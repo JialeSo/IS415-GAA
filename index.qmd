@@ -1,11 +1,27 @@
----
-title: "IS415-GAA"
----
+# Welcome to my IS415 Journey :)  Jiale So here!
 
-This is a Quarto website.
+Welcome to my website ! I'm a student currently enrolled in this course, where I'll be diving deep into the world of geospatial analysis and geographic information systems (GIS). Through hands-on exercises, in-class activities, and take-home assignments, I'll be exploring the practical applications of geospatial technologies.
 
-To learn more about Quarto websites visit <https://quarto.org/docs/websites>.
+## About This Module
 
-```{r}
-1 + 1
-```
+IS415-GAA is designed to introduce students to the key concepts and tools used in geospatial analysis. We will cover topics like spatial data collection, visualization, and analysis. By the end of the course, I aim to have a solid understanding of how to apply GIS principles to solve real-world problems.
+
+### Key Sections
+
+-   **Hands-On Exercises:** This section includes practical exercises designed to apply what we learn in class. These exercises will help reinforce concepts and develop technical skills in GIS.
+
+-   **In-Class Exercises:** These activities are done during class sessions to help us grasp key concepts quickly and collaboratively.
+
+-   **Take-Home Exercises:** Assignments to be completed independently, giving us the opportunity to dive deeper into specific topics at our own pace.
+
+## Why I Chose This Module
+
+I chose IS415-GAA because of its relevance in today’s data-driven world. Geospatial analysis is becoming increasingly important across many industries, and I’m excited to build the skills that can help me make data-driven decisions and contribute to meaningful projects.
+
+## What to Expect
+
+Throughout the course, I’ll be documenting my progress, reflecting on key learning points, and sharing interesting insights I discover along the way. Stay tuned as I embark on this exciting journey into the realm of geospatial analysis!
+
+------------------------------------------------------------------------
+
+To navigate the site, use the links in the navigation bar at the top.

@@ -2,12 +2,37 @@ project:
   type: website
 
 website:
-  title: "IS415-GAA"
+  title: "IS415-GAA-JialeSo"
   navbar:
     left:
+      - text: "Hands-On Exercises"
+        icon: fas fa-laptop-code
+        menu:
+          - text: "Hands-On Exercise 1"
+            href: "Hands_On_exercises/Hands_On_Exercise_1/Hands_On_Exercise1.html"
+            icon: fas fa-code
+
+      - text: "In-Class Exercises"
+        icon: fas fa-chalkboard-teacher
+        menu:
+          - text: "In-Class Exercise 1"
+            href: "404.qmd"
+            icon: fas fa-file-alt
+
+      - text: "Take-Home Exercises"
+        icon: fas fa-home
+        menu:
+          - text: "Take-Home Exercise 1"
+            href: "404.qmd"
+            icon: fas fa-file-alt
+
+    right:
       - href: index.qmd
-        text: Home
-      - about.qmd
+        text: "Home"
+        icon: fas fa-home
+      - href: "404.qmd"
+        text: "About"
+        icon: fas fa-info-circle
 
 format:
   html:
@@ -16,4 +41,3 @@ format:
     toc: true
 
 editor: visual
-
