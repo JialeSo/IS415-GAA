@@ -11,12 +11,15 @@ website:
           - text: "Hands-On Exercise 1"
             href: "Hands_On_exercises/Hands_On_Exercise_1/Hands_On_Exercise1.html"
             icon: fas fa-code
+          - text: "Hands-On Exercise 2"
+            href: "Hands_On_exercises/Hands_On_Exercise_2/Hands_On_Exercise2.html"
+            icon: fas fa-code
 
       - text: "In-Class Exercises"
         icon: fas fa-chalkboard-teacher
         menu:
           - text: "In-Class Exercise 1"
-            href: "404.qmd"
+            href: "In_Class_exercises/In_Class_Exercise_1/In_Class_Exercise1.html"
             icon: fas fa-file-alt
 
       - text: "Take-Home Exercises"

@@ -1,0 +1,106 @@
+# **Thematic Mapping and GeoVisualisation with R**
+
+Using TMap, we will learn how to plot functional and truthful choropleth maps. Through Geo visualization, we allow our audiences to understand the dataset easier with their spatial cognition.
+
+# 1.0 Setting up the Environment
+
+Likewise in Chapter 1, we set up the environment by installing all the required packages. We can do so using the ~p_load~ function from the Pacman Package.
+
+A total of 5 packages will be used,
+
+-   [**readr**](https://readr.tidyverse.org/) for importing delimited text file,
+
+-   [**tidyr**](https://tidyr.tidyverse.org/) for tidying data,
+
+-   [**dplyr**](https://dplyr.tidyverse.org/) for wrangling data and
+
+-   [**sf**](https://cran.r-project.org/web/packages/sf/index.html) for handling geospatial data.
+
+-   [tmap](https://cran.r-project.org/web/packages/tmap/index.html)for creating geovisualization
+
+```{r}
+pacman::p_load(sf, tmap, tidyverse)
+```
+
+# 2.0 Importing the Data into R
+
+Two Data Set will be used here, we can retrieve it by simply clicking on the link.
+
+1.  [Singapore Population Size](https://www.singstat.gov.sg/find-data/search-by-theme/population/geographic-distribution/latest-data). This is an aspatial dataset that does not contain coordinate values. However, it includes "PA" (Planning Area) and "SZ" (Subzone) fields that can be linked to another dataset to identify the geographical areas.
+
+2.  [Singapore Map](https://beta.data.gov.sg/datasets?query=Master+Plan+2014+Subzone+Boundary&resultId=d_d14da225fccf921049ab64238ff473d9), This dataset is used to create the base layer of the choropleth map. It contains the geographical boundaries of Singapore at the planning subzone level and is stored as an ESRI shapefile.
+
+## 2.1 Importing the Geo-spatial Data
+
+Simply use the ST_Read() to import the shapefile into R.
+
+```{r}
+mpsz <- st_read(dsn = "data/geospatial", 
+                layer = "MP14_SUBZONE_WEB_PL")
+```
+
+### 2.1.1 Understanding the data
+
+We can simply examine the content of mpsz by calling the variable.
+
+```{r}
+mpsz
+```
+
+> Question -\> Notice that only the first ten records will be displayed. Do you know why?
+
+Generally, only 10 records are shown as displaying a subset of rows makes it easier to inspect the data without loading the entire dataset. This helps optimize large datasets by loading only a portion, which improves processing time. Often, these 10 records provide users with a quick preview of the dataset.
+
+Remember that we can always read the content of `mpsz` using the following functions. If we want to preview more than 10 records, we can simply use `head(mpsz, 20)` to view more rows.
+
+-   **`st_geometry`**: Prints only basic information about the feature class, such as the type of geometry.
+
+-   **`glimpse`**: Displays associated attribute information in the data frame.
+
+-   **`head`**: Reveals complete information of a feature object.
+
+```{r}
+st_geometry(mpsz)
+glimpse(mpsz)
+head(mpsz, n = 20)
+```
+
+Through glimpse and head, we can map the following columns to their description for ease of use.
+
+| **Variable Name** | **Description**                                                               | **Cluster (Y/N)** | **Data Type / Example Values**                                                         |
+|-------------|----------------------|-------------|-------------------------|
+| OBJECTID          | Unique identifier for each row in the dataset.                                | N                 | `<int>` 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, …                                               |
+| SUBZONE_NO        | Numeric code representing the specific subzone within the planning area.      | Y                 | `<int>` 1, 1, 3, 8, 3, 7, 9, 2, 13, 7, …                                               |
+| SUBZONE_N         | The name of the subzone (e.g., "MARINA SOUTH," "PEARL'S HILL").               | Y                 | `<chr>` "MARINA SOUTH", "PEARL'S HILL", "BOAT QUAY", …                                 |
+| SUBZONE_C         | Short code representing the subzone, typically an abbreviation.               | Y                 | `<chr>` "MSSZ01", "OTSZ01", "SRSZ03", "BMSZ08", …                                      |
+| CA_IND            | Indicates if the subzone is a Central Area subzone ("Y" for Yes, "N" for No). | Y                 | `<chr>` "Y", "Y", "Y", "N", "N", "N", "N", …                                           |
+| PLN_AREA_N        | The name of the planning area that the subzone belongs to (e.g., "OUTRAM").   | Y                 | `<chr>` "MARINA SOUTH", "OUTRAM", "SINGAPORE RIVER", …                                 |
+| PLN_AREA_C        | Short code representing the planning area (abbreviation).                     | Y                 | `<chr>` "MS", "OT", "SR", "BM", "BM", "BM", …                                          |
+| REGION_N          | The name of the broader region (e.g., "CENTRAL REGION," "WEST REGION").       | Y                 | `<chr>` "CENTRAL REGION", "CENTRAL REGION", "CENTRAL REGION", …                        |
+| REGION_C          | Short code representing the region (e.g., "CR" for Central Region).           | Y                 | `<chr>` "CR", "CR", "CR", "CR", "CR", "CR", …                                          |
+| INC_CRC           | Internal checksum code for data integrity; not relevant for clustering.       | N                 | `<chr>` "5ED7EB253F99252E", "8C7149B9EB32EEFC", "C35FEFF02B13E0E5", …                  |
+| FMEL_UPD_D        | Date when the data was last updated (e.g., "2014-12-05").                     | N                 | `<date>` 2014-12-05, 2014-12-05, 2014-12-05, …                                         |
+| X_ADDR            | X coordinate of the subzone's centroid or key location.                       | Y                 | `<dbl>` 31595.84, 28679.06, 29654.96, …                                                |
+| Y_ADDR            | Y coordinate of the subzone's centroid or key location.                       | Y                 | `<dbl>` 29220.19, 29782.05, 29974.66, …                                                |
+| SHAPE_Leng        | The length of the subzone boundary (in meters).                               | Y                 | `<dbl>` 5267.381, 3506.107, 1740.926, …                                                |
+| SHAPE_Area        | The area of the subzone (in square meters).                                   | Y                 | `<dbl>` 1630379.27, 559816.25, 160807.50, …                                            |
+| geometry          | Geographic shape data (MULTIPOLYGON) representing the subzone's boundaries.   | Y                 | `<MULTIPOLYGON [m]>` MULTIPOLYGON (((31495.56 30..., MULTIPOLYGON (((29092.28 30..., … |
+
+## 2.2 Importing Attribute Data
+
+We can simply use the `read_csv` function of readr package.
+
+```{r}
+
+popdata <- read_csv("data/respopagesextod2011to2020.csv")
+```
+
+### 2.2.1 Understanding the data
+
+Likewise we can do the same to understand the data, or we can simply just read it on the data source website [here](https://www.singstat.gov.sg/find-data/search-by-theme/population/geographic-distribution/latest-data). For a quick analysis, we can use `head()` here as well.
+
+```{r}
+head(popdata, n = 20)
+```
+
+### 2.2.2

@@ -1,4 +1,4 @@
-# Welcome to my IS415 Journey :)  Jiale So here!
+# Welcome to my IS415 Journey :) Jiale So here!
 
 Welcome to my website ! I'm a student currently enrolled in this course, where I'll be diving deep into the world of geospatial analysis and geographic information systems (GIS). Through hands-on exercises, in-class activities, and take-home assignments, I'll be exploring the practical applications of geospatial technologies.
 
