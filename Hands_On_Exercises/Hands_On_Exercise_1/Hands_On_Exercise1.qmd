@@ -1,5 +1,12 @@
 ---
 title: "Hands-On Exercise 1" 
+author: "Jiale SO"
+date: "August 18, 2024"
+date-modified: "last-modified"
+execute: 
+  eval: true
+  echo: true
+  freeze: true
 ---
 
 ## Install and launching R Packages
