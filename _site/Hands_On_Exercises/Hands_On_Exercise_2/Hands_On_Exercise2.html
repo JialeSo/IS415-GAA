@@ -212,7 +212,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#data-preparation" id="toc-data-preparation" class="nav-link" data-scroll-target="#data-preparation">2.2.2 <strong>Data Preparation</strong></a></li>
   </ul></li>
   </ul></li>
-  <li><a href="#choropleth-mapping-geospatial-data-using-tmap" id="toc-choropleth-mapping-geospatial-data-using-tmap" class="nav-link" data-scroll-target="#choropleth-mapping-geospatial-data-using-tmap">3.0 <strong>Choropleth Mapping Geospatial Data Using <em>tmap</em></strong></a>
+  <li><a href="#choropleth-mapping-geospatial-data-using-tmap" id="toc-choropleth-mapping-geospatial-data-using-tmap" class="nav-link" data-scroll-target="#choropleth-mapping-geospatial-data-using-tmap">3.0 Choropleth Mapping Geospatial Data Using <em>tmap</em></a>
   <ul class="collapse">
   <li><a href="#quick-thematic-map-qtm" id="toc-quick-thematic-map-qtm" class="nav-link" data-scroll-target="#quick-thematic-map-qtm">3.1 Quick Thematic Map: <code>qtm()</code></a></li>
   <li><a href="#customizing-tmap-elements" id="toc-customizing-tmap-elements" class="nav-link" data-scroll-target="#customizing-tmap-elements">3.2 Customizing <code>tmap</code> elements</a>
@@ -230,7 +230,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#drawing-small-multiple-choropelth-maps" id="toc-drawing-small-multiple-choropelth-maps" class="nav-link" data-scroll-target="#drawing-small-multiple-choropelth-maps">3.6 drawing small multiple choropelth maps</a></li>
   <li><a href="#mapping-spatial-object-meeting-a-selection-criterion" id="toc-mapping-spatial-object-meeting-a-selection-criterion" class="nav-link" data-scroll-target="#mapping-spatial-object-meeting-a-selection-criterion">3.7 mapping spatial object meeting a selection criterion</a></li>
   </ul></li>
-  <li><a href="#extra-hands-on-exercise-lets-have-fun-with-choropleth-mapping" id="toc-extra-hands-on-exercise-lets-have-fun-with-choropleth-mapping" class="nav-link" data-scroll-target="#extra-hands-on-exercise-lets-have-fun-with-choropleth-mapping">4.0 Extra-Hands-On Exercise Let’s have fun with <strong>Choropleth</strong> Mapping!</a>
+  <li><a href="#extra-hands-on-exercise-lets-have-fun-with-choropleth-mapping" id="toc-extra-hands-on-exercise-lets-have-fun-with-choropleth-mapping" class="nav-link" data-scroll-target="#extra-hands-on-exercise-lets-have-fun-with-choropleth-mapping">4.0 Extra-Hands-On Exercise Let’s have fun with Choropleth Mapping!</a>
   <ul class="collapse">
   <li><a href="#age-cluster-by-years-and-sub-zones." id="toc-age-cluster-by-years-and-sub-zones." class="nav-link" data-scroll-target="#age-cluster-by-years-and-sub-zones.">4.1 Age Cluster By Years and Sub zones.</a>
   <ul class="collapse">
@@ -770,7 +770,7 @@ $ Time &lt;dbl&gt; 2011, 2011, 2011, 2011, 2011, 2011, 2011, 2011, 2011, 2011, 2
 </section>
 </section>
 <section id="choropleth-mapping-geospatial-data-using-tmap" class="level1">
-<h1>3.0 <strong>Choropleth Mapping Geospatial Data Using <em>tmap</em></strong></h1>
+<h1>3.0 Choropleth Mapping Geospatial Data Using <em>tmap</em></h1>
 <p>This section provides an overview of key functions and concepts in <code>tmap</code>, focusing on the step-by-step process of building maps with progressively more complex elements. While the subsections dive into specific examples, this chapter highlights the core components used in choropleth mapping with <code>tmap</code>.</p>
 <section id="quick-thematic-map-qtm" class="level2">
 <h2 class="anchored" data-anchor-id="quick-thematic-map-qtm">3.1 Quick Thematic Map: <code>qtm()</code></h2>
@@ -1288,23 +1288,13 @@ Legend labels were too wide. The labels have been resized to 0.37, 0.37, 0.37, 0
 <h2 class="anchored" data-anchor-id="drawing-small-multiple-choropelth-maps">3.6 drawing small multiple choropelth maps</h2>
 <p>Generate multiple maps in a single visual output to compare different variables or time periods. Small multiple maps (facet maps) allow visualization of how spatial patterns change across categories.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb65"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb65-1"><a href="#cb65-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tmap_mode</span>(<span class="st">"plot"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>tmap mode set to plotting</code></pre>
-</div>
-<div class="sourceCode cell-code" id="cb67"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb67-1"><a href="#cb67-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tm_shape</span>(mpsz_pop2020)<span class="sc">+</span></span>
-<span id="cb67-2"><a href="#cb67-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_fill</span>(<span class="fu">c</span>(<span class="st">"Young"</span>, <span class="st">"Aged"</span>),</span>
-<span id="cb67-3"><a href="#cb67-3" aria-hidden="true" tabindex="-1"></a>          <span class="at">style =</span> <span class="st">"equal"</span>, </span>
-<span id="cb67-4"><a href="#cb67-4" aria-hidden="true" tabindex="-1"></a>          <span class="at">palette =</span> <span class="st">"Blues"</span>) <span class="sc">+</span></span>
-<span id="cb67-5"><a href="#cb67-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_layout</span>(<span class="at">legend.position =</span> <span class="fu">c</span>(<span class="st">"right"</span>, <span class="st">"bottom"</span>)) <span class="sc">+</span></span>
-<span id="cb67-6"><a href="#cb67-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_borders</span>(<span class="at">alpha =</span> <span class="fl">0.5</span>) <span class="sc">+</span></span>
-<span id="cb67-7"><a href="#cb67-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tmap_style</span>(<span class="st">"white"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>tmap style set to "white"</code></pre>
-</div>
-<div class="cell-output cell-output-stderr">
-<pre><code>other available styles are: "gray", "natural", "cobalt", "col_blind", "albatross", "beaver", "bw", "classic", "watercolor" </code></pre>
-</div>
+<div class="sourceCode cell-code" id="cb65"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb65-1"><a href="#cb65-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tm_shape</span>(mpsz_pop2020)<span class="sc">+</span></span>
+<span id="cb65-2"><a href="#cb65-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_fill</span>(<span class="fu">c</span>(<span class="st">"Young"</span>, <span class="st">"Aged"</span>),</span>
+<span id="cb65-3"><a href="#cb65-3" aria-hidden="true" tabindex="-1"></a>          <span class="at">style =</span> <span class="st">"equal"</span>, </span>
+<span id="cb65-4"><a href="#cb65-4" aria-hidden="true" tabindex="-1"></a>          <span class="at">palette =</span> <span class="st">"Blues"</span>) <span class="sc">+</span></span>
+<span id="cb65-5"><a href="#cb65-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_layout</span>(<span class="at">legend.position =</span> <span class="fu">c</span>(<span class="st">"right"</span>, <span class="st">"bottom"</span>)) <span class="sc">+</span></span>
+<span id="cb65-6"><a href="#cb65-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_borders</span>(<span class="at">alpha =</span> <span class="fl">0.5</span>) <span class="sc">+</span></span>
+<span id="cb65-7"><a href="#cb65-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tmap_style</span>(<span class="st">"white"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div>
 <figure class="figure">
@@ -1312,11 +1302,11 @@ Legend labels were too wide. The labels have been resized to 0.37, 0.37, 0.37, 0
 </figure>
 </div>
 </div>
-<div class="sourceCode cell-code" id="cb70"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb70-1"><a href="#cb70-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tm_shape</span>(mpsz_pop2020)<span class="sc">+</span> </span>
-<span id="cb70-2"><a href="#cb70-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_polygons</span>(<span class="fu">c</span>(<span class="st">"DEPENDENCY"</span>,<span class="st">"Aged"</span>),</span>
-<span id="cb70-3"><a href="#cb70-3" aria-hidden="true" tabindex="-1"></a>          <span class="at">style =</span> <span class="fu">c</span>(<span class="st">"equal"</span>, <span class="st">"quantile"</span>), </span>
-<span id="cb70-4"><a href="#cb70-4" aria-hidden="true" tabindex="-1"></a>          <span class="at">palette =</span> <span class="fu">list</span>(<span class="st">"Blues"</span>,<span class="st">"Greens"</span>)) <span class="sc">+</span></span>
-<span id="cb70-5"><a href="#cb70-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_layout</span>(<span class="at">legend.position =</span> <span class="fu">c</span>(<span class="st">"right"</span>, <span class="st">"bottom"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb66"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb66-1"><a href="#cb66-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tm_shape</span>(mpsz_pop2020)<span class="sc">+</span> </span>
+<span id="cb66-2"><a href="#cb66-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_polygons</span>(<span class="fu">c</span>(<span class="st">"DEPENDENCY"</span>,<span class="st">"Aged"</span>),</span>
+<span id="cb66-3"><a href="#cb66-3" aria-hidden="true" tabindex="-1"></a>          <span class="at">style =</span> <span class="fu">c</span>(<span class="st">"equal"</span>, <span class="st">"quantile"</span>), </span>
+<span id="cb66-4"><a href="#cb66-4" aria-hidden="true" tabindex="-1"></a>          <span class="at">palette =</span> <span class="fu">list</span>(<span class="st">"Blues"</span>,<span class="st">"Greens"</span>)) <span class="sc">+</span></span>
+<span id="cb66-5"><a href="#cb66-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_layout</span>(<span class="at">legend.position =</span> <span class="fu">c</span>(<span class="st">"right"</span>, <span class="st">"bottom"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div>
 <figure class="figure">
@@ -1324,22 +1314,18 @@ Legend labels were too wide. The labels have been resized to 0.37, 0.37, 0.37, 0
 </figure>
 </div>
 </div>
-<div class="sourceCode cell-code" id="cb71"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb71-1"><a href="#cb71-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tm_shape</span>(mpsz_pop2020) <span class="sc">+</span></span>
-<span id="cb71-2"><a href="#cb71-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_fill</span>(<span class="st">"DEPENDENCY"</span>,</span>
-<span id="cb71-3"><a href="#cb71-3" aria-hidden="true" tabindex="-1"></a>          <span class="at">style =</span> <span class="st">"quantile"</span>,</span>
-<span id="cb71-4"><a href="#cb71-4" aria-hidden="true" tabindex="-1"></a>          <span class="at">palette =</span> <span class="st">"Blues"</span>,</span>
-<span id="cb71-5"><a href="#cb71-5" aria-hidden="true" tabindex="-1"></a>          <span class="at">thres.poly =</span> <span class="dv">0</span>) <span class="sc">+</span> </span>
-<span id="cb71-6"><a href="#cb71-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_facets</span>(<span class="at">by=</span><span class="st">"REGION_N"</span>, </span>
-<span id="cb71-7"><a href="#cb71-7" aria-hidden="true" tabindex="-1"></a>            <span class="at">free.coords=</span><span class="cn">TRUE</span>, </span>
-<span id="cb71-8"><a href="#cb71-8" aria-hidden="true" tabindex="-1"></a>            <span class="at">drop.shapes=</span><span class="cn">TRUE</span>) <span class="sc">+</span></span>
-<span id="cb71-9"><a href="#cb71-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_layout</span>(<span class="at">legend.show =</span> <span class="cn">FALSE</span>,</span>
-<span id="cb71-10"><a href="#cb71-10" aria-hidden="true" tabindex="-1"></a>            <span class="at">title.position =</span> <span class="fu">c</span>(<span class="st">"center"</span>, <span class="st">"center"</span>), </span>
-<span id="cb71-11"><a href="#cb71-11" aria-hidden="true" tabindex="-1"></a>            <span class="at">title.size =</span> <span class="dv">20</span>) <span class="sc">+</span></span>
-<span id="cb71-12"><a href="#cb71-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_borders</span>(<span class="at">alpha =</span> <span class="fl">0.5</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>Warning: The argument drop.shapes has been renamed to drop.units, and is
-therefore deprecated</code></pre>
-</div>
+<div class="sourceCode cell-code" id="cb67"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb67-1"><a href="#cb67-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tm_shape</span>(mpsz_pop2020) <span class="sc">+</span></span>
+<span id="cb67-2"><a href="#cb67-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_fill</span>(<span class="st">"DEPENDENCY"</span>,</span>
+<span id="cb67-3"><a href="#cb67-3" aria-hidden="true" tabindex="-1"></a>          <span class="at">style =</span> <span class="st">"quantile"</span>,</span>
+<span id="cb67-4"><a href="#cb67-4" aria-hidden="true" tabindex="-1"></a>          <span class="at">palette =</span> <span class="st">"Blues"</span>,</span>
+<span id="cb67-5"><a href="#cb67-5" aria-hidden="true" tabindex="-1"></a>          <span class="at">thres.poly =</span> <span class="dv">0</span>) <span class="sc">+</span> </span>
+<span id="cb67-6"><a href="#cb67-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_facets</span>(<span class="at">by=</span><span class="st">"REGION_N"</span>, </span>
+<span id="cb67-7"><a href="#cb67-7" aria-hidden="true" tabindex="-1"></a>            <span class="at">free.coords=</span><span class="cn">TRUE</span>, </span>
+<span id="cb67-8"><a href="#cb67-8" aria-hidden="true" tabindex="-1"></a>            <span class="at">drop.shapes=</span><span class="cn">TRUE</span>) <span class="sc">+</span></span>
+<span id="cb67-9"><a href="#cb67-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_layout</span>(<span class="at">legend.show =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb67-10"><a href="#cb67-10" aria-hidden="true" tabindex="-1"></a>            <span class="at">title.position =</span> <span class="fu">c</span>(<span class="st">"center"</span>, <span class="st">"center"</span>), </span>
+<span id="cb67-11"><a href="#cb67-11" aria-hidden="true" tabindex="-1"></a>            <span class="at">title.size =</span> <span class="dv">20</span>) <span class="sc">+</span></span>
+<span id="cb67-12"><a href="#cb67-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_borders</span>(<span class="at">alpha =</span> <span class="fl">0.5</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div>
 <figure class="figure">
@@ -1347,17 +1333,17 @@ therefore deprecated</code></pre>
 </figure>
 </div>
 </div>
-<div class="sourceCode cell-code" id="cb73"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb73-1"><a href="#cb73-1" aria-hidden="true" tabindex="-1"></a>youngmap <span class="ot">&lt;-</span> <span class="fu">tm_shape</span>(mpsz_pop2020)<span class="sc">+</span> </span>
-<span id="cb73-2"><a href="#cb73-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_polygons</span>(<span class="st">"Young"</span>, </span>
-<span id="cb73-3"><a href="#cb73-3" aria-hidden="true" tabindex="-1"></a>              <span class="at">style =</span> <span class="st">"quantile"</span>, </span>
-<span id="cb73-4"><a href="#cb73-4" aria-hidden="true" tabindex="-1"></a>              <span class="at">palette =</span> <span class="st">"Blues"</span>)</span>
-<span id="cb73-5"><a href="#cb73-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb73-6"><a href="#cb73-6" aria-hidden="true" tabindex="-1"></a>agedmap <span class="ot">&lt;-</span> <span class="fu">tm_shape</span>(mpsz_pop2020)<span class="sc">+</span> </span>
-<span id="cb73-7"><a href="#cb73-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_polygons</span>(<span class="st">"Aged"</span>, </span>
-<span id="cb73-8"><a href="#cb73-8" aria-hidden="true" tabindex="-1"></a>              <span class="at">style =</span> <span class="st">"quantile"</span>, </span>
-<span id="cb73-9"><a href="#cb73-9" aria-hidden="true" tabindex="-1"></a>              <span class="at">palette =</span> <span class="st">"Blues"</span>)</span>
-<span id="cb73-10"><a href="#cb73-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb73-11"><a href="#cb73-11" aria-hidden="true" tabindex="-1"></a><span class="fu">tmap_arrange</span>(youngmap, agedmap, <span class="at">asp=</span><span class="dv">1</span>, <span class="at">ncol=</span><span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb68"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb68-1"><a href="#cb68-1" aria-hidden="true" tabindex="-1"></a>youngmap <span class="ot">&lt;-</span> <span class="fu">tm_shape</span>(mpsz_pop2020)<span class="sc">+</span> </span>
+<span id="cb68-2"><a href="#cb68-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_polygons</span>(<span class="st">"Young"</span>, </span>
+<span id="cb68-3"><a href="#cb68-3" aria-hidden="true" tabindex="-1"></a>              <span class="at">style =</span> <span class="st">"quantile"</span>, </span>
+<span id="cb68-4"><a href="#cb68-4" aria-hidden="true" tabindex="-1"></a>              <span class="at">palette =</span> <span class="st">"Blues"</span>)</span>
+<span id="cb68-5"><a href="#cb68-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb68-6"><a href="#cb68-6" aria-hidden="true" tabindex="-1"></a>agedmap <span class="ot">&lt;-</span> <span class="fu">tm_shape</span>(mpsz_pop2020)<span class="sc">+</span> </span>
+<span id="cb68-7"><a href="#cb68-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_polygons</span>(<span class="st">"Aged"</span>, </span>
+<span id="cb68-8"><a href="#cb68-8" aria-hidden="true" tabindex="-1"></a>              <span class="at">style =</span> <span class="st">"quantile"</span>, </span>
+<span id="cb68-9"><a href="#cb68-9" aria-hidden="true" tabindex="-1"></a>              <span class="at">palette =</span> <span class="st">"Blues"</span>)</span>
+<span id="cb68-10"><a href="#cb68-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb68-11"><a href="#cb68-11" aria-hidden="true" tabindex="-1"></a><span class="fu">tmap_arrange</span>(youngmap, agedmap, <span class="at">asp=</span><span class="dv">1</span>, <span class="at">ncol=</span><span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div>
 <figure class="figure">
@@ -1371,24 +1357,19 @@ therefore deprecated</code></pre>
 <h2 class="anchored" data-anchor-id="mapping-spatial-object-meeting-a-selection-criterion">3.7 mapping spatial object meeting a selection criterion</h2>
 <p>Filter and map spatial objects that satisfy specific conditions or criteria.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb74"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb74-1"><a href="#cb74-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tm_shape</span>(mpsz_pop2020[mpsz_pop2020<span class="sc">$</span>REGION_N<span class="sc">==</span><span class="st">"CENTRAL REGION"</span>, ])<span class="sc">+</span></span>
-<span id="cb74-2"><a href="#cb74-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_fill</span>(<span class="st">"DEPENDENCY"</span>, </span>
-<span id="cb74-3"><a href="#cb74-3" aria-hidden="true" tabindex="-1"></a>          <span class="at">style =</span> <span class="st">"quantile"</span>, </span>
-<span id="cb74-4"><a href="#cb74-4" aria-hidden="true" tabindex="-1"></a>          <span class="at">palette =</span> <span class="st">"Blues"</span>, </span>
-<span id="cb74-5"><a href="#cb74-5" aria-hidden="true" tabindex="-1"></a>          <span class="at">legend.hist =</span> <span class="cn">TRUE</span>, </span>
-<span id="cb74-6"><a href="#cb74-6" aria-hidden="true" tabindex="-1"></a>          <span class="at">legend.is.portrait =</span> <span class="cn">TRUE</span>,</span>
-<span id="cb74-7"><a href="#cb74-7" aria-hidden="true" tabindex="-1"></a>          <span class="at">legend.hist.z =</span> <span class="fl">0.1</span>) <span class="sc">+</span></span>
-<span id="cb74-8"><a href="#cb74-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_layout</span>(<span class="at">legend.outside =</span> <span class="cn">TRUE</span>,</span>
-<span id="cb74-9"><a href="#cb74-9" aria-hidden="true" tabindex="-1"></a>            <span class="at">legend.height =</span> <span class="fl">0.45</span>, </span>
-<span id="cb74-10"><a href="#cb74-10" aria-hidden="true" tabindex="-1"></a>            <span class="at">legend.width =</span> <span class="fl">5.0</span>,</span>
-<span id="cb74-11"><a href="#cb74-11" aria-hidden="true" tabindex="-1"></a>            <span class="at">legend.position =</span> <span class="fu">c</span>(<span class="st">"right"</span>, <span class="st">"bottom"</span>),</span>
-<span id="cb74-12"><a href="#cb74-12" aria-hidden="true" tabindex="-1"></a>            <span class="at">frame =</span> <span class="cn">FALSE</span>) <span class="sc">+</span></span>
-<span id="cb74-13"><a href="#cb74-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_borders</span>(<span class="at">alpha =</span> <span class="fl">0.5</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>Warning in pre_process_gt(x, interactive = interactive, orig_crs =
-gm$shape.orig_crs): legend.width controls the width of the legend within a map.
-Please use legend.outside.size to control the width of the outside legend</code></pre>
-</div>
+<div class="sourceCode cell-code" id="cb69"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb69-1"><a href="#cb69-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tm_shape</span>(mpsz_pop2020[mpsz_pop2020<span class="sc">$</span>REGION_N<span class="sc">==</span><span class="st">"CENTRAL REGION"</span>, ])<span class="sc">+</span></span>
+<span id="cb69-2"><a href="#cb69-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_fill</span>(<span class="st">"DEPENDENCY"</span>, </span>
+<span id="cb69-3"><a href="#cb69-3" aria-hidden="true" tabindex="-1"></a>          <span class="at">style =</span> <span class="st">"quantile"</span>, </span>
+<span id="cb69-4"><a href="#cb69-4" aria-hidden="true" tabindex="-1"></a>          <span class="at">palette =</span> <span class="st">"Blues"</span>, </span>
+<span id="cb69-5"><a href="#cb69-5" aria-hidden="true" tabindex="-1"></a>          <span class="at">legend.hist =</span> <span class="cn">TRUE</span>, </span>
+<span id="cb69-6"><a href="#cb69-6" aria-hidden="true" tabindex="-1"></a>          <span class="at">legend.is.portrait =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb69-7"><a href="#cb69-7" aria-hidden="true" tabindex="-1"></a>          <span class="at">legend.hist.z =</span> <span class="fl">0.1</span>) <span class="sc">+</span></span>
+<span id="cb69-8"><a href="#cb69-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_layout</span>(<span class="at">legend.outside =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb69-9"><a href="#cb69-9" aria-hidden="true" tabindex="-1"></a>            <span class="at">legend.height =</span> <span class="fl">0.45</span>, </span>
+<span id="cb69-10"><a href="#cb69-10" aria-hidden="true" tabindex="-1"></a>            <span class="at">legend.width =</span> <span class="fl">5.0</span>,</span>
+<span id="cb69-11"><a href="#cb69-11" aria-hidden="true" tabindex="-1"></a>            <span class="at">legend.position =</span> <span class="fu">c</span>(<span class="st">"right"</span>, <span class="st">"bottom"</span>),</span>
+<span id="cb69-12"><a href="#cb69-12" aria-hidden="true" tabindex="-1"></a>            <span class="at">frame =</span> <span class="cn">FALSE</span>) <span class="sc">+</span></span>
+<span id="cb69-13"><a href="#cb69-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_borders</span>(<span class="at">alpha =</span> <span class="fl">0.5</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div>
 <figure class="figure">
@@ -1400,7 +1381,7 @@ Please use legend.outside.size to control the width of the outside legend</code>
 </section>
 </section>
 <section id="extra-hands-on-exercise-lets-have-fun-with-choropleth-mapping" class="level1">
-<h1>4.0 Extra-Hands-On Exercise Let’s have fun with <strong>Choropleth</strong> Mapping!</h1>
+<h1>4.0 Extra-Hands-On Exercise Let’s have fun with Choropleth Mapping!</h1>
 <section id="age-cluster-by-years-and-sub-zones." class="level2">
 <h2 class="anchored" data-anchor-id="age-cluster-by-years-and-sub-zones.">4.1 Age Cluster By Years and Sub zones.</h2>
 <p>Let’s push the boundaries a bit! The goal is to visualize how the age clusters within each subzone have evolved over time. Although we haven’t fully explored interactivity yet, we can take on the challenge of creating a video GIF that sequentially combines maps for each year. We’ll wrap it up with a bird’s-eye comparison of the different years side by side.</p>
@@ -1416,52 +1397,52 @@ Please use legend.outside.size to control the width of the outside legend</code>
 <li>Then we full join the map to their individual values.</li>
 </ol>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb76"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb76-1"><a href="#cb76-1" aria-hidden="true" tabindex="-1"></a>population_data <span class="ot">&lt;-</span> <span class="fu">read.csv</span>(<span class="st">"data/respopagesextod2011to2020.csv"</span>)</span>
-<span id="cb76-2"><a href="#cb76-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Load the population data</span></span>
-<span id="cb76-3"><a href="#cb76-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Categorize age groups</span></span>
-<span id="cb76-4"><a href="#cb76-4" aria-hidden="true" tabindex="-1"></a>age_categories <span class="ot">&lt;-</span> <span class="fu">unique</span>(popdata<span class="sc">$</span>AG)</span>
-<span id="cb76-5"><a href="#cb76-5" aria-hidden="true" tabindex="-1"></a>population_data <span class="ot">&lt;-</span> population_data <span class="sc">%&gt;%</span></span>
-<span id="cb76-6"><a href="#cb76-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb76-7"><a href="#cb76-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">Age_Category =</span> <span class="fu">case_when</span>(</span>
-<span id="cb76-8"><a href="#cb76-8" aria-hidden="true" tabindex="-1"></a>      AG <span class="sc">%in%</span> age_categories[<span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>] <span class="sc">~</span> <span class="st">"Young"</span>,  <span class="co"># Age groups 0_to_4 until 20_to_24</span></span>
-<span id="cb76-9"><a href="#cb76-9" aria-hidden="true" tabindex="-1"></a>      AG <span class="sc">%in%</span> age_categories[<span class="dv">6</span><span class="sc">:</span><span class="dv">13</span>] <span class="sc">~</span> <span class="st">"Economy Active"</span>,  <span class="co"># Age groups 25_to_29 until 60_to_64</span></span>
-<span id="cb76-10"><a href="#cb76-10" aria-hidden="true" tabindex="-1"></a>      AG <span class="sc">%in%</span> age_categories[<span class="dv">14</span><span class="sc">:</span><span class="fu">length</span>(age_categories)] <span class="sc">~</span> <span class="st">"Aged"</span>,  <span class="co"># Age groups 65 and above</span></span>
-<span id="cb76-11"><a href="#cb76-11" aria-hidden="true" tabindex="-1"></a>      <span class="cn">TRUE</span> <span class="sc">~</span> <span class="st">"Other"</span></span>
-<span id="cb76-12"><a href="#cb76-12" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb76-13"><a href="#cb76-13" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb76-14"><a href="#cb76-14" aria-hidden="true" tabindex="-1"></a>animation_maps <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
-<span id="cb76-15"><a href="#cb76-15" aria-hidden="true" tabindex="-1"></a>age_clusters <span class="ot">&lt;-</span> <span class="fu">unique</span>(population_data<span class="sc">$</span>Age_Category)</span>
-<span id="cb76-16"><a href="#cb76-16" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb76-17"><a href="#cb76-17" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb76-18"><a href="#cb76-18" aria-hidden="true" tabindex="-1"></a>aggregated_data <span class="ot">&lt;-</span> population_data <span class="sc">%&gt;%</span></span>
-<span id="cb76-19"><a href="#cb76-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(SZ,Time,Age_Category) <span class="sc">%&gt;%</span></span>
-<span id="cb76-20"><a href="#cb76-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">Total_Population =</span> <span class="fu">sum</span>(Pop, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)) <span class="sc">%&gt;%</span></span>
-<span id="cb76-21"><a href="#cb76-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb70"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb70-1"><a href="#cb70-1" aria-hidden="true" tabindex="-1"></a>population_data <span class="ot">&lt;-</span> <span class="fu">read.csv</span>(<span class="st">"data/respopagesextod2011to2020.csv"</span>)</span>
+<span id="cb70-2"><a href="#cb70-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Load the population data</span></span>
+<span id="cb70-3"><a href="#cb70-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Categorize age groups</span></span>
+<span id="cb70-4"><a href="#cb70-4" aria-hidden="true" tabindex="-1"></a>age_categories <span class="ot">&lt;-</span> <span class="fu">unique</span>(popdata<span class="sc">$</span>AG)</span>
+<span id="cb70-5"><a href="#cb70-5" aria-hidden="true" tabindex="-1"></a>population_data <span class="ot">&lt;-</span> population_data <span class="sc">%&gt;%</span></span>
+<span id="cb70-6"><a href="#cb70-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb70-7"><a href="#cb70-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">Age_Category =</span> <span class="fu">case_when</span>(</span>
+<span id="cb70-8"><a href="#cb70-8" aria-hidden="true" tabindex="-1"></a>      AG <span class="sc">%in%</span> age_categories[<span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>] <span class="sc">~</span> <span class="st">"Young"</span>,  <span class="co"># Age groups 0_to_4 until 20_to_24</span></span>
+<span id="cb70-9"><a href="#cb70-9" aria-hidden="true" tabindex="-1"></a>      AG <span class="sc">%in%</span> age_categories[<span class="dv">6</span><span class="sc">:</span><span class="dv">13</span>] <span class="sc">~</span> <span class="st">"Economy Active"</span>,  <span class="co"># Age groups 25_to_29 until 60_to_64</span></span>
+<span id="cb70-10"><a href="#cb70-10" aria-hidden="true" tabindex="-1"></a>      AG <span class="sc">%in%</span> age_categories[<span class="dv">14</span><span class="sc">:</span><span class="fu">length</span>(age_categories)] <span class="sc">~</span> <span class="st">"Aged"</span>,  <span class="co"># Age groups 65 and above</span></span>
+<span id="cb70-11"><a href="#cb70-11" aria-hidden="true" tabindex="-1"></a>      <span class="cn">TRUE</span> <span class="sc">~</span> <span class="st">"Other"</span></span>
+<span id="cb70-12"><a href="#cb70-12" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb70-13"><a href="#cb70-13" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb70-14"><a href="#cb70-14" aria-hidden="true" tabindex="-1"></a>animation_maps <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
+<span id="cb70-15"><a href="#cb70-15" aria-hidden="true" tabindex="-1"></a>age_clusters <span class="ot">&lt;-</span> <span class="fu">unique</span>(population_data<span class="sc">$</span>Age_Category)</span>
+<span id="cb70-16"><a href="#cb70-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb70-17"><a href="#cb70-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb70-18"><a href="#cb70-18" aria-hidden="true" tabindex="-1"></a>aggregated_data <span class="ot">&lt;-</span> population_data <span class="sc">%&gt;%</span></span>
+<span id="cb70-19"><a href="#cb70-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(SZ,Time,Age_Category) <span class="sc">%&gt;%</span></span>
+<span id="cb70-20"><a href="#cb70-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">Total_Population =</span> <span class="fu">sum</span>(Pop, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb70-21"><a href="#cb70-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stderr">
 <pre><code>`summarise()` has grouped output by 'SZ', 'Time'. You can override using the
 `.groups` argument.</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb78"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb78-1"><a href="#cb78-1" aria-hidden="true" tabindex="-1"></a>aggregated_data <span class="ot">&lt;-</span> aggregated_data <span class="sc">%&gt;%</span></span>
-<span id="cb78-2"><a href="#cb78-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate_at</span>(<span class="at">.vars =</span> <span class="fu">vars</span>(SZ), </span>
-<span id="cb78-3"><a href="#cb78-3" aria-hidden="true" tabindex="-1"></a>          <span class="at">.funs =</span> <span class="fu">list</span>(toupper))</span>
-<span id="cb78-4"><a href="#cb78-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb78-5"><a href="#cb78-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Now join the aggregated population data into the expanded spatial data</span></span>
-<span id="cb78-6"><a href="#cb78-6" aria-hidden="true" tabindex="-1"></a>final_map_data <span class="ot">&lt;-</span> <span class="fu">full_join</span>(mpsz, aggregated_data, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"SUBZONE_N"</span> <span class="ot">=</span> <span class="st">"SZ"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb72"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb72-1"><a href="#cb72-1" aria-hidden="true" tabindex="-1"></a>aggregated_data <span class="ot">&lt;-</span> aggregated_data <span class="sc">%&gt;%</span></span>
+<span id="cb72-2"><a href="#cb72-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate_at</span>(<span class="at">.vars =</span> <span class="fu">vars</span>(SZ), </span>
+<span id="cb72-3"><a href="#cb72-3" aria-hidden="true" tabindex="-1"></a>          <span class="at">.funs =</span> <span class="fu">list</span>(toupper))</span>
+<span id="cb72-4"><a href="#cb72-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb72-5"><a href="#cb72-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Now join the aggregated population data into the expanded spatial data</span></span>
+<span id="cb72-6"><a href="#cb72-6" aria-hidden="true" tabindex="-1"></a>final_map_data <span class="ot">&lt;-</span> <span class="fu">full_join</span>(mpsz, aggregated_data, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"SUBZONE_N"</span> <span class="ot">=</span> <span class="st">"SZ"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <section id="difference-in-the-number-of-mpzs-sub-zone-versus-populations-sub-zones." class="level4">
 <h4 class="anchored" data-anchor-id="difference-in-the-number-of-mpzs-sub-zone-versus-populations-sub-zones.">4.1.1.1 Difference in the number of MPZ’s sub-zone versus Population’s sub-zones.</h4>
 <p>While analyzing the data, we noticed that in the year 2020, there are more subzones than the usual 323 MPZ subzones. To address this, we can apply a simple filter to remove the excess subzones using the following code:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb79"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb79-1"><a href="#cb79-1" aria-hidden="true" tabindex="-1"></a>unique_sz <span class="ot">&lt;-</span> <span class="fu">unique</span>(aggregated_data<span class="sc">$</span>SZ)</span>
-<span id="cb79-2"><a href="#cb79-2" aria-hidden="true" tabindex="-1"></a>unique_mpsz_sz <span class="ot">&lt;-</span> <span class="fu">unique</span>(mpsz<span class="sc">$</span>SUBZONE_N)</span>
-<span id="cb79-3"><a href="#cb79-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb79-4"><a href="#cb79-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Find subzones in aggregated_data but not in mpsz</span></span>
-<span id="cb79-5"><a href="#cb79-5" aria-hidden="true" tabindex="-1"></a>missing_in_mpsz <span class="ot">&lt;-</span> <span class="fu">setdiff</span>(unique_sz, unique_mpsz_sz)</span>
-<span id="cb79-6"><a href="#cb79-6" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Subzones in aggregated_data but not in mpsz:</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb73"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb73-1"><a href="#cb73-1" aria-hidden="true" tabindex="-1"></a>unique_sz <span class="ot">&lt;-</span> <span class="fu">unique</span>(aggregated_data<span class="sc">$</span>SZ)</span>
+<span id="cb73-2"><a href="#cb73-2" aria-hidden="true" tabindex="-1"></a>unique_mpsz_sz <span class="ot">&lt;-</span> <span class="fu">unique</span>(mpsz<span class="sc">$</span>SUBZONE_N)</span>
+<span id="cb73-3"><a href="#cb73-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb73-4"><a href="#cb73-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Find subzones in aggregated_data but not in mpsz</span></span>
+<span id="cb73-5"><a href="#cb73-5" aria-hidden="true" tabindex="-1"></a>missing_in_mpsz <span class="ot">&lt;-</span> <span class="fu">setdiff</span>(unique_sz, unique_mpsz_sz)</span>
+<span id="cb73-6"><a href="#cb73-6" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Subzones in aggregated_data but not in mpsz:</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Subzones in aggregated_data but not in mpsz:</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb81"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb81-1"><a href="#cb81-1" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(missing_in_mpsz)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb75"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb75-1"><a href="#cb75-1" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(missing_in_mpsz)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code> [1] "BAHAR"                    "BRICKLAND"               
  [3] "CLEANTECH"                "FOREST HILL"             
@@ -1470,19 +1451,19 @@ Please use legend.outside.size to control the width of the outside legend</code>
  [9] "NICOLL"                   "PARK"                    
 [11] "PLANTATION"               "TENGAH INDUSTRIAL ESTATE"</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb83"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb83-1"><a href="#cb83-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Find subzones in mpsz but not in aggregated_data</span></span>
-<span id="cb83-2"><a href="#cb83-2" aria-hidden="true" tabindex="-1"></a>missing_in_aggregated <span class="ot">&lt;-</span> <span class="fu">setdiff</span>(unique_mpsz_sz, unique_sz)</span>
-<span id="cb83-3"><a href="#cb83-3" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Subzones in mpsz but not in aggregated_data:</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb77"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb77-1"><a href="#cb77-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Find subzones in mpsz but not in aggregated_data</span></span>
+<span id="cb77-2"><a href="#cb77-2" aria-hidden="true" tabindex="-1"></a>missing_in_aggregated <span class="ot">&lt;-</span> <span class="fu">setdiff</span>(unique_mpsz_sz, unique_sz)</span>
+<span id="cb77-3"><a href="#cb77-3" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Subzones in mpsz but not in aggregated_data:</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Subzones in mpsz but not in aggregated_data:</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb85"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb85-1"><a href="#cb85-1" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(missing_in_aggregated)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb79"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb79-1"><a href="#cb79-1" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(missing_in_aggregated)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>character(0)</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb87"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb87-1"><a href="#cb87-1" aria-hidden="true" tabindex="-1"></a>common_subzones <span class="ot">&lt;-</span> <span class="fu">intersect</span>(<span class="fu">unique</span>(mpsz<span class="sc">$</span>SUBZONE_N), <span class="fu">unique</span>(aggregated_data<span class="sc">$</span>SZ))</span>
-<span id="cb87-2"><a href="#cb87-2" aria-hidden="true" tabindex="-1"></a>final_map_data <span class="ot">&lt;-</span> final_map_data <span class="sc">%&gt;%</span></span>
-<span id="cb87-3"><a href="#cb87-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(SUBZONE_N <span class="sc">%in%</span> common_subzones)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb81"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb81-1"><a href="#cb81-1" aria-hidden="true" tabindex="-1"></a>common_subzones <span class="ot">&lt;-</span> <span class="fu">intersect</span>(<span class="fu">unique</span>(mpsz<span class="sc">$</span>SUBZONE_N), <span class="fu">unique</span>(aggregated_data<span class="sc">$</span>SZ))</span>
+<span id="cb81-2"><a href="#cb81-2" aria-hidden="true" tabindex="-1"></a>final_map_data <span class="ot">&lt;-</span> final_map_data <span class="sc">%&gt;%</span></span>
+<span id="cb81-3"><a href="#cb81-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(SUBZONE_N <span class="sc">%in%</span> common_subzones)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 </section>
@@ -1497,73 +1478,73 @@ Please use legend.outside.size to control the width of the outside legend</code>
 <li>Finally, we create the GIF to visualize the changes over time.</li>
 </ol>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb88"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb88-1"><a href="#cb88-1" aria-hidden="true" tabindex="-1"></a>age_clusters <span class="ot">&lt;-</span> <span class="fu">unique</span>(final_map_data<span class="sc">$</span>Age_Category)</span>
-<span id="cb88-2"><a href="#cb88-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb88-3"><a href="#cb88-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Loop through each age category and generate a GIF</span></span>
-<span id="cb88-4"><a href="#cb88-4" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (age_cluster <span class="cf">in</span> age_clusters) {</span>
-<span id="cb88-5"><a href="#cb88-5" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Filter the data for the current age category</span></span>
-<span id="cb88-6"><a href="#cb88-6" aria-hidden="true" tabindex="-1"></a>  age_category_data <span class="ot">&lt;-</span> final_map_data <span class="sc">%&gt;%</span></span>
-<span id="cb88-7"><a href="#cb88-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(Age_Category <span class="sc">==</span> age_cluster)</span>
-<span id="cb88-8"><a href="#cb88-8" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb88-9"><a href="#cb88-9" aria-hidden="true" tabindex="-1"></a>  <span class="co"># List to store each year’s map for the GIF</span></span>
-<span id="cb88-10"><a href="#cb88-10" aria-hidden="true" tabindex="-1"></a>  animation_frames <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
-<span id="cb88-11"><a href="#cb88-11" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb88-12"><a href="#cb88-12" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Loop through each year and generate frames</span></span>
-<span id="cb88-13"><a href="#cb88-13" aria-hidden="true" tabindex="-1"></a>  years <span class="ot">&lt;-</span> <span class="fu">unique</span>(age_category_data<span class="sc">$</span>Time)</span>
-<span id="cb88-14"><a href="#cb88-14" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (year <span class="cf">in</span> years) {</span>
-<span id="cb88-15"><a href="#cb88-15" aria-hidden="true" tabindex="-1"></a>    year_data <span class="ot">&lt;-</span> age_category_data <span class="sc">%&gt;%</span></span>
-<span id="cb88-16"><a href="#cb88-16" aria-hidden="true" tabindex="-1"></a>      <span class="fu">filter</span>(Time <span class="sc">==</span> year)</span>
-<span id="cb88-17"><a href="#cb88-17" aria-hidden="true" tabindex="-1"></a>    </span>
-<span id="cb88-18"><a href="#cb88-18" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="fu">nrow</span>(year_data) <span class="sc">&gt;</span> <span class="dv">0</span>) {  <span class="co"># Ensure there is data for the year</span></span>
-<span id="cb88-19"><a href="#cb88-19" aria-hidden="true" tabindex="-1"></a>      <span class="co"># Create the map for the current year</span></span>
-<span id="cb88-20"><a href="#cb88-20" aria-hidden="true" tabindex="-1"></a>      map <span class="ot">&lt;-</span> <span class="fu">tm_shape</span>(year_data) <span class="sc">+</span></span>
-<span id="cb88-21"><a href="#cb88-21" aria-hidden="true" tabindex="-1"></a>        <span class="fu">tm_polygons</span>(<span class="st">"Total_Population"</span>, <span class="at">style =</span> <span class="st">"quantile"</span>, <span class="at">palette =</span> <span class="st">"-RdYlBu"</span>, </span>
-<span id="cb88-22"><a href="#cb88-22" aria-hidden="true" tabindex="-1"></a>                    <span class="at">title =</span> <span class="fu">paste</span>(age_cluster, <span class="st">"Population in"</span>, year)) <span class="sc">+</span></span>
-<span id="cb88-23"><a href="#cb88-23" aria-hidden="true" tabindex="-1"></a>        <span class="fu">tm_layout</span>(</span>
-<span id="cb88-24"><a href="#cb88-24" aria-hidden="true" tabindex="-1"></a>          <span class="at">main.title =</span> <span class="fu">paste</span>(<span class="st">"Population Distribution for"</span>, age_cluster, <span class="st">"in"</span>, year),</span>
-<span id="cb88-25"><a href="#cb88-25" aria-hidden="true" tabindex="-1"></a>          <span class="at">main.title.size =</span> <span class="dv">1</span>,  <span class="co"># Increase the title size for better visibility</span></span>
-<span id="cb88-26"><a href="#cb88-26" aria-hidden="true" tabindex="-1"></a>          <span class="at">main.title.fontface =</span> <span class="st">"bold"</span>,  <span class="co"># Make the title bold</span></span>
-<span id="cb88-27"><a href="#cb88-27" aria-hidden="true" tabindex="-1"></a>          <span class="at">main.title.position =</span> <span class="fu">c</span>(<span class="st">"center"</span>, <span class="st">"top"</span>),  <span class="co"># Center align the title at the top</span></span>
-<span id="cb88-28"><a href="#cb88-28" aria-hidden="true" tabindex="-1"></a>          <span class="at">legend.position =</span> <span class="fu">c</span>(<span class="st">"center"</span>, <span class="st">"bottom"</span>),  <span class="co"># Move the legend below the map</span></span>
-<span id="cb88-29"><a href="#cb88-29" aria-hidden="true" tabindex="-1"></a>          <span class="at">legend.stack =</span> <span class="st">"horizontal"</span>,  <span class="co"># Ensure the legend is stacked horizontally</span></span>
-<span id="cb88-30"><a href="#cb88-30" aria-hidden="true" tabindex="-1"></a>          <span class="at">frame =</span> <span class="cn">FALSE</span></span>
-<span id="cb88-31"><a href="#cb88-31" aria-hidden="true" tabindex="-1"></a>        )</span>
-<span id="cb88-32"><a href="#cb88-32" aria-hidden="true" tabindex="-1"></a>      </span>
-<span id="cb88-33"><a href="#cb88-33" aria-hidden="true" tabindex="-1"></a>      <span class="co"># Add the map to the list of frames</span></span>
-<span id="cb88-34"><a href="#cb88-34" aria-hidden="true" tabindex="-1"></a>      animation_frames[[<span class="fu">as.character</span>(year)]] <span class="ot">&lt;-</span> map</span>
-<span id="cb88-35"><a href="#cb88-35" aria-hidden="true" tabindex="-1"></a>    } <span class="cf">else</span> {</span>
-<span id="cb88-36"><a href="#cb88-36" aria-hidden="true" tabindex="-1"></a>      <span class="fu">cat</span>(<span class="st">"Skipping year:"</span>, year, <span class="st">"due to missing or empty data for age category:"</span>, age_cluster, <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span>
-<span id="cb88-37"><a href="#cb88-37" aria-hidden="true" tabindex="-1"></a>    }</span>
-<span id="cb88-38"><a href="#cb88-38" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb88-39"><a href="#cb88-39" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb88-40"><a href="#cb88-40" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Dynamically create a single comparison map using tm_facets</span></span>
-<span id="cb88-41"><a href="#cb88-41" aria-hidden="true" tabindex="-1"></a>  comparison_map <span class="ot">&lt;-</span> <span class="fu">tm_shape</span>(age_category_data) <span class="sc">+</span></span>
-<span id="cb88-42"><a href="#cb88-42" aria-hidden="true" tabindex="-1"></a>    <span class="fu">tm_polygons</span>(<span class="st">"Total_Population"</span>, <span class="at">style =</span> <span class="st">"quantile"</span>, <span class="at">palette =</span> <span class="st">"-RdYlBu"</span>, </span>
-<span id="cb88-43"><a href="#cb88-43" aria-hidden="true" tabindex="-1"></a>                <span class="at">title =</span> <span class="fu">paste</span>(age_cluster, <span class="st">"Population Comparison (2011-2020)"</span>)) <span class="sc">+</span></span>
-<span id="cb88-44"><a href="#cb88-44" aria-hidden="true" tabindex="-1"></a>    <span class="fu">tm_facets</span>(<span class="at">by =</span> <span class="st">"Time"</span>, <span class="at">ncol =</span> <span class="dv">2</span>, <span class="at">free.coords =</span> <span class="cn">FALSE</span>) <span class="sc">+</span>  <span class="co"># Arrange facets in 2 columns</span></span>
-<span id="cb88-45"><a href="#cb88-45" aria-hidden="true" tabindex="-1"></a>    <span class="fu">tm_layout</span>(</span>
-<span id="cb88-46"><a href="#cb88-46" aria-hidden="true" tabindex="-1"></a>      <span class="at">main.title =</span> <span class="fu">paste</span>(<span class="st">"Population Comparison for"</span>, age_cluster, <span class="st">"Across All Years"</span>),</span>
-<span id="cb88-47"><a href="#cb88-47" aria-hidden="true" tabindex="-1"></a>      <span class="at">main.title.size =</span> <span class="dv">2</span>,  <span class="co"># Max out the title size for the final frame</span></span>
-<span id="cb88-48"><a href="#cb88-48" aria-hidden="true" tabindex="-1"></a>      <span class="at">main.title.fontface =</span> <span class="st">"bold"</span>,  <span class="co"># Make the title bold</span></span>
-<span id="cb88-49"><a href="#cb88-49" aria-hidden="true" tabindex="-1"></a>      <span class="at">main.title.position =</span> <span class="fu">c</span>(<span class="st">"center"</span>, <span class="st">"top"</span>),  <span class="co"># Center align the title at the top</span></span>
-<span id="cb88-50"><a href="#cb88-50" aria-hidden="true" tabindex="-1"></a>      <span class="at">legend.position =</span> <span class="fu">c</span>(<span class="st">"center"</span>, <span class="st">"bottom"</span>),  <span class="co"># Move the legend to the bottom</span></span>
-<span id="cb88-51"><a href="#cb88-51" aria-hidden="true" tabindex="-1"></a>      <span class="at">legend.stack =</span> <span class="st">"horizontal"</span>,  <span class="co"># Ensure the legend is stacked horizontally for better fit</span></span>
-<span id="cb88-52"><a href="#cb88-52" aria-hidden="true" tabindex="-1"></a>      <span class="at">frame =</span> <span class="cn">FALSE</span></span>
-<span id="cb88-53"><a href="#cb88-53" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb88-54"><a href="#cb88-54" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb88-55"><a href="#cb88-55" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Add the comparison map as the final frame multiple times to extend its duration</span></span>
-<span id="cb88-56"><a href="#cb88-56" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>) {  <span class="co"># Adding the final frame 5 times to simulate a 10-second delay (5 x 2 seconds)</span></span>
-<span id="cb88-57"><a href="#cb88-57" aria-hidden="true" tabindex="-1"></a>    animation_frames[[<span class="fu">paste0</span>(<span class="st">"comparison_"</span>, i)]] <span class="ot">&lt;-</span> comparison_map</span>
-<span id="cb88-58"><a href="#cb88-58" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb88-59"><a href="#cb88-59" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb88-60"><a href="#cb88-60" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Save the animation as a GIF with the correct delays</span></span>
-<span id="cb88-61"><a href="#cb88-61" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tmap_animation</span>(animation_frames, </span>
-<span id="cb88-62"><a href="#cb88-62" aria-hidden="true" tabindex="-1"></a>                 <span class="at">filename =</span> <span class="fu">paste0</span>(<span class="st">"population_time_series_"</span>, age_cluster, <span class="st">".gif"</span>), </span>
-<span id="cb88-63"><a href="#cb88-63" aria-hidden="true" tabindex="-1"></a>                 <span class="at">delay =</span> <span class="dv">200</span>,  <span class="co"># 2 seconds per frame (2000 ms)</span></span>
-<span id="cb88-64"><a href="#cb88-64" aria-hidden="true" tabindex="-1"></a>                 <span class="at">width =</span> <span class="dv">1500</span>, <span class="at">height =</span> <span class="dv">1200</span>)  <span class="co"># Increase the size for better visibility</span></span>
-<span id="cb88-65"><a href="#cb88-65" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb88-66"><a href="#cb88-66" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="st">"Saved GIF for Age Category:"</span>, age_cluster, <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span>
-<span id="cb88-67"><a href="#cb88-67" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb82"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb82-1"><a href="#cb82-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tmap)</span>
+<span id="cb82-2"><a href="#cb82-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb82-3"><a href="#cb82-3" aria-hidden="true" tabindex="-1"></a>age_clusters <span class="ot">&lt;-</span> <span class="fu">unique</span>(final_map_data<span class="sc">$</span>Age_Category)</span>
+<span id="cb82-4"><a href="#cb82-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb82-5"><a href="#cb82-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Loop through each age category and generate a GIF</span></span>
+<span id="cb82-6"><a href="#cb82-6" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (age_cluster <span class="cf">in</span> age_clusters) {</span>
+<span id="cb82-7"><a href="#cb82-7" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Filter the data for the current age category</span></span>
+<span id="cb82-8"><a href="#cb82-8" aria-hidden="true" tabindex="-1"></a>  age_category_data <span class="ot">&lt;-</span> final_map_data <span class="sc">%&gt;%</span></span>
+<span id="cb82-9"><a href="#cb82-9" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(Age_Category <span class="sc">==</span> age_cluster)</span>
+<span id="cb82-10"><a href="#cb82-10" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb82-11"><a href="#cb82-11" aria-hidden="true" tabindex="-1"></a>  <span class="co"># List to store each year’s map for the GIF</span></span>
+<span id="cb82-12"><a href="#cb82-12" aria-hidden="true" tabindex="-1"></a>  animation_frames <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
+<span id="cb82-13"><a href="#cb82-13" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb82-14"><a href="#cb82-14" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Loop through each year and generate frames</span></span>
+<span id="cb82-15"><a href="#cb82-15" aria-hidden="true" tabindex="-1"></a>  years <span class="ot">&lt;-</span> <span class="fu">unique</span>(age_category_data<span class="sc">$</span>Time)</span>
+<span id="cb82-16"><a href="#cb82-16" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (year <span class="cf">in</span> years) {</span>
+<span id="cb82-17"><a href="#cb82-17" aria-hidden="true" tabindex="-1"></a>    year_data <span class="ot">&lt;-</span> age_category_data <span class="sc">%&gt;%</span></span>
+<span id="cb82-18"><a href="#cb82-18" aria-hidden="true" tabindex="-1"></a>      <span class="fu">filter</span>(Time <span class="sc">==</span> year)</span>
+<span id="cb82-19"><a href="#cb82-19" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb82-20"><a href="#cb82-20" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="fu">nrow</span>(year_data) <span class="sc">&gt;</span> <span class="dv">0</span>) {  <span class="co"># Ensure there is data for the year</span></span>
+<span id="cb82-21"><a href="#cb82-21" aria-hidden="true" tabindex="-1"></a>      <span class="co"># Create the map for the current year</span></span>
+<span id="cb82-22"><a href="#cb82-22" aria-hidden="true" tabindex="-1"></a>      map <span class="ot">&lt;-</span> <span class="fu">tm_shape</span>(year_data) <span class="sc">+</span></span>
+<span id="cb82-23"><a href="#cb82-23" aria-hidden="true" tabindex="-1"></a>        <span class="fu">tm_polygons</span>(<span class="st">"Total_Population"</span>, <span class="at">style =</span> <span class="st">"quantile"</span>, <span class="at">palette =</span> <span class="st">"-RdYlBu"</span>, </span>
+<span id="cb82-24"><a href="#cb82-24" aria-hidden="true" tabindex="-1"></a>                    <span class="at">title =</span> <span class="fu">paste</span>(age_cluster, <span class="st">"Population in"</span>, year)) <span class="sc">+</span></span>
+<span id="cb82-25"><a href="#cb82-25" aria-hidden="true" tabindex="-1"></a>        <span class="fu">tm_layout</span>(</span>
+<span id="cb82-26"><a href="#cb82-26" aria-hidden="true" tabindex="-1"></a>          <span class="at">title =</span> <span class="fu">paste</span>(<span class="st">"Population Distribution for"</span>, age_cluster, <span class="st">"in"</span>, year),</span>
+<span id="cb82-27"><a href="#cb82-27" aria-hidden="true" tabindex="-1"></a>          <span class="at">title.size =</span> <span class="fl">2.5</span>,  <span class="co"># Increase the title size for better visibility</span></span>
+<span id="cb82-28"><a href="#cb82-28" aria-hidden="true" tabindex="-1"></a>          <span class="at">title.fontface =</span> <span class="st">"bold"</span>,  <span class="co"># Make the title bold</span></span>
+<span id="cb82-29"><a href="#cb82-29" aria-hidden="true" tabindex="-1"></a>          <span class="at">title.position =</span> <span class="fu">c</span>(<span class="st">"center"</span>, <span class="st">"top"</span>),  <span class="co"># Center align the title at the top</span></span>
+<span id="cb82-30"><a href="#cb82-30" aria-hidden="true" tabindex="-1"></a>          <span class="at">legend.position =</span> <span class="fu">c</span>(<span class="st">"center"</span>, <span class="st">"bottom"</span>),  <span class="co"># Move the legend below the map</span></span>
+<span id="cb82-31"><a href="#cb82-31" aria-hidden="true" tabindex="-1"></a>          <span class="at">legend.stack =</span> <span class="st">"horizontal"</span>,  <span class="co"># Ensure the legend is stacked horizontally</span></span>
+<span id="cb82-32"><a href="#cb82-32" aria-hidden="true" tabindex="-1"></a>          <span class="at">frame =</span> <span class="cn">FALSE</span></span>
+<span id="cb82-33"><a href="#cb82-33" aria-hidden="true" tabindex="-1"></a>        )</span>
+<span id="cb82-34"><a href="#cb82-34" aria-hidden="true" tabindex="-1"></a>      </span>
+<span id="cb82-35"><a href="#cb82-35" aria-hidden="true" tabindex="-1"></a>      <span class="co"># Add the map to the list of frames</span></span>
+<span id="cb82-36"><a href="#cb82-36" aria-hidden="true" tabindex="-1"></a>      animation_frames[[<span class="fu">as.character</span>(year)]] <span class="ot">&lt;-</span> map</span>
+<span id="cb82-37"><a href="#cb82-37" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb82-38"><a href="#cb82-38" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb82-39"><a href="#cb82-39" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb82-40"><a href="#cb82-40" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Dynamically create a single comparison map using tm_facets</span></span>
+<span id="cb82-41"><a href="#cb82-41" aria-hidden="true" tabindex="-1"></a>  comparison_map <span class="ot">&lt;-</span> <span class="fu">tm_shape</span>(age_category_data) <span class="sc">+</span></span>
+<span id="cb82-42"><a href="#cb82-42" aria-hidden="true" tabindex="-1"></a>    <span class="fu">tm_polygons</span>(<span class="st">"Total_Population"</span>, <span class="at">style =</span> <span class="st">"quantile"</span>, <span class="at">palette =</span> <span class="st">"-RdYlBu"</span>, </span>
+<span id="cb82-43"><a href="#cb82-43" aria-hidden="true" tabindex="-1"></a>                <span class="at">title =</span> <span class="fu">paste</span>(age_cluster, <span class="st">"Population Comparison (2011-2020)"</span>)) <span class="sc">+</span></span>
+<span id="cb82-44"><a href="#cb82-44" aria-hidden="true" tabindex="-1"></a>    <span class="fu">tm_facets</span>(<span class="at">by =</span> <span class="st">"Time"</span>, <span class="at">ncol =</span> <span class="dv">2</span>, <span class="at">free.coords =</span> <span class="cn">FALSE</span>) <span class="sc">+</span>  <span class="co"># Arrange facets in 2 columns</span></span>
+<span id="cb82-45"><a href="#cb82-45" aria-hidden="true" tabindex="-1"></a>    <span class="fu">tm_layout</span>(</span>
+<span id="cb82-46"><a href="#cb82-46" aria-hidden="true" tabindex="-1"></a>      <span class="at">title =</span> <span class="fu">paste</span>(<span class="st">"Population Comparison for"</span>, age_cluster, <span class="st">"Across All Years"</span>),</span>
+<span id="cb82-47"><a href="#cb82-47" aria-hidden="true" tabindex="-1"></a>      <span class="at">title.size =</span> <span class="dv">5</span>,  <span class="co"># Max out the title size for the final frame</span></span>
+<span id="cb82-48"><a href="#cb82-48" aria-hidden="true" tabindex="-1"></a>      <span class="at">title.fontface =</span> <span class="st">"bold"</span>,  <span class="co"># Make the title bold</span></span>
+<span id="cb82-49"><a href="#cb82-49" aria-hidden="true" tabindex="-1"></a>      <span class="at">title.position =</span> <span class="fu">c</span>(<span class="st">"center"</span>, <span class="st">"top"</span>),  <span class="co"># Center align the title at the top</span></span>
+<span id="cb82-50"><a href="#cb82-50" aria-hidden="true" tabindex="-1"></a>      <span class="at">legend.position =</span> <span class="fu">c</span>(<span class="st">"center"</span>, <span class="st">"bottom"</span>),  <span class="co"># Move the legend to the bottom</span></span>
+<span id="cb82-51"><a href="#cb82-51" aria-hidden="true" tabindex="-1"></a>      <span class="at">legend.stack =</span> <span class="st">"horizontal"</span>,  <span class="co"># Ensure the legend is stacked horizontally for better fit</span></span>
+<span id="cb82-52"><a href="#cb82-52" aria-hidden="true" tabindex="-1"></a>      <span class="at">frame =</span> <span class="cn">FALSE</span></span>
+<span id="cb82-53"><a href="#cb82-53" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb82-54"><a href="#cb82-54" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb82-55"><a href="#cb82-55" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Add the comparison map as the final frame multiple times to extend its duration</span></span>
+<span id="cb82-56"><a href="#cb82-56" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>) {  <span class="co"># Adding the final frame 5 times to simulate a 10-second delay (5 x 2 seconds)</span></span>
+<span id="cb82-57"><a href="#cb82-57" aria-hidden="true" tabindex="-1"></a>    animation_frames[[<span class="fu">paste0</span>(<span class="st">"comparison_"</span>, i)]] <span class="ot">&lt;-</span> comparison_map</span>
+<span id="cb82-58"><a href="#cb82-58" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb82-59"><a href="#cb82-59" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb82-60"><a href="#cb82-60" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Save the animation as a GIF with the correct delays</span></span>
+<span id="cb82-61"><a href="#cb82-61" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tmap_animation</span>(animation_frames, </span>
+<span id="cb82-62"><a href="#cb82-62" aria-hidden="true" tabindex="-1"></a>                 <span class="at">filename =</span> <span class="fu">paste0</span>(<span class="st">"population_time_series_"</span>, age_cluster, <span class="st">".gif"</span>), </span>
+<span id="cb82-63"><a href="#cb82-63" aria-hidden="true" tabindex="-1"></a>                 <span class="at">delay =</span> <span class="dv">200</span>,  <span class="co"># 2 seconds per frame (2000 ms)</span></span>
+<span id="cb82-64"><a href="#cb82-64" aria-hidden="true" tabindex="-1"></a>                 <span class="at">width =</span> <span class="dv">1500</span>, <span class="at">height =</span> <span class="dv">1200</span>)  <span class="co"># Increase the size for better visibility</span></span>
+<span id="cb82-65"><a href="#cb82-65" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb82-66"><a href="#cb82-66" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="fu">paste</span>(<span class="st">"Saved GIF for Age Category:"</span>, age_cluster, <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>))</span>
+<span id="cb82-67"><a href="#cb82-67" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Creating frames
 =====</code></pre>
@@ -1716,7 +1697,7 @@ Creating animation
 Animation saved to C:\Users\jiale\Desktop\IS415\IS415-GAA\Hands_On_Exercises\Hands_On_Exercise_2\population_time_series_Young.gif 
 Saved GIF for Age Category: Young </code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb135"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb135-1"><a href="#cb135-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"All GIFs have been created.</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb129"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb129-1"><a href="#cb129-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"All GIFs have been created.</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>All GIFs have been created.</code></pre>
 </div>
@@ -1727,15 +1708,12 @@ Saved GIF for Age Category: Young </code></pre>
 <h3 class="anchored" data-anchor-id="visualization-of-the-gifs.">4.1.3 Visualization of the GIFS.</h3>
 <section id="age" class="level4">
 <h4 class="anchored" data-anchor-id="age">4.1.3.1 Age</h4>
-<p><img src="population_time_series_Aged.gif" class="img-fluid"></p>
 </section>
 <section id="economic-active" class="level4">
 <h4 class="anchored" data-anchor-id="economic-active">4.1.3.2 Economic Active</h4>
-<p><img src="population_time_series_Economy Active.gif" class="img-fluid"></p>
 </section>
 <section id="young" class="level4">
 <h4 class="anchored" data-anchor-id="young">4.1.3.3 Young</h4>
-<p><img src="population_time_series_Young.gif" class="img-fluid"></p>
 
 
 </section>
