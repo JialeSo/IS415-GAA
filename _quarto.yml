@@ -2,7 +2,7 @@ project:
   type: website
 
 website:
-  title: "IS415-GAA-JialeSo"
+  title: "IS415-GAA: JialeSo"
   navbar:
     left:
       - text: "Hands-On Exercises"
@@ -39,8 +39,18 @@ website:
 
 format:
   html:
-    theme: cosmo
+    theme: journal
+    highlight-style: dracula
     css: styles.css
     toc: true
+    toc-location: left # Consistent TOC placement across all pages
+    footer:
+      text: "© 2024 JialeSo | IS415-GAA"
+      left:
+        text: "Privacy Policy"
+        href: "#"
+      right:
+        text: "Contact"
+        href: "mailto:your-email@example.com"
 
 editor: visual

@@ -8,3 +8,7 @@ execute:
   echo: true
   freeze: true
 ---
+
+There's no In Class Exercise 1, so here's a picture of a cat.
+
+![](images/clipboard-190842043.png)
