@@ -1,7 +1,9 @@
 ---
 title: "Work in Progress"
-format: html
-editor: visual
+execute: 
+  eval: true
+  echo: true
+  freeze: true
 ---
 
 # Hold Up... 🚧

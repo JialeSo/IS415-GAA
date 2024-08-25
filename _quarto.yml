@@ -14,21 +14,87 @@ website:
           - text: "Hands-On Exercise 2"
             href: "Hands_On_exercises/Hands_On_Exercise_2/Hands_On_Exercise2.html"
             icon: fas fa-code
-
+          - text: "Hands-On Exercise 3"
+            href: "404.qmd"
+            icon: fas fa-code
+          - text: "Hands-On Exercise 4"
+            href: "404.qmd"
+            icon: fas fa-code
+          - text: "Hands-On Exercise 5"
+            href: "404.qmd"
+            icon: fas fa-code
+          - text: "Hands-On Exercise 6"
+            href: "404.qmd"
+            icon: fas fa-code
+          - text: "Hands-On Exercise 7"
+            href: "404.qmd"
+            icon: fas fa-code
+          - text: "Hands-On Exercise 8"
+            href: "404.qmd"
+            icon: fas fa-code
+          - text: "Hands-On Exercise 9"
+            href: "404.qmd"
+            icon: fas fa-code
+          - text: "Hands-On Exercise 10"
+            href: "404.qmd"
+            icon: fas fa-code
+          - text: "Hands-On Exercise 11"
+            href: "404.qmd"
+            icon: fas fa-code
+          - text: "Hands-On Exercise 12"
+            href: "404.qmd"
+            icon: fas fa-code
+          - text: "Hands-On Exercise 13"
+            href: "404.qmd"
+            icon: fas fa-code
       - text: "In-Class Exercises"
         icon: fas fa-chalkboard-teacher
         menu:
           - text: "In-Class Exercise 1"
             href: "In_Class_exercises/In_Class_Exercise_1/In_Class_Exercise1.html"
             icon: fas fa-file-alt
-
+          - text: "In-Class Exercise 2"
+            href: "404.qmd"
+            icon: fas fa-file-alt
+          - text: "In-Class Exercise 3"
+            href: "404.qmd"
+            icon: fas fa-file-alt
+          - text: "In-Class Exercise 4"
+            href: "404.qmd"
+            icon: fas fa-file-alt
+          - text: "In-Class Exercise 5"
+            href: "404.qmd"
+            icon: fas fa-file-alt
+          - text: "In-Class Exercise 6"
+            href: "404.qmd"
+            icon: fas fa-file-alt
+          - text: "In-Class Exercise 7"
+            href: "404.qmd"
+            icon: fas fa-file-alt
+          - text: "In-Class Exercise 8"
+            href: "404.qmd"
+            icon: fas fa-file-alt
+          - text: "In-Class Exercise 9"
+            href: "404.qmd"
+            icon: fas fa-file-alt
+          - text: "In-Class Exercise 10"
+            href: "404.qmd"
+            icon: fas fa-file-alt
+          - text: "In-Class Exercise 11"
+            href: "404.qmd"
+            icon: fas fa-file-alt
+          - text: "In-Class Exercise 12"
+            href: "404.qmd"
+            icon: fas fa-file-alt
+          - text: "In-Class Exercise 13"
+            href: "404.qmd"
+            icon: fas fa-file-alt
       - text: "Take-Home Exercises"
         icon: fas fa-home
         menu:
           - text: "Take-Home Exercise 1"
             href: "404.qmd"
             icon: fas fa-file-alt
-
     right:
       - href: index.qmd
         text: "Home"
@@ -40,17 +106,10 @@ website:
 format:
   html:
     theme: journal
-    highlight-style: dracula
-    css: styles.css
+    highlight-style: dracula # Ensure Dracula is applied globally
+    freeze: false
+    css: styles.css # Custom styles for non-code elements
     toc: true
-    toc-location: left # Consistent TOC placement across all pages
-    footer:
-      text: "© 2024 JialeSo | IS415-GAA"
-      left:
-        text: "Privacy Policy"
-        href: "#"
-      right:
-        text: "Contact"
-        href: "mailto:your-email@example.com"
+    toc-location: right
 
 editor: visual

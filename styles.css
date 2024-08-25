@@ -1,95 +1,71 @@
 /* Import Google Fonts */
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&family=Open+Sans:wght@400;600&display=swap');
 
-/* Font Awesome for Icons */
-@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css');
-
 /* General Layout */
 body {
   font-family: 'Open Sans', sans-serif;
-  background-color: #2b2b2b; /* Dark grey background */
-  color: #e0e0e0; /* Light grey text */
+  background-color: #2b2b2b;
+  color: #e0e0e0;
+}
+
+/* Headers */
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Montserrat', sans-serif;
+  color: #ffffff;
+  font-weight: 600;
 }
 
 /* Navbar */
 .quarto-navbar {
-  background-color: #444444; /* Darker background for the navbar */
-  border-bottom: 2px solid #E74C3C; /* Red-pinkish accent color */
+  background-color: #444444;
+  border-bottom: 2px solid #E74C3C;
 }
 
 .quarto-navbar .navbar-nav .nav-link {
-  font-family: 'Montserrat', sans-serif; /* Ensuring Montserrat is used */
+  font-family: 'Montserrat', sans-serif;
   color: #ffffff;
   font-weight: 600;
 }
 
-.quarto-navbar .navbar-nav .nav-link:hover {
-  color: #E74C3C; /* Hover effect with accent color */
-}
-
-/* Icons */
-.quarto-navbar .navbar-nav .nav-link .fas {
-  margin-right: 8px;
-}
-
-.quarto-navbar .navbar-nav .nav-link {
-  display: flex;
-  align-items: center;
-}
-
-/* Dropdown Menu */
-.dropdown-menu {
-  background-color: #333333;
-  border: none;
-}
-
-.dropdown-menu .dropdown-item {
+/* Minimal Additional Styling */
+p {
+  font-family: 'Open Sans', sans-serif;
+  line-height: 1.8;
   color: #e0e0e0;
-  font-family: 'Open Sans', sans-serif;
 }
 
-.dropdown-menu .dropdown-item:hover {
-  background-color: #E74C3C;
-}
-
-/* Headings */
-h1, h2, h3, h4, h5, h6 {
-  font-family: 'Montserrat', sans-serif; /* Ensuring Montserrat is applied */
-  color: #ffffff; /* White headings */
-  font-weight: 600;
-}
-
-/* Table of Contents (TOC) */
-.toc {
-  background-color: #2b2b2b; /* Dark background for the TOC */
-  border-left: 4px solid #E74C3C;
-  padding-left: 15px;
-}
-
-.toc a {
-  font-family: 'Open Sans', sans-serif;
-  color: #ffffff;
-}
-
-.toc a:hover {
-  color: #E74C3C;
-}
-
-/* Code Blocks and Cell Output */
-.sourceCode, .cell-output, .cell-output-stderr, .cell-output-stdout {
-  background-color: #1c1c1e; /* Darker background for code and cell output */
-  color: #e6e6e6; /* Light text for dark background */
+/* Dracula-Themed Output Blocks */
+.cell-output, 
+.cell-output-stdout, 
+.cell-output-stderr, 
+.cell-output-display, 
+.cell-output-stdouterr {
+  background-color: #282a36; /* Dracula dark background color */
+  margin: 10px 0px;
+  color: #f8f8f2; /* Dracula light text color */
   border-radius: 6px;
   padding: 12px;
-  font-family: 'Fira Code', monospace;
+  font-family: 'Fira Code', monospace; /* Monospace font for consistency */
   font-size: 0.95em;
 }
 
-pre {
-  overflow-x: auto;
+/* Additional preformatted content within these blocks */
+.cell-output pre, 
+.cell-output-stdout pre, 
+.cell-output-stderr pre, 
+.cell-output-display pre, 
+.cell-output-stdouterr pre {
+  background-color: #282a36; /* Ensure consistency inside pre blocks */
+  color: #f8f8f2;
 }
 
-/* Syntax Highlighting for Code */
+/* Ensure any additional code blocks within outputs are consistent */
+.sourceCode, .cell-code {
+  background-color: #282a36;
+  color: #f8f8f2;
+}
+
+/* Syntax Highlighting (if needed) */
 .sourceCode span.kw, .cell-code span.kw {
   color: #ff79c6; /* Pink for keywords */
 }
@@ -108,67 +84,4 @@ pre {
 
 .sourceCode span.num, .cell-code span.num {
   color: #bd93f9; /* Purple for numbers */
-}
-
-/* Body Text */
-p {
-  font-family: 'Open Sans', sans-serif;
-  line-height: 1.8;
-  color: #e0e0e0;
-}
-
-/* Links */
-a {
-  color: #E74C3C;
-  text-decoration: none;
-}
-
-a:hover {
-  color: #f08080; /* Lightened red for hover */
-}
-
-/* Footer */
-footer {
-  text-align: center;
-  background-color: #444444;
-  color: #e0e0e0;
-  padding: 10px 0;
-  font-size: 0.9em;
-  margin-top: 30px;
-}
-
-footer a {
-  font-family: 'Open Sans', sans-serif;
-  color: #ffffff;
-  margin: 0 10px;
-  text-decoration: none;
-}
-
-footer a:hover {
-  color: #E74C3C;
-}
-
-/* Error Page Styling */
-.error-page {
-  text-align: center;
-  padding: 100px 20px;
-}
-
-.error-page h1 {
-  font-family: 'Montserrat', sans-serif;
-  font-size: 3em;
-  color: #ffffff;
-}
-
-.error-page p {
-  font-family: 'Open Sans', sans-serif;
-  font-size: 1.5em;
-  color: #e0e0e0;
-}
-
-.error-page a {
-  font-family: 'Open Sans', sans-serif;
-  color: #E74C3C;
-  text-decoration: none;
-  font-weight: bold;
 }
