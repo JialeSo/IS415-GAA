@@ -332,7 +332,11 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#working-with-population-data" id="toc-working-with-population-data" class="nav-link" data-scroll-target="#working-with-population-data">4.0 Working with Population Data</a>
   <ul class="collapse">
   <li><a href="#import-and-simple-data-transformation" id="toc-import-and-simple-data-transformation" class="nav-link" data-scroll-target="#import-and-simple-data-transformation">4.1 Import and Simple Data Transformation</a></li>
-  <li><a href="#simpy-join-the-data-and-then-map-it-out" id="toc-simpy-join-the-data-and-then-map-it-out" class="nav-link" data-scroll-target="#simpy-join-the-data-and-then-map-it-out">4.2 Simpy join the data and then map it out</a></li>
+  <li><a href="#simply-join-the-data-and-then-map-it-out" id="toc-simply-join-the-data-and-then-map-it-out" class="nav-link" data-scroll-target="#simply-join-the-data-and-then-map-it-out">4.2 Simply join the data and then map it out</a>
+  <ul class="collapse">
+  <li><a href="#join-the-data" id="toc-join-the-data" class="nav-link" data-scroll-target="#join-the-data">4.2.1 Join the data</a></li>
+  <li><a href="#plot-the-map" id="toc-plot-the-map" class="nav-link" data-scroll-target="#plot-the-map">4.2.2 Plot the map</a></li>
+  </ul></li>
   </ul></li>
   </ul>
 </nav>
@@ -778,8 +782,10 @@ PROJCRS["SVY21 / Singapore TM",
 </div>
 </div>
 </section>
-<section id="simpy-join-the-data-and-then-map-it-out" class="level2">
-<h2 class="anchored" data-anchor-id="simpy-join-the-data-and-then-map-it-out">4.2 Simpy join the data and then map it out</h2>
+<section id="simply-join-the-data-and-then-map-it-out" class="level2">
+<h2 class="anchored" data-anchor-id="simply-join-the-data-and-then-map-it-out">4.2 Simply join the data and then map it out</h2>
+<section id="join-the-data" class="level3">
+<h3 class="anchored" data-anchor-id="join-the-data">4.2.1 Join the data</h3>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>popdata2023 <span class="ot">&lt;-</span> popdata2023 <span class="sc">%&gt;%</span></span>
 <span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate_at</span>(<span class="at">.vars =</span> <span class="fu">vars</span>(PA, SZ), </span>
@@ -789,6 +795,9 @@ PROJCRS["SVY21 / Singapore TM",
 <span id="cb31-6"><a href="#cb31-6" aria-hidden="true" tabindex="-1"></a>mpsz_pop2020 <span class="ot">&lt;-</span> <span class="fu">left_join</span>(mpsz19_shp_crs3414, popdata2023,</span>
 <span id="cb31-7"><a href="#cb31-7" aria-hidden="true" tabindex="-1"></a>                          <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"SUBZONE_N"</span> <span class="ot">=</span> <span class="st">"SZ"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
+</section>
+<section id="plot-the-map" class="level3">
+<h3 class="anchored" data-anchor-id="plot-the-map">4.2.2 Plot the map</h3>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb32"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tmap_mode</span>(<span class="st">"plot"</span>)</span>
 <span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a></span>
@@ -819,6 +828,7 @@ PROJCRS["SVY21 / Singapore TM",
 </div>
 
 
+</section>
 </section>
 </section>
 

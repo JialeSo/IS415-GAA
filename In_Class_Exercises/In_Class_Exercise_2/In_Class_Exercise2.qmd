@@ -166,7 +166,9 @@ colnames(popdata2023)
 ```
 :::
 
-## 4.2 Simpy join the data and then map it out
+## 4.2 Simply join the data and then map it out
+
+### 4.2.1 Join the data 
 
 ```{r}
 popdata2023 <- popdata2023 %>%
@@ -177,6 +179,8 @@ popdata2023 <- popdata2023 %>%
 mpsz_pop2020 <- left_join(mpsz19_shp_crs3414, popdata2023,
                           by = c("SUBZONE_N" = "SZ"))
 ```
+
+### 4.2.2 Plot the map
 
 ```{r}
 tmap_mode("plot")
