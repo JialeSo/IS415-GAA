@@ -7,9 +7,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="Jiale SO">
-<meta name="dcterms.date" content="2024-08-22">
+<meta name="dcterms.date" content="2024-08-26">
 
-<title>IS415-GAA: JialeSo - Hands-On Exercise 1:</title>
+<title>IS415-GAA: JialeSo - In Class Exercise 2: Working with Master Plan Planning Sub-zone Data</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -211,7 +211,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
  <span class="dropdown-text">In-Class Exercise 1</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="../../404.html"><i class="bi bi-fas fa-file-alt" role="img">
+    <a class="dropdown-item" href="../../In_Class_exercises/In_Class_Exercise_1/In_Class_Exercise2.html"><i class="bi bi-fas fa-file-alt" role="img">
 </i> 
  <span class="dropdown-text">In-Class Exercise 2</span></a>
   </li>  
@@ -310,14 +310,40 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <!-- sidebar -->
 <!-- margin-sidebar -->
     <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
-        
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#exercise-2-working-with-master-plan-planning-sub-zone-data." id="toc-exercise-2-working-with-master-plan-planning-sub-zone-data." class="nav-link active" data-scroll-target="#exercise-2-working-with-master-plan-planning-sub-zone-data.">Exercise 2 Working with Master Plan Planning Sub-zone data.</a></li>
+  <li><a href="#introduction" id="toc-introduction" class="nav-link" data-scroll-target="#introduction">1.0 Introduction</a></li>
+  <li><a href="#setup-and-requirements" id="toc-setup-and-requirements" class="nav-link" data-scroll-target="#setup-and-requirements">2.0 Setup and Requirements</a></li>
+  <li><a href="#importing-the-data-sets." id="toc-importing-the-data-sets." class="nav-link" data-scroll-target="#importing-the-data-sets.">3.0 Importing the Data Sets.</a>
+  <ul class="collapse">
+  <li><a href="#importing-2014-shpz-file" id="toc-importing-2014-shpz-file" class="nav-link" data-scroll-target="#importing-2014-shpz-file">3.1 Importing 2014 SHPZ File</a>
+  <ul class="collapse">
+  <li><a href="#shpz-file-importing" id="toc-shpz-file-importing" class="nav-link" data-scroll-target="#shpz-file-importing">SHPZ File Importing</a></li>
+  <li><a href="#kml-file-importing" id="toc-kml-file-importing" class="nav-link" data-scroll-target="#kml-file-importing">KML File Importing</a></li>
+  </ul></li>
+  <li><a href="#importing-2019-shpz-file" id="toc-importing-2019-shpz-file" class="nav-link" data-scroll-target="#importing-2019-shpz-file">3.2 Importing 2019 SHPZ File</a></li>
+  <li><a href="#comparison-the-difference-between-shp-and-kml-file" id="toc-comparison-the-difference-between-shp-and-kml-file" class="nav-link" data-scroll-target="#comparison-the-difference-between-shp-and-kml-file">3.3 Comparison the difference between SHP and KML File</a></li>
+  <li><a href="#task-at-hand-1" id="toc-task-at-hand-1" class="nav-link" data-scroll-target="#task-at-hand-1">Task at hand</a></li>
+  <li><a href="#importing-kml-file-1" id="toc-importing-kml-file-1" class="nav-link" data-scroll-target="#importing-kml-file-1">Importing KML File</a></li>
+  </ul></li>
+  <li><a href="#data-exploration" id="toc-data-exploration" class="nav-link" data-scroll-target="#data-exploration">4.0 Data Exploration</a></li>
+  <li><a href="#data-wrangling" id="toc-data-wrangling" class="nav-link" data-scroll-target="#data-wrangling">5.0 Data Wrangling</a></li>
+  <li><a href="#methodology" id="toc-methodology" class="nav-link" data-scroll-target="#methodology">6.0 Methodology</a></li>
+  <li><a href="#analysis-and-findings" id="toc-analysis-and-findings" class="nav-link" data-scroll-target="#analysis-and-findings"><strong>7.0 Analysis and Findings</strong></a></li>
+  <li><a href="#conclusion" id="toc-conclusion" class="nav-link" data-scroll-target="#conclusion">8.0 Conclusion</a></li>
+  <li><a href="#extra-stuff" id="toc-extra-stuff" class="nav-link" data-scroll-target="#extra-stuff">9.0 Extra Stuff</a></li>
+  </ul>
+</nav>
     </div>
 <!-- main -->
 <main class="content" id="quarto-document-content">
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title">Hands-On Exercise 1:</h1>
+<h1 class="title">In Class Exercise 2: Working with Master Plan Planning Sub-zone Data</h1>
 </div>
 
 
@@ -334,7 +360,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">August 22, 2024</p>
+      <p class="date">August 26, 2024</p>
     </div>
   </div>
   
@@ -352,19 +378,139 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
-<p>Getting Started</p>
-<p>Install and launching R Packages</p>
-<p>The code chunk below uses the p_load() of pacman package to check if tidyverse packages are installed in the computer. If they are, then they will be launched into R.</p>
+<section id="exercise-2-working-with-master-plan-planning-sub-zone-data." class="level1">
+<h1>Exercise 2 Working with Master Plan Planning Sub-zone data.</h1>
+</section>
+<section id="introduction" class="level1">
+<h1>1.0 Introduction</h1>
+</section>
+<section id="setup-and-requirements" class="level1">
+<h1>2.0 Setup and Requirements</h1>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(pacman)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>Warning: package 'pacman' was built under R version 4.3.3</code></pre>
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(sf, tmap, tidyverse, dplyr)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>  pacman<span class="sc">::</span><span class="fu">p_load</span>(tidyverse)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+<section id="importing-the-data-sets." class="level1">
+<h1>3.0 Importing the Data Sets.</h1>
+<section id="importing-2014-shpz-file" class="level2">
+<h2 class="anchored" data-anchor-id="importing-2014-shpz-file">3.1 Importing 2014 SHPZ File</h2>
+<p>::: panel-tabset ### Task at Hand</p>
+<ol type="1">
+<li>Go to data.gov.sg and download the 2014 Master Subzone SHP and KML File</li>
+<li>Import and read the SHP and KML File in R.</li>
+</ol>
+<section id="shpz-file-importing" class="level3">
+<h3 class="anchored" data-anchor-id="shpz-file-importing">SHPZ File Importing</h3>
+<p>We can use the <code>st_read</code> function to import the data.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>mpsz <span class="ot">&lt;-</span> <span class="fu">st_read</span>(<span class="at">dsn =</span> <span class="st">"data/geospatial"</span>, <span class="at">layer =</span> <span class="st">"MP14_SUBZONE_WEB_PL"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Reading layer `MP14_SUBZONE_WEB_PL' from data source 
+  `C:\Users\jiale\Desktop\IS415\IS415-GAA\In_Class_Exercises\In_Class_Exercise_2\data\geospatial' 
+  using driver `ESRI Shapefile'
+Simple feature collection with 323 features and 15 fields
+Geometry type: MULTIPOLYGON
+Dimension:     XY
+Bounding box:  xmin: 2667.538 ymin: 15748.72 xmax: 56396.44 ymax: 50256.33
+Projected CRS: SVY21</code></pre>
 </div>
-<p>Importing the data</p>
+</div>
+</section>
+<section id="kml-file-importing" class="level3">
+<h3 class="anchored" data-anchor-id="kml-file-importing">KML File Importing</h3>
+<p>Similarly we can use the <code>st_read</code> function to import the data.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>mspz_kml <span class="ot">&lt;-</span> <span class="fu">st_read</span>(<span class="st">"data/geospatial/MasterPlan2014SubzoneBoundaryWebKML.kml"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-error">
+<pre><code>Error: Cannot open "C:\Users\jiale\Desktop\IS415\IS415-GAA\In_Class_Exercises\In_Class_Exercise_2\data\geospatial\MasterPlan2014SubzoneBoundaryWebKML.kml"; The source could be corrupt or not supported. See `st_drivers()` for a list of supported formats.</code></pre>
+</div>
+</div>
+<p>However, the data on data.gov.sg is corrupted. Hence we will do a workaround, where we can create a new kml file base on the shp file and read it.</p>
+<p>Step 1: using the <code>st_write</code> to create a kml file from the shapefile</p>
+<p>Step 2: using the <code>st_read</code> function to read the generated kml file.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">st_write</span>(mpsz, <span class="st">"data/geospatial/MP14_SUBZONE_WEB_PL.kml"</span>, <span class="at">driver =</span> <span class="st">"KML"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Layer MP14_SUBZONE_WEB_PL in dataset data/geospatial/MP14_SUBZONE_WEB_PL.kml already exists:
+use either append=TRUE to append to layer or append=FALSE to overwrite layer</code></pre>
+</div>
+<div class="cell-output cell-output-error">
+<pre><code>Error in eval(expr, envir, enclos): Dataset already exists.</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>mpsz_kml <span class="ot">&lt;-</span> <span class="fu">st_read</span>(<span class="st">"data/geospatial/MP14_SUBZONE_WEB_PL.kml"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Reading layer `MP14_SUBZONE_WEB_PL' from data source 
+  `C:\Users\jiale\Desktop\IS415\IS415-GAA\In_Class_Exercises\In_Class_Exercise_2\data\geospatial\MP14_SUBZONE_WEB_PL.kml' 
+  using driver `KML'
+Simple feature collection with 323 features and 2 fields
+Geometry type: MULTIPOLYGON
+Dimension:     XY
+Bounding box:  xmin: 103.6057 ymin: 1.158699 xmax: 104.0885 ymax: 1.470775
+Geodetic CRS:  WGS 84</code></pre>
+</div>
+</div>
+</section>
+</section>
+<section id="importing-2019-shpz-file" class="level2">
+<h2 class="anchored" data-anchor-id="importing-2019-shpz-file">3.2 Importing 2019 SHPZ File</h2>
+</section>
+<div class="panel-set">
+<section id="task-at-hand" class="level2">
+<h2 class="anchored" data-anchor-id="task-at-hand">Task At Hand</h2>
+<ol type="1">
+<li>Go to data.gov.sg and download the 2019 KML File</li>
+<li>Import and read the KML File in R.</li>
+</ol>
+</section>
+<section id="importing-kml-file" class="level2">
+<h2 class="anchored" data-anchor-id="importing-kml-file">Importing KML File</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>mspz2019_kml <span class="ot">&lt;-</span> <span class="fu">st_read</span>(<span class="st">"data/geospatial/MasterPlan2019SubzoneBoundaryNoSeaKML.kml"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Reading layer `URA_MP19_SUBZONE_NO_SEA_PL' from data source 
+  `C:\Users\jiale\Desktop\IS415\IS415-GAA\In_Class_Exercises\In_Class_Exercise_2\data\geospatial\MasterPlan2019SubzoneBoundaryNoSeaKML.kml' 
+  using driver `KML'
+Simple feature collection with 332 features and 2 fields
+Geometry type: MULTIPOLYGON
+Dimension:     XY, XYZ
+Bounding box:  xmin: 103.6057 ymin: 1.158699 xmax: 104.0885 ymax: 1.470775
+z_range:       zmin: 0 zmax: 0
+Geodetic CRS:  WGS 84</code></pre>
+</div>
+</div>
+</section>
+</div>
+<section id="comparison-the-difference-between-shp-and-kml-file" class="level2">
+<h2 class="anchored" data-anchor-id="comparison-the-difference-between-shp-and-kml-file">3.3 Comparison the difference between SHP and KML File</h2>
+<p>::: panel-tabset</p>
+</section>
+<section id="task-at-hand-1" class="level2">
+<h2 class="anchored" data-anchor-id="task-at-hand-1">Task at hand</h2>
+</section>
+<section id="importing-kml-file-1" class="level2">
+<h2 class="anchored" data-anchor-id="importing-kml-file-1">Importing KML File</h2>
+</section>
+</section>
+<section id="data-exploration" class="level1">
+<h1>4.0 Data Exploration</h1>
+</section>
+<section id="data-wrangling" class="level1">
+<h1>5.0 Data Wrangling</h1>
+</section>
+<section id="methodology" class="level1">
+<h1>6.0 Methodology</h1>
+</section>
+<section id="analysis-and-findings" class="level1">
+<h1><strong>7.0 Analysis and Findings</strong></h1>
+</section>
+<section id="conclusion" class="level1">
+<h1>8.0 Conclusion</h1>
+</section>
+<section id="extra-stuff" class="level1">
+<h1>9.0 Extra Stuff</h1>
 
 
+</section>
 
 </main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">

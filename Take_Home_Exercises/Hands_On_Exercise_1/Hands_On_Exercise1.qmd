@@ -1,5 +1,12 @@
 ---
-title: "IS415-GAA" 
+title: "Hands-On Exercise 1: "
+author: "Jiale SO"
+date: "August 22, 2024"
+date-modified: "last-modified"
+execute: 
+  eval: true
+  echo: true
+  freeze: true
 ---
 
 Getting Started

@@ -1,0 +1,201 @@
+---
+title: "In Class Exercise 2: Working with Master Plan Planning Sub-zone Data"
+author: "Jiale SO"
+date: "August 26, 2024"
+date-modified: "last-modified"
+execute: 
+  eval: true  
+  echo: true
+  freeze: true
+  warning: false
+  message: false
+---
+
+# Exercise 2 Working with Master Plan Planning Sub-zone data.
+
+# 1.0 Introduction
+
+# 2.0 Setup and Requirements
+
+```{r}
+pacman::p_load(sf, tmap, tidyverse, dplyr)
+```
+
+# 3.0 Importing the Data Sets.
+
+## 3.1 Importing 2014 SHPZ File
+
+::: panel-tabset
+### Task at Hand
+
+1.  Go to data.gov.sg and download the 2014 Master Subzone SHP and KML File
+2.  Import and read the SHP and KML File in R.
+
+### SHPZ File Importing
+
+We can use the `st_read` function to import the data.
+
+```{r}
+mpsz <- st_read(dsn = "data/geospatial", layer = "MP14_SUBZONE_WEB_PL")
+```
+
+### KML File Importing
+
+Similarly we can use the `st_read` function to import the data.
+
+```{r, error=TRUE}
+mspz_kml <- st_read("data/geospatial/MasterPlan2014SubzoneBoundaryWebKML.kml")
+```
+
+However, the data on data.gov.sg is corrupted. Hence we will do a workaround, where we can create a new kml file base on the shp file and read it.
+
+Step 1: using the `st_write` to create a kml file from the shapefile
+
+Step 2: using the `st_read` function to read the generated kml file.
+
+```{r, error=TRUE}
+st_write(mpsz, "data/geospatial/MP14_SUBZONE_WEB_PL.kml", driver = "KML")
+mpsz_kml <- st_read("data/geospatial/MP14_SUBZONE_WEB_PL.kml")
+```
+:::
+
+## 3.2 Importing 2019 SHPZ File
+
+::: panel-tabset
+## Task At Hand
+
+1.  Go to data.gov.sg and download the 2019 KML File
+2.  Import and read the KML File in R.
+
+## Importing the SHP File
+
+```{r}
+mpsz19_shp <- st_read(dsn = "data/geospatial", layer = "MPSZ-2019")
+```
+
+## Importing KML File
+
+```{r}
+mpsz19_kml <- st_read("data/geospatial/MasterPlan2019SubzoneBoundaryNoSeaKML.kml")
+```
+:::
+
+## 3.3 Comparison the difference between SHP and KML File and formatting the CRS.
+
+### 3.3.1 Understanding SHP and KML Files
+
+Use `glimpse()` and `head()` to compare the attributes available in each file. For instance, SHP files might have more detailed attribute tables with multiple fields, while KML files are more streamlined with fewer attributes.
+
+::: panel-tabset
+## SHP File
+
+```{r}
+glimpse(mpsz19_shp)
+```
+
+```{r}
+head(mpsz19_shp)
+```
+
+## KML FILE
+
+```{r}
+glimpse(mpsz19_kml)
+```
+
+```{r}
+head(mpsz19_kml)
+```
+:::
+
+### SHP vs. KML: Key Differences
+
+### Summary Table:
+
+| Property            | SHP (Shapefile)                              | KML (Keyhole Markup Language)     |
+|---------------------|----------------------------------------------|-----------------------------------|
+| **File Structure**  | Multiple files for geometries and attributes | Single file for visualization     |
+| **Attributes**      | Detailed, diverse data types                 | Limited, mostly descriptive       |
+| **Geometry Types**  | Complex, suited for GIS analysis             | Basic, suited for display         |
+| **CRS Information** | Explicit and configurable (e.g., EPSG:3414)  | Typically defaults to WGS84       |
+| **Usage Context**   | GIS analysis, mapping                        | Web-based visualization           |
+| **Performance**     | Slower with large datasets                   | Lightweight and quick for display |
+
+### 3.3.2 CRS (Coordinate Reference System)
+
+-   **SHP File CRS:** Shapefiles often come with a defined CRS. In this case, we ensure that it is aligned with Singapore’s local system (EPSG:3414).
+
+-   **KML File CRS:** KML files typically default to WGS84 (EPSG:4326), which is used in web applications and is latitude/longitude-based.
+
+::: {.callout-tip appearance="simple"}
+How to know which CRS to use ? We can simply go to epsg.io to check <https://epsg.io/?q=singapore>
+:::
+
+```{r}
+st_crs(mpsz19_shp)
+```
+
+```{r}
+mpsz19_shp_crs3414 <- st_read(dsn = "data/geospatial", layer = "MPSZ-2019") %>%
+  st_transform(crs = 3414)
+st_crs(mpsz19_shp_crs3414)
+```
+
+# 4.0 Working with Population Data
+
+## 4.1 Import and Simple Data Transformation
+
+::: panel-tabset
+## The Task
+
+Go to[SingStat Website](https://www.singstat.gov.sg/find-data/search-by-theme/population/geographic-distribution/latest-data) and download 2023's dataset for our popuplation data. We then group them by age and subzone
+
+## Code
+
+```{r}
+popdata <- read_csv("data/respopagesextod2023.csv")
+popdata2023 <- popdata %>%
+  group_by(PA, SZ, AG) %>%  # Ensure data is grouped by 'AG' if needed
+  summarise(POP = sum(Pop, na.rm = TRUE)) %>%  # Summarise population
+  pivot_wider(names_from = AG, values_from = POP) %>%  # Pivot to wider format
+  ungroup()  # Ungroup the data
+
+# Check the column names
+colnames(popdata2023)
+
+```
+:::
+
+## 4.2 Simpy join the data and then map it out
+
+```{r}
+popdata2023 <- popdata2023 %>%
+  mutate_at(.vars = vars(PA, SZ), 
+          .funs = list(toupper))
+
+#Step 5: Merge the spatial data with the population data
+mpsz_pop2020 <- left_join(mpsz19_shp_crs3414, popdata2023,
+                          by = c("SUBZONE_N" = "SZ"))
+```
+
+```{r}
+tmap_mode("plot")
+
+tm_shape(mpsz_pop2020)+
+  tm_fill("0_to_4", 
+          style = "quantile", 
+          palette = "Blues",
+          title = "0_to_4") +
+  tm_layout(main.title = "Distribution of 0_to_4 by planning subzone",
+            main.title.position = "center",
+            main.title.size = 1.2,
+            legend.height = 0.45, 
+            legend.width = 0.35,
+            frame = TRUE) +
+  tm_borders(alpha = 0.5) +
+  tm_compass(type="8star", size = 2) +
+  tm_scale_bar() +
+  tm_grid(alpha =0.2) +
+  tm_credits("Source: Planning Sub-zone boundary from Urban Redevelopment Authorithy (URA)\n and Population data from Department of Statistics DOS", 
+             position = c("left", "bottom"))
+```

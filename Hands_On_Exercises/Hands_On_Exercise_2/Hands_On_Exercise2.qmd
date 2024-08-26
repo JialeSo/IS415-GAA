@@ -7,6 +7,8 @@ execute:
   eval: true
   echo: true
   freeze: true
+  message: false
+  warning: false
 ---
 
 Using TMap, we will learn how to plot functional and truthful choropleth maps. Through Geo visualization, we allow our audiences to understand the dataset easier with their spatial cognition.
@@ -73,7 +75,7 @@ head(mpsz, n = 20)
 Through glimpse and head, we can map the following columns to their description for ease of use.
 
 | **Variable Name** | **Description**                                                               | **Cluster (Y/N)** | **Data Type / Example Values**                                                         |
-|------------------|------------------|------------------|-------------------|
+|-------------------|-------------------------------------------------------------------------------|-------------------|----------------------------------------------------------------------------------------|
 | OBJECTID          | Unique identifier for each row in the dataset.                                | N                 | `<int>` 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, …                                               |
 | SUBZONE_NO        | Numeric code representing the specific subzone within the planning area.      | Y                 | `<int>` 1, 1, 3, 8, 3, 7, 9, 2, 13, 7, …                                               |
 | SUBZONE_N         | The name of the subzone (e.g., "MARINA SOUTH," "PEARL'S HILL").               | Y                 | `<chr>` "MARINA SOUTH", "PEARL'S HILL", "BOAT QUAY", …                                 |
@@ -642,7 +644,7 @@ tm_shape(mpsz_pop2020[mpsz_pop2020$REGION_N=="CENTRAL REGION", ])+
 
 Let's push the boundaries a bit! The goal is to visualize how the age clusters within each subzone have evolved over time. Although we haven't fully explored interactivity yet, we can take on the challenge of creating a video GIF that sequentially combines maps for each year. We'll wrap it up with a bird's-eye comparison of the different years side by side.
 
-###  4.1.1 Preparing the data set
+### 4.1.1 Preparing the data set
 
 1.  We Need to read the data set in
 2.  Find and cluster the age groups
@@ -706,7 +708,7 @@ final_map_data <- final_map_data %>%
 
 ### 4.1.2 Generating the Gifs
 
-#### 4.1.2.1 Logic and Steps 
+#### 4.1.2.1 Logic and Steps
 
 1.  Step 1; we categorize the data into different age clusters.
 2.  For each cluster, we filter the dataset,
@@ -794,7 +796,7 @@ cat("All GIFs have been created.\n")
 
 #### 4.1.3.2 Economic Active
 
-![](population_time_series_Economy Active.gif)
+![](population_time_series_Economy%20Active.gif)
 
 #### 4.1.3.3 Young
 

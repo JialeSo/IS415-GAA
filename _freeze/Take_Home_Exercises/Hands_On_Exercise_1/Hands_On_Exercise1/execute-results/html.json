@@ -1,0 +1,15 @@
+{
+  "hash": "f8f2e0141f9a72b5ca25bb676369a133",
+  "result": {
+    "engine": "knitr",
+    "markdown": "---\ntitle: \"Hands-On Exercise 1: \"\nauthor: \"Jiale SO\"\ndate: \"August 22, 2024\"\ndate-modified: \"last-modified\"\nexecute: \n  eval: true\n  echo: true\n  freeze: true\n---\n\n\nGetting Started\n\nInstall and launching R Packages\n\nThe code chunk below uses the p_load() of pacman package to check if tidyverse packages are installed in the computer. If they are, then they will be launched into R.\n\n\n::: {.cell}\n\n```{.r .cell-code}\n  library(pacman)\n```\n\n::: {.cell-output .cell-output-stderr}\n\n```\nWarning: package 'pacman' was built under R version 4.3.3\n```\n\n\n:::\n\n```{.r .cell-code}\n  pacman::p_load(tidyverse)\n```\n:::\n\n\nImporting the data\n\n\n::: {.cell}\n\n:::\n",
+    "supporting": [],
+    "filters": [
+      "rmarkdown/pagebreak.lua"
+    ],
+    "includes": {},
+    "engineDependencies": {},
+    "preserve": {},
+    "postProcess": true
+  }
+}
