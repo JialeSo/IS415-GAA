@@ -11,8 +11,6 @@ execute:
   message: false
 ---
 
-# Exercise 2 Working with Master Plan Planning Sub-zone data.
-
 # 1.0 Introduction
 
 # 2.0 Setup and Requirements
@@ -113,7 +111,7 @@ head(mpsz19_kml)
 ### Summary Table:
 
 | Property            | SHP (Shapefile)                              | KML (Keyhole Markup Language)     |
-|---------------------|----------------------------------------------|-----------------------------------|
+|------------------|------------------------------|------------------------|
 | **File Structure**  | Multiple files for geometries and attributes | Single file for visualization     |
 | **Attributes**      | Detailed, diverse data types                 | Limited, mostly descriptive       |
 | **Geometry Types**  | Complex, suited for GIS analysis             | Basic, suited for display         |
@@ -168,7 +166,7 @@ colnames(popdata2023)
 
 ## 4.2 Simply join the data and then map it out
 
-### 4.2.1 Join the data 
+### 4.2.1 Join the data
 
 ```{r}
 popdata2023 <- popdata2023 %>%
