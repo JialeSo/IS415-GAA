@@ -54,7 +54,7 @@ website:
             href: "In_Class_exercises/In_Class_Exercise_1/In_Class_Exercise1.html"
             icon: fas fa-file-alt
           - text: "In-Class Exercise 2"
-            href: "In_Class_exercises/In_Class_Exercise_1/In_Class_Exercise2.html"
+            href: "In_Class_exercises/In_Class_Exercise_2/In_Class_Exercise2.html"
             icon: fas fa-file-alt
           - text: "In-Class Exercise 3"
             href: "404.qmd"
