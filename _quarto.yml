@@ -15,7 +15,7 @@ website:
             href: "Hands_On_exercises/Hands_On_Exercise_2/Hands_On_Exercise2.html"
             icon: fas fa-code
           - text: "Hands-On Exercise 3"
-            href: "404.qmd"
+            href: "Hands_On_exercises/Hands_On_Exercise_3/Hands_On_Exercise3.html"
             icon: fas fa-code
           - text: "Hands-On Exercise 4"
             href: "404.qmd"
@@ -105,8 +105,7 @@ website:
 
 format:
   html:
-    theme: journal
-    highlight-style: dracula # Ensure Dracula is applied globally
+    theme: Darkly 
     freeze: false
     css: styles.css # Custom styles for non-code elements
     toc: true

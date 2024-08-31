@@ -4,7 +4,6 @@
 /* General Layout */
 body {
   font-family: 'Open Sans', sans-serif;
-  background-color: #2b2b2b;
   color: #e0e0e0;
 }
 
@@ -13,75 +12,4 @@ h1, h2, h3, h4, h5, h6 {
   font-family: 'Montserrat', sans-serif;
   color: #ffffff;
   font-weight: 600;
-}
-
-/* Navbar */
-.quarto-navbar {
-  background-color: #444444;
-  border-bottom: 2px solid #E74C3C;
-}
-
-.quarto-navbar .navbar-nav .nav-link {
-  font-family: 'Montserrat', sans-serif;
-  color: #ffffff;
-  font-weight: 600;
-}
-
-/* Minimal Additional Styling */
-p {
-  font-family: 'Open Sans', sans-serif;
-  line-height: 1.8;
-  color: #e0e0e0;
-}
-
-/* Dracula-Themed Output Blocks */
-.cell-output, 
-.cell-output-stdout, 
-.cell-output-stderr, 
-.cell-output-display, 
-.cell-output-stdouterr {
-  background-color: #282a36; /* Dracula dark background color */
-  margin: 10px 0px;
-  color: #f8f8f2; /* Dracula light text color */
-  border-radius: 6px;
-  padding: 12px;
-  font-family: 'Fira Code', monospace; /* Monospace font for consistency */
-  font-size: 0.95em;
-}
-
-/* Additional preformatted content within these blocks */
-.cell-output pre, 
-.cell-output-stdout pre, 
-.cell-output-stderr pre, 
-.cell-output-display pre, 
-.cell-output-stdouterr pre {
-  background-color: #282a36; /* Ensure consistency inside pre blocks */
-  color: #f8f8f2;
-}
-
-/* Ensure any additional code blocks within outputs are consistent */
-.sourceCode, .cell-code {
-  background-color: #282a36;
-  color: #f8f8f2;
-}
-
-/* Syntax Highlighting (if needed) */
-.sourceCode span.kw, .cell-code span.kw {
-  color: #ff79c6; /* Pink for keywords */
-}
-
-.sourceCode span.str, .cell-code span.str {
-  color: #50fa7b; /* Green for strings */
-}
-
-.sourceCode span.fn, .cell-code span.fn {
-  color: #8be9fd; /* Cyan for function names */
-}
-
-.sourceCode span.co, .cell-code span.co {
-  color: #6272a4; /* Grey for comments */
-}
-
-.sourceCode span.num, .cell-code span.num {
-  color: #bd93f9; /* Purple for numbers */
 }
