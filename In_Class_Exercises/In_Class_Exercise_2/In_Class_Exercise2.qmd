@@ -201,34 +201,3 @@ tm_shape(mpsz_pop2020)+
   tm_credits("Source: Planning Sub-zone boundary from Urban Redevelopment Authorithy (URA)\n and Population data from Department of Statistics DOS", 
              position = c("left", "bottom"))
 ```
-
-::: panel-tabset
-### Task at Hand
-
-1.  Go to data.gov.sg and download the 2014 Master Subzone SHP and KML File
-2.  Import and read the SHP and KML File in R.
-
-### SHPZ File Importing
-
-We can use the `st_read` function to import the data.
-
-```{r}
-
-```
-
-### KML File Importing
-
-Similarly we can use the `st_read` function to import the data.
-
-```{r, error=TRUE}
-```
-
-However, the data on data.gov.sg is corrupted. Hence we will do a workaround, where we can create a new kml file base on the shp file and read it.
-
-Step 1: using the `st_write` to create a kml file from the shapefile
-
-Step 2: using the `st_read` function to read the generated kml file.
-
-```{r, error=TRUE}
-```
-:::

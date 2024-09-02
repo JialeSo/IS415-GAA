@@ -9,6 +9,7 @@ execute:
   freeze: true
   warning: false
   message: false
+  cache: true
 ---
 
 # 1.0 Introduction
@@ -75,7 +76,7 @@ glimpse(acled_sf)
 
 class(acled_sf)
 
-tmap_mode('view')
+tmap_mode('plot')
 
 acled_sf %>%
   filter(year == 2023 | event_type == 'Political violence') %>%
