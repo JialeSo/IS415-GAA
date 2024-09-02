@@ -1,0 +1,77 @@
+---
+title: "In Class Exercise 3: Spatial Point Patterns Analysis"
+author: "Jiale SO"
+date: "September 02, 2024"
+date-modified: "last-modified"
+execute: 
+  eval: true  
+  echo: true
+  freeze: true
+  warning: false
+  message: false
+---
+
+# 1.0 Introduction
+
+```{r}
+# eval: FALSE
+```
+
+# 2.0 Setup and Requirements 
+
+```{r}
+pacman::p_load(sf, raster, spatstat, tmap, tidyverse, rvest, geojsonsf)
+```
+
+# 3.0 Importing the Data Sets.
+
+::: panel-tabset
+### Childcare data
+
+```{r}
+childcare_sf <- st_read("data/child-care-services-geojson.geojson") %>%   st_transform(crs = 3414) 
+```
+
+### Costal Outline
+
+```{r}
+sg_sf <- st_read(dsn = "data", layer="CostalOutline")
+```
+
+### mp14_subzone
+
+```{r}
+mpsz_sf <- st_read(dsn = "data", layer = "MP14_SUBZONE_WEB_PL")
+```
+:::
+
+# 4.0 GeoSpatial Data-wrangling 
+
+## 4.1 SF Costal
+
+Working with `st_union()`
+
+1.  We want to have a coastal outline of Singapore, and we can do so with `st_union()` to union the outline data with the subzone data.
+
+```{r}
+sg_sf <- mpsz_sf %>%
+  st_union()
+
+plot(sg_sf)
+```
+
+## 4.2 Importing ACLED Myanmar File
+
+```{r}
+acled_sf <- read_csv("data/ACLED_Myanmar.csv") %>%
+  st_as_sf(coords = c("longitude","latitude"),
+  crs=4326) %>%
+  st_transform(crs = 32647) %>%
+  mutate(event_date = dmy(event_date))
+```
+
+```{r}
+glimpse(acled_sf)
+
+class(acled_sf)
+```
