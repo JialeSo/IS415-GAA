@@ -74,4 +74,12 @@ acled_sf <- read_csv("data/ACLED_Myanmar.csv") %>%
 glimpse(acled_sf)
 
 class(acled_sf)
+
+tmap_mode('view')
+
+acled_sf %>%
+  filter(year == 2023 | event_type == 'Political violence') %>%
+  tm_shape() +
+  tm_dots()
+tmap_mode("plot")
 ```
