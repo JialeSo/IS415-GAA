@@ -17,7 +17,7 @@ execute:
 # eval: FALSE
 ```
 
-# 2.0 Setup and Requirements 
+# 2.0 Setup and Requirements
 
 ```{r}
 pacman::p_load(sf, raster, spatstat, tmap, tidyverse, rvest, geojsonsf)
@@ -45,7 +45,7 @@ mpsz_sf <- st_read(dsn = "data", layer = "MP14_SUBZONE_WEB_PL")
 ```
 :::
 
-# 4.0 GeoSpatial Data-wrangling 
+# 4.0 GeoSpatial Data-wrangling
 
 ## 4.1 SF Costal
 
