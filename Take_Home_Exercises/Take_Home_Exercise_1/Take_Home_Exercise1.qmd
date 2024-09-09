@@ -1,0 +1,42 @@
+---
+title: "Take_Home Exercise 1: "
+author: "Jiale SO"
+date: "August 22, 2024"
+date-modified: "last-modified"
+execute: 
+  eval: true
+  echo: true
+  freeze: true
+---
+
+```{r}
+dxIsk4EIsia10WN3u9Vj
+
+
+Rural Vs Urban Divide
+Population?
+State level
+Division Level
+Region?
+
+```
+
+# 1.0 Introduction
+
+# 2.0 Data Description
+
+# 3.0 Data Pre-processing
+
+# 4.0 Exploratory Data analysis
+
+# 5.0 Temporal Analysis
+
+# 6.0 Advanced Geospatial Analysis
+
+# 7.0 Results and Interpretation
+
+# 8.0 Conclusion
+
+# 9.0 References
+
+# 

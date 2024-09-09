@@ -1,0 +1,337 @@
+---
+title: "Spatial Point Patterns Analysis"
+author: "Jiale SO"
+date: "August 30, 2024"
+date-modified: "last-modified"
+execute: 
+  eval: true
+  echo: true
+  message: false
+  warning: false
+  freeze: true
+---
+
+# 1.0 Context:
+
+------------------------------------------------------------------------
+
+Spatial Point Pattern Analysis involves evaluating the pattern or distribution of a set of points on a surface. These points can represent the locations of:
+
+-   Events, such as crimes, traffic accidents, or disease outbreaks, or
+
+-   Business services, like coffee shops and fast food outlets, or facilities such as childcare and eldercare centers.
+
+The specific questions we would like to answer are as follows:
+
+-   are the childcare centres in Singapore randomly distributed throughout the country?
+
+-   if the answer is not, then the next logical question is where are the locations with higher concentration of childcare centres?
+
+# 2.0 Downloading the Data sets
+
+------------------------------------------------------------------------
+
+To provide answers to the questions above, three data sets will be used. They are:
+
+-   `CHILDCARE`, a point feature data providing both location and attribute information of childcare centres. It was downloaded from Data.gov.sg and is in geojson format. [Link here](https://data.gov.sg/datasets?query=child&page=1&coverage=&formats=GEOJSON&resultId=d_5d668e3f544335f8028f546827b773b4)
+
+-   `MP14_SUBZONE_WEB_PL`, a polygon feature data providing information of URA 2014 Master Plan Planning Subzone boundary data. It is in ESRI shapefile format. This data set was also downloaded from Data.gov.sg. [Link here](https://data.gov.sg/datasets?query=subzone&page=1&coverage=&resultId=d_d14da225fccf921049ab64238ff473d9)
+
+-   `CostalOutline`, a polygon feature data showing the national boundary of Singapore. It is provided by SLA and is in ESRI shapefile format. Link here
+
+# 3.0 Installing and loading R packages
+
+------------------------------------------------------------------------
+
+In this hands-on exercise, five R packages will be used, they are:
+
+-   [**sf**](https://r-spatial.github.io/sf/), a relatively new R package specially designed to import, manage and process vector-based geospatial data in R.
+
+-   [**spatstat**](https://spatstat.org/), which has a wide range of useful functions for point pattern analysis. In this hands-on exercise, it will be used to perform 1st- and 2nd-order spatial point patterns analysis and derive kernel density estimation (KDE) layer.
+
+-   [**raster**](https://cran.r-project.org/web/packages/raster/) which reads, writes, manipulates, analyses and model of gridded spatial data (i.e. raster). In this hands-on exercise, it will be used to convert image output generate by spatstat into raster format.
+
+-   [**maptools**](https://cran.r-project.org/web/packages/maptools/index.html) which provides a set of tools for manipulating geographic data. In this hands-on exercise, we mainly use it to convert *Spatial* objects into *ppp* format of **spatstat**.
+
+-   [**tmap**](https://cran.r-project.org/web/packages/tmap/index.html) which provides functions for plotting cartographic quality static point patterns maps or interactive maps by using [leaflet](https://leafletjs.com/) API.
+
+Use the code chunk below to install and launch the five R packages.
+
+```{r}
+pacman::p_load(sf, raster, spatstat, tmap, tidyverse, rvest, geojsonsf)
+```
+
+# 4.0 Spatial Data Wrangling
+
+## 4.1 Importing Spatial Data
+
+::: panel-tabset
+### Childcare data
+
+```{r}
+childcare_sf <- st_read("data/child-care-services-geojson.geojson") %>%
+  st_transform(crs = 3414)
+
+```
+
+### Costal Outline
+
+```{r}
+sg_sf <- st_read(dsn = "data", layer="CostalOutline")
+```
+
+### mp14_subzone
+
+```{r}
+mpsz_sf <- st_read(dsn = "data", layer = "MP14_SUBZONE_WEB_PL")
+```
+:::
+
+### 4.1.1 DIY:Use the appropriate SF function to retrieve the referencing system information of these geospatial data.
+
+Simple, use the `st_crs` function from SF to check and print the crs information
+
+```{r}
+# Retrieve CRS information
+childcare_crs <- st_crs(childcare_sf)
+sg_crs <- st_crs(sg_sf)
+mpsz_crs <- st_crs(mpsz_sf)
+
+# Print CRS information
+print(childcare_crs)
+print(sg_crs)
+print(mpsz_crs)
+```
+
+### 4.1.2 DIY: Assign the correct CRS to MPSZ_SF and SG_SF Simple Feature Data frames.
+
+notice that the MPSZ_SF and SG_SF is in `World Geodetic System 1984` format, we need set the correct crs to these data and we can do so using the st transform. We can do so using the transform method
+
+::: panel-tabset
+### Changing to CRS
+
+```{r}
+mpsz_sf <- st_read(dsn = "data", layer = "MP14_SUBZONE_WEB_PL") %>%
+  st_transform(crs = 3414)
+
+sg_sf <- st_read(dsn = "data", layer = "CostalOutline") %>%
+  st_transform(crs = 3414)
+```
+
+### Check if its the right CRS
+
+```{r}
+print(st_crs(mpsz_sf))
+print(st_crs(sg_sf))
+```
+:::
+
+### 4.1.3 Change the referencing System to Singapore National Projected Coordinate System
+
+::: callout-note
+**Understanding the CRS in Our Data:**
+
+1.  **MPZ and Coastal Data:**
+
+    -   **CRS**: `SVY21`, which is the Singapore National Projected Coordinate System based on WGS84.
+
+    -   **Description**: This is a common projected coordinate system used in Singapore for accurate mapping.
+
+2.  **Childcare Data:**
+
+    -   **CRS**: `SVY21 / Singapore TM` (Transverse Mercator projection).
+
+    -   **Description**: This is also a projection based on SVY21, specifically using the Transverse Mercator projection. It is very close to the SVY21 system, with minor differences in how the projection is handled.
+
+Given that the map file serves as the base, we want all spatial data to overlay correctly, we should:
+
+1.  **Transform the GeoJSON Data to Match the Map File's CRS**:
+
+    -   Since our MPZ and Coastal data are already in `SVY21` (EPSG:3414), transform the GeoJSON data to `EPSG:3414` as well.
+
+2.  **Rationale**:
+
+    -   This approach ensures that the childcare locations from the GeoJSON data will be accurately plotted within the boundaries and context provided by the map file (MPZ and Coastal data).
+
+    -   It avoids potential issues with misalignment, especially since oour base map data is already set up in a local projection suitable for Singapore.
+:::
+
+```{r}
+# Transform Childcare data to match the base map's CRS (EPSG:3414)
+childcare_sf <- st_read("data/child-care-services-geojson.geojson") %>%
+  st_transform(crs = 3414)
+
+# Now, all datasets should be aligned in the same CRS
+```
+
+### 4.1.4 Checking for validity of maps
+
+When working with spatial data, it's crucial to ensure that all geometries are valid. Invalid geometries can cause errors in analysis and visualization.
+
+1.  **Checking Validity with `st_is_valid()`**:
+2.  **Identifying Invalid Geometries**:
+3.  **Fixing Invalid Geometries with `st_make_valid()`**
+
+::: panel-tabset
+### MPZ
+
+```{r}
+mpsz_validity <- st_is_valid(mpsz_sf)
+mpsz_invalid <- which(!mpsz_validity)
+if (length(mpsz_invalid) > 0) {
+  print("MPZ Invalid!")
+  print(mpsz_sf[mpsz_invalid, ])
+} else {
+  print("it's valid!")
+}
+```
+
+Notice that MPZ has 9 invalidity of sub zones here, so we have to make it valid through the function make valid. Once it's valid we then check again
+
+```{r}
+mpsz_sf <- st_make_valid(mpsz_sf)
+mpsz_validity <- st_is_valid(mpsz_sf)
+mpsz_invalid <- which(!mpsz_validity)
+if (length(mpsz_invalid) > 0) {
+  print("MPZ Invalid!")
+  print(mpsz_sf[mpsz_invalid, ])
+} else {
+  print("it's valid!")
+}
+```
+
+### SG
+
+```{r}
+sg_validity <- st_is_valid(sg_sf)
+sg_invalid <- which(!sg_validity)
+if (length(sg_invalid) > 0) {
+  print("SG Invalid!")
+  print(mpsz_sf[mpsz_invalid, ])
+} else {
+  print("it's valid!")
+}
+```
+
+In SG_SF there's one invalid as well, so we apply the fix.
+
+```{r}
+sg_sf <- st_make_valid(sg_sf)
+sg_validity <- st_is_valid(sg_sf)
+sg_invalid <- which(!sg_validity)
+if (length(sg_invalid) > 0) {
+  print("SG Invalid!")
+  print(mpsz_sf[sg_invalid, ])
+} else {
+  print("it's valid!")
+}
+```
+
+### Childcare
+
+Notice that childcare is a geojson data and it houses it's data in the description column, we need to break this up to get more meaningful data.
+
+We can do a simple extraction from the `Description` attribute and map the data better. Assuming that each Table Row (TR) contains a Table Head (TH) and a Table Data (TD), we can map the data accordingly.
+
+```{r}
+childcare_validity <- st_is_valid(childcare_sf)
+childcare_invalid <- which(!childcare_validity)
+if (length(childcare_invalid) > 0) {
+  print("ChildCare Invalid!")
+  print(childcare_sf[childcare_invalid, ])
+} else {
+  print("it's valid!")
+}
+
+
+# Ensure the geometry column is preserved
+geometry_column <- st_geometry(childcare_sf)
+parse_description <- function(html_string) {
+  html <- read_html(html_string)
+  html <- html %>% html_nodes("tr") %>% .[!grepl("Attributes", .)]
+  headers <- html %>% html_nodes("th") %>% html_text(trim = TRUE)
+  values <- html %>% html_nodes("td") %>% html_text(trim = TRUE)
+  
+  # Handle cases where the number of headers and values don't match
+  if (length(headers) != length(values)) {
+    max_length <- max(length(headers), length(values))
+    headers <- c(headers, rep("ExtraHeader", max_length - length(headers)))
+    values <- c(values, rep("NULL", max_length - length(values)))
+  }
+  
+  setNames(values, headers)
+}
+
+# Apply parsing function, unnest the description fields, and remove the original 'Description' column
+childcare_sf <- childcare_sf %>% 
+  mutate(Description_parsed = map(Description, parse_description)) %>%
+  unnest_wider(Description_parsed) %>%
+  select(-Description)  # Remove the original 'Description' column
+
+# Overwrite the 'Name' column with the 'LANDYADDRESSPOINT' column values
+childcare_sf <- childcare_sf %>%
+  mutate(Name = NAME)  # Overwrite 'Name' with 'LANDYADDRESSPOINT'
+
+# Replace empty strings or NA across all columns with "NULL"
+childcare_sf <- childcare_sf %>%
+  mutate(across(!geometry, ~ ifelse(is.na(.) | . == "", "NULL", .)))
+
+# Reassign the geometry to the dataframe
+st_geometry(childcare_sf) <- geometry_column
+# Ensure it's still an sf object
+class(childcare_sf)
+```
+:::
+
+## 4.2 Mapping the geospatial datasets.
+
+::: panel-tabset
+### DIY PLOT Map
+
+Using the mapping methods you learned in Hands-on Exercise 3, prepare a static map
+
+```{r}
+# Suppress the tmap mode message
+suppressMessages({
+  tmap_mode("plot")  # Use "view" for an interactive map or "plot" for a static map
+})
+
+# Create the map
+tm <- tm_shape(mpsz_sf) + 
+  tm_polygons(col = "grey", border.col = "black", alpha = 0.5) +  # Base map with subzones
+  tm_shape(childcare_sf) + 
+  tm_dots(col = "black", size = 0.05) +  # Plot childcare locations as dots
+   tm_layout(
+    main.title = "Childcare Locations on Singapore Map",
+    main.title.position = c("center"),  # Center the title at the top
+    outer.margins = c(0.1, 0, 0, 0),  # Adjust outer margins to make space for the title
+    legend.outside = TRUE,  # Keep legend outside the map area
+    legend.outside.position = "bottom"  # Position the legend at the bottom
+  )
+tm
+```
+
+### DIY View Interactivity
+
+we can also prepare a pin map by using the code chunk below.
+
+```{r}
+suppressMessages({
+  tmap_mode("view")  # Use "view" for an interactive map or "plot" for a static map
+})
+
+tm <- tm_shape(mpsz_sf) + 
+  tm_polygons(col = "grey", border.col = "black", alpha = 0.5) +  # Base map with subzones
+  tm_shape(childcare_sf) + 
+  tm_dots(col = "black", size = 0.05) +  # Plot childcare locations as dots
+   tm_layout(
+    title = "Childcare Locations on Singapore Map",
+    title.position = c("center"),  # Center the title at the top
+    outer.margins = c(0.1, 0, 0, 0),  # Adjust outer margins to make space for the title
+    legend.outside = TRUE,  # Keep legend outside the map area
+    legend.outside.position = "bottom"  # Position the legend at the bottom
+  )
+
+tm
+```
+:::
