@@ -54,6 +54,14 @@ For the purpose of this exercise, two data sets are used, they are:
 
 -   Kepulauan_Bangka_Belitung, an ESRI shapefile showing the sub-district (i.e. [kelurahan](https://en.wikipedia.org/wiki/Villages_of_Indonesia)) boundary of Kepulauan Bangka Belitung. The data set was downloaded from [Indonesia Geospatial](https://www.indonesia-geospasial.com/2023/05/download-shapefile-batas-administrasi.html) portal. The original data covers the whole Indonesia. For the purpose of this exercise, only sub-districts within Kepulauan Bangka Belitung are extracted
 
+kbb_sf \<- st_read(dsn = "data/rawdata", layer="Kepulauan_Bangka_Belitung") %\>%
+
+st_union %\>%
+
+st_zm(drop = TRUE, what = "ZM") %\>%
+
+st_transform(crs = 32748)
+
 ::: panel-tabset
 ### Forest Fire
 
@@ -183,4 +191,78 @@ tims <- c(7,8,9,10,11,12)
  }
 ```
 
-# 6.0 Computing STKDE By Day Of Year
+## 5.6 Plotting the STKDE Object By Day Of Year & Improved
+
+```{r}
+fire_yday_ppp <- forestFire_sf %>% 
+  dplyr::select(DayofYear) %>%
+  as.ppp()
+
+fire_yday_owin <- fire_yday_ppp[kbb_owin]
+
+```
+
+```{r}
+set.seed(1234)
+BOOT.spattemp(fire_yday_owin) 
+
+kde_yday <- spattemp.density(
+  fire_yday_owin,
+  h = 9000,
+  lambda = 19)
+summary(kde_yday)
+```
+
+### 5.6.1 Making An Animated Time Series Gif Across Days
+
+First Make the data Streamlined into a Dataframe object
+
+```{r}
+# Assuming kde_yday$z.cond contains 343 frames (one for each day)
+days <- 1:343  # Adjust to match the number of days
+
+# Initialize an empty list to hold the data for each day
+kde_data_list <- lapply(days, function(day) {
+  # Extract the kernel density image for each day from z.cond
+  kde_day <- as.data.frame(kde_yday$z.cond[[day]])  # Convert to a data frame (adjust if necessary)
+  
+  # Rename the columns appropriately (adjust based on the actual structure)
+  colnames(kde_day) <- c("x", "y", "value")  # Ensure the correct column names for spatial data
+  
+  # Add a DayofYear column for animation
+  kde_day$DayofYear <- day
+  
+  return(kde_day)
+})
+
+# Combine all days' data into a single data frame
+kde_data <- do.call(rbind, kde_data_list)
+
+# Check the structure of the combined data
+str(kde_data)  # Ensure it contains x, y, value, and DayofYear columns
+```
+
+Then get plot data into gif.
+
+```{r}
+library(ggplot2)
+library(gganimate)
+
+# Create an animated plot using ggplot2
+p <- ggplot(kde_data, aes(x = x, y = y, fill = value)) +
+  geom_raster() +
+  scale_fill_viridis_c() +  # Use a color scale for density values
+  labs(title = "Kernel Density Estimation for Day {frame_time}",
+       x = "Longitude", y = "Latitude") +
+  coord_equal() +
+  transition_time(DayofYear) +  # Animate by DayofYear (1 to 343)
+  ease_aes('linear')
+
+# Animate the plot and save as a GIF
+animate(p, nframes = 343, fps = 10, width = 800, height = 600, renderer = gifski_renderer("kde_animation_343_days.gif"))
+
+```
+
+Results!
+
+![](kde_animation_343_days.gif)

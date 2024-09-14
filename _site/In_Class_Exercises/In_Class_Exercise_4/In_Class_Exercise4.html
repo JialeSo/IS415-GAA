@@ -152,7 +152,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
  <span class="dropdown-text">Hands-On Exercise 4</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="../../404.html"><i class="bi bi-fas fa-code" role="img">
+    <a class="dropdown-item" href="../../Hands_On_exercises/Hands_On_Exercise_5/Hands_On_Exercise5.html"><i class="bi bi-fas fa-code" role="img">
 </i> 
  <span class="dropdown-text">Hands-On Exercise 5</span></a>
   </li>  
@@ -329,7 +329,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#computing-spatio-temporal-kde" id="toc-computing-spatio-temporal-kde" class="nav-link" data-scroll-target="#computing-spatio-temporal-kde">5.4 Computing Spatio-temporal KDE</a></li>
   <li><a href="#plotting-the-spatio-temporal-kde-object" id="toc-plotting-the-spatio-temporal-kde-object" class="nav-link" data-scroll-target="#plotting-the-spatio-temporal-kde-object">5.5 Plotting the spatio-temporal KDE Object</a></li>
   </ul></li>
-  <li><a href="#computing-stkde-by-day-of-year" id="toc-computing-stkde-by-day-of-year" class="nav-link" data-scroll-target="#computing-stkde-by-day-of-year">6.0 Computing STKDE By Day Of Year</a></li>
   </ul>
 </nav>
     </div>
@@ -362,7 +361,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <div>
     <div class="quarto-title-meta-heading">Modified</div>
     <div class="quarto-title-meta-contents">
-      <p class="date-modified">September 9, 2024</p>
+      <p class="date-modified">September 14, 2024</p>
     </div>
   </div>
     
@@ -408,6 +407,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li><p>forestfires, a csv file provides locations of forest fire detected from the Moderate Resolution Imaging Spectroradiometer (MODIS) sensor data. The data are downloaded from <a href="https://firms.modaps.eosdis.nasa.gov/download/">Fire Information for Resource Management System</a>. For the purpose of this exercise, only forest fires within Kepulauan Bangka Belitung will be used.</p></li>
 <li><p>Kepulauan_Bangka_Belitung, an ESRI shapefile showing the sub-district (i.e.&nbsp;<a href="https://en.wikipedia.org/wiki/Villages_of_Indonesia">kelurahan</a>) boundary of Kepulauan Bangka Belitung. The data set was downloaded from <a href="https://www.indonesia-geospasial.com/2023/05/download-shapefile-batas-administrasi.html">Indonesia Geospatial</a> portal. The original data covers the whole Indonesia. For the purpose of this exercise, only sub-districts within Kepulauan Bangka Belitung are extracted</p></li>
 </ul>
+<p>kbb_sf &lt;- st_read(dsn = “data/rawdata”, layer=“Kepulauan_Bangka_Belitung”) %&gt;%</p>
+<p>st_union %&gt;%</p>
+<p>st_zm(drop = TRUE, what = “ZM”) %&gt;%</p>
+<p>st_transform(crs = 32748)</p>
 <div class="tabset-margin-container"></div><div class="panel-tabset">
 <ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-1-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-1" role="tab" aria-controls="tabset-1-1" aria-selected="true">Forest Fire</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-1-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-2" role="tab" aria-controls="tabset-1-2" aria-selected="false">Kepulauan Shape File</a></li></ul>
 <div class="tab-content">
@@ -737,12 +740,9 @@ Evaluation
 </div>
 </div>
 </div>
-</section>
-</section>
-<section id="computing-stkde-by-day-of-year" class="level1">
-<h1>6.0 Computing STKDE By Day Of Year</h1>
 
 
+</section>
 </section>
 
 </main> <!-- /main -->

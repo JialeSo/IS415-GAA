@@ -1,337 +1,274 @@
 ---
-title: "Spatial Point Patterns Analysis"
+title: "Hands On Exercise 4: Spatio-Temporal & Network Constrainted Spatial Point Pattern Analysis"
 author: "Jiale SO"
-date: "August 30, 2024"
+date: "September 09, 2024"
 date-modified: "last-modified"
 execute: 
-  eval: true
+  eval: true  
   echo: true
-  message: false
-  warning: false
   freeze: true
+  warning: false
+  message: false
+  cache: true
 ---
 
-# 1.0 Context:
+# 1.0 Introduction
 
-------------------------------------------------------------------------
+A spatio-temporal point process (also called space-time or spatial-temporal point process) is a random collection of points, where each point represents the time and location of an event. Examples of events include incidence of disease, sightings or births of a species, or the occurrences of fires, earthquakes, lightning strikes, tsunamis, or volcanic eruptions.
 
-Spatial Point Pattern Analysis involves evaluating the pattern or distribution of a set of points on a surface. These points can represent the locations of:
+The analysis of spatio-temporal point patterns is becoming increasingly necessary, given the rapid emergence of geographically and temporally indexed data in a wide range of fields. Several spatio-temporal point patterns analysis methods have been introduced and implemented in R in the last ten years. This chapter shows how various R packages can be combined to run a set of spatio-temporal point pattern analyses in a guided and intuitive way. A real world forest fire events in Kepulauan Bangka Belitung, Indonesia from 1st January 2023 to 31st December 2023 is used to illustrate the methods, procedures and interpretations.
 
--   Events, such as crimes, traffic accidents, or disease outbreaks, or
+## 1.1 Research Questions
 
--   Business services, like coffee shops and fast food outlets, or facilities such as childcare and eldercare centers.
+The specific question we would like to answer is:
 
-The specific questions we would like to answer are as follows:
+-   are the locations of forest fire in Kepulauan Bangka Belitung spatial and spatio-temporally independent?
 
--   are the childcare centres in Singapore randomly distributed throughout the country?
+-   if the answer is NO, where and when the observed forest fire locations tend to cluster?
 
--   if the answer is not, then the next logical question is where are the locations with higher concentration of childcare centres?
+# 2.0 Setup and Requirements
 
-# 2.0 Downloading the Data sets
+For the purpose of this study, five R packages will be used. They are:
 
-------------------------------------------------------------------------
+-   `rgdal` for importing geospatial data in GIS file format such as shapefile into R and save them as Spatial\*DataFrame,
 
-To provide answers to the questions above, three data sets will be used. They are:
+-   `maptools` for converting Spatial\* object into ppp object,
 
--   `CHILDCARE`, a point feature data providing both location and attribute information of childcare centres. It was downloaded from Data.gov.sg and is in geojson format. [Link here](https://data.gov.sg/datasets?query=child&page=1&coverage=&formats=GEOJSON&resultId=d_5d668e3f544335f8028f546827b773b4)
+-   `raster` for handling raster data in R,
 
--   `MP14_SUBZONE_WEB_PL`, a polygon feature data providing information of URA 2014 Master Plan Planning Subzone boundary data. It is in ESRI shapefile format. This data set was also downloaded from Data.gov.sg. [Link here](https://data.gov.sg/datasets?query=subzone&page=1&coverage=&resultId=d_d14da225fccf921049ab64238ff473d9)
+-   `sparr` provides function to estimate fixed and adaptive kernel-smoothed spatial relative risk surfaces via the density-ratio method and perform subsequent inference. fixed-bandwidth spati=temporal density and relative risk estimation is also supported
 
--   `CostalOutline`, a polygon feature data showing the national boundary of Singapore. It is provided by SLA and is in ESRI shapefile format. Link here
+-   `spatstat` for performing Spatial Point Patterns Analysis such as kcross, Lcross, etc., and
 
-# 3.0 Installing and loading R packages
-
-------------------------------------------------------------------------
-
-In this hands-on exercise, five R packages will be used, they are:
-
--   [**sf**](https://r-spatial.github.io/sf/), a relatively new R package specially designed to import, manage and process vector-based geospatial data in R.
-
--   [**spatstat**](https://spatstat.org/), which has a wide range of useful functions for point pattern analysis. In this hands-on exercise, it will be used to perform 1st- and 2nd-order spatial point patterns analysis and derive kernel density estimation (KDE) layer.
-
--   [**raster**](https://cran.r-project.org/web/packages/raster/) which reads, writes, manipulates, analyses and model of gridded spatial data (i.e. raster). In this hands-on exercise, it will be used to convert image output generate by spatstat into raster format.
-
--   [**maptools**](https://cran.r-project.org/web/packages/maptools/index.html) which provides a set of tools for manipulating geographic data. In this hands-on exercise, we mainly use it to convert *Spatial* objects into *ppp* format of **spatstat**.
-
--   [**tmap**](https://cran.r-project.org/web/packages/tmap/index.html) which provides functions for plotting cartographic quality static point patterns maps or interactive maps by using [leaflet](https://leafletjs.com/) API.
-
-Use the code chunk below to install and launch the five R packages.
+-   `tmap` for producing cartographic quality thematic maps.
 
 ```{r}
-pacman::p_load(sf, raster, spatstat, tmap, tidyverse, rvest, geojsonsf)
+pacman::p_load(sf, raster, spatstat, sparr, tmap, tidyverse, stpp, skimr, gganimate, ggplot2, plotly)
 ```
 
-# 4.0 Spatial Data Wrangling
+# 3.0 Importing the Data Sets.
 
-## 4.1 Importing Spatial Data
+For the purpose of this exercise, two data sets are used, they are:
+
+-   forestfires, a csv file provides locations of forest fire detected from the Moderate Resolution Imaging Spectroradiometer (MODIS) sensor data. The data are downloaded from [Fire Information for Resource Management System](https://firms.modaps.eosdis.nasa.gov/download/). For the purpose of this exercise, only forest fires within Kepulauan Bangka Belitung will be used.
+
+-   Kepulauan_Bangka_Belitung, an ESRI shapefile showing the sub-district (i.e. [kelurahan](https://en.wikipedia.org/wiki/Villages_of_Indonesia)) boundary of Kepulauan Bangka Belitung. The data set was downloaded from [Indonesia Geospatial](https://www.indonesia-geospasial.com/2023/05/download-shapefile-batas-administrasi.html) portal. The original data covers the whole Indonesia. For the purpose of this exercise, only sub-districts within Kepulauan Bangka Belitung are extracted
+
+kbb_sf \<- st_read(dsn = "data/rawdata", layer="Kepulauan_Bangka_Belitung") %\>%
+
+st_union %\>%
+
+st_zm(drop = TRUE, what = "ZM") %\>%
+
+st_transform(crs = 32748)
 
 ::: panel-tabset
-### Childcare data
+### Forest Fire
 
 ```{r}
-childcare_sf <- st_read("data/child-care-services-geojson.geojson") %>%
-  st_transform(crs = 3414)
+forestFire_sf <- read_csv("data/rawdata/forestfires.csv") %>%
+  st_as_sf(coords = c("longitude", "latitude"), crs = 4326) %>%
+  st_transform(crs = 32748)
+```
+
+```{r}
+forestFire_sf <- forestFire_sf %>%
+  mutate(DayofYear = yday(acq_date)) %>%
+  mutate(Month_num = month(acq_date)) %>%
+  mutate(Month_fac = month(acq_date, label = TRUE, abbr = FALSE)) 
 
 ```
 
-### Costal Outline
+### Kepulauan Shape File
+
+Importing the study area.
 
 ```{r}
-sg_sf <- st_read(dsn = "data", layer="CostalOutline")
+kbb_sf <- st_read(dsn = "data/rawdata", layer="Kepulauan_Bangka_Belitung") %>%
+  st_union %>%
+  st_zm(drop = TRUE, what = "ZM") %>%
+  st_transform(crs = 32748)
 ```
 
-### mp14_subzone
+Convert to own
 
 ```{r}
-mpsz_sf <- st_read(dsn = "data", layer = "MP14_SUBZONE_WEB_PL")
+kbb_owin <- as.owin(kbb_sf)
+kbb_owin
+
+class(kbb_owin)
 ```
 :::
 
-### 4.1.1 DIY:Use the appropriate SF function to retrieve the referencing system information of these geospatial data.
-
-Simple, use the `st_crs` function from SF to check and print the crs information
+# 4.0 Visualizing the Fire Points
 
 ```{r}
-# Retrieve CRS information
-childcare_crs <- st_crs(childcare_sf)
-sg_crs <- st_crs(sg_sf)
-mpsz_crs <- st_crs(mpsz_sf)
-
-# Print CRS information
-print(childcare_crs)
-print(sg_crs)
-print(mpsz_crs)
+tm_shape(kbb_sf) +
+  tm_polygons() +
+  tm_shape(forestFire_sf) +
+    tm_dots()
 ```
 
-### 4.1.2 DIY: Assign the correct CRS to MPSZ_SF and SG_SF Simple Feature Data frames.
-
-notice that the MPSZ_SF and SG_SF is in `World Geodetic System 1984` format, we need set the correct crs to these data and we can do so using the st transform. We can do so using the transform method
-
-::: panel-tabset
-### Changing to CRS
-
 ```{r}
-mpsz_sf <- st_read(dsn = "data", layer = "MP14_SUBZONE_WEB_PL") %>%
-  st_transform(crs = 3414)
-
-sg_sf <- st_read(dsn = "data", layer = "CostalOutline") %>%
-  st_transform(crs = 3414)
+tm_shape(kbb_sf) +
+  tm_polygons() +
+  tm_shape(forestFire_sf) +
+    tm_dots(size = 0.1) +
+  tm_facets(by="Month_fac",
+            free.coords = FALSE,
+            drop.units = TRUE)
 ```
 
-### Check if its the right CRS
-
 ```{r}
-print(st_crs(mpsz_sf))
-print(st_crs(sg_sf))
-```
-:::
-
-### 4.1.3 Change the referencing System to Singapore National Projected Coordinate System
-
-::: callout-note
-**Understanding the CRS in Our Data:**
-
-1.  **MPZ and Coastal Data:**
-
-    -   **CRS**: `SVY21`, which is the Singapore National Projected Coordinate System based on WGS84.
-
-    -   **Description**: This is a common projected coordinate system used in Singapore for accurate mapping.
-
-2.  **Childcare Data:**
-
-    -   **CRS**: `SVY21 / Singapore TM` (Transverse Mercator projection).
-
-    -   **Description**: This is also a projection based on SVY21, specifically using the Transverse Mercator projection. It is very close to the SVY21 system, with minor differences in how the projection is handled.
-
-Given that the map file serves as the base, we want all spatial data to overlay correctly, we should:
-
-1.  **Transform the GeoJSON Data to Match the Map File's CRS**:
-
-    -   Since our MPZ and Coastal data are already in `SVY21` (EPSG:3414), transform the GeoJSON data to `EPSG:3414` as well.
-
-2.  **Rationale**:
-
-    -   This approach ensures that the childcare locations from the GeoJSON data will be accurately plotted within the boundaries and context provided by the map file (MPZ and Coastal data).
-
-    -   It avoids potential issues with misalignment, especially since oour base map data is already set up in a local projection suitable for Singapore.
-:::
-
-```{r}
-# Transform Childcare data to match the base map's CRS (EPSG:3414)
-childcare_sf <- st_read("data/child-care-services-geojson.geojson") %>%
-  st_transform(crs = 3414)
-
-# Now, all datasets should be aligned in the same CRS
+ggplot() +
+  # Plot the map of Kepulauan Bangka Belitung
+  geom_sf(data = kbb_sf, fill = "lightgreen", color = "darkgreen") +
+  # Plot the forest fire points, colored by month
+  geom_sf(data = forestFire_sf, aes(color = Month_fac), size = 2) +
+  # Customize the theme
+  theme_minimal() +
+  labs(
+    title = "Forest Fires in Kepulauan Bangka Belitung",
+    subtitle = "Mapped by Month",
+    color = "Month",
+    caption = "Source: Forest Fire Data"
+  ) +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5)
+  )
 ```
 
-### 4.1.4 Checking for validity of maps
+# 5.0 Computing the STKDE By Month
 
-When working with spatial data, it's crucial to ensure that all geometries are valid. Invalid geometries can cause errors in analysis and visualization.
-
-1.  **Checking Validity with `st_is_valid()`**:
-2.  **Identifying Invalid Geometries**:
-3.  **Fixing Invalid Geometries with `st_make_valid()`**
-
-::: panel-tabset
-### MPZ
+## 5.1 Extracting forest fire by months
 
 ```{r}
-mpsz_validity <- st_is_valid(mpsz_sf)
-mpsz_invalid <- which(!mpsz_validity)
-if (length(mpsz_invalid) > 0) {
-  print("MPZ Invalid!")
-  print(mpsz_sf[mpsz_invalid, ])
-} else {
-  print("it's valid!")
-}
+fire_month <- forestFire_sf %>%
+  dplyr::select(Month_num)
+
 ```
 
-Notice that MPZ has 9 invalidity of sub zones here, so we have to make it valid through the function make valid. Once it's valid we then check again
+## 5.2 Creating the PPP
 
 ```{r}
-mpsz_sf <- st_make_valid(mpsz_sf)
-mpsz_validity <- st_is_valid(mpsz_sf)
-mpsz_invalid <- which(!mpsz_validity)
-if (length(mpsz_invalid) > 0) {
-  print("MPZ Invalid!")
-  print(mpsz_sf[mpsz_invalid, ])
-} else {
-  print("it's valid!")
-}
+fire_month_ppp <- as.ppp(fire_month)
+fire_month_ppp
 ```
 
-### SG
+## 5.3 Including Owin Object
+
+The code chunk below is used to combine *origin_am_ppp* and *am_owin* objects into one.
 
 ```{r}
-sg_validity <- st_is_valid(sg_sf)
-sg_invalid <- which(!sg_validity)
-if (length(sg_invalid) > 0) {
-  print("SG Invalid!")
-  print(mpsz_sf[mpsz_invalid, ])
-} else {
-  print("it's valid!")
-}
+fire_month_owin <- fire_month_ppp[kbb_owin]
+head(fire_month_owin)
+glimpse(fire_month_owin)
+skim(fire_month_owin)
 ```
 
-In SG_SF there's one invalid as well, so we apply the fix.
+## 5.4 Computing Spatio-temporal KDE
+
+`Spattemp.density()` of sparr package is used to compute the STYKDE.
 
 ```{r}
-sg_sf <- st_make_valid(sg_sf)
-sg_validity <- st_is_valid(sg_sf)
-sg_invalid <- which(!sg_validity)
-if (length(sg_invalid) > 0) {
-  print("SG Invalid!")
-  print(mpsz_sf[sg_invalid, ])
-} else {
-  print("it's valid!")
-}
+st_kde <- spattemp.density(fire_month_owin)
+summary(st_kde)
 ```
 
-### Childcare
+## 5.5 Plotting the STKDE Object By Month
 
-Notice that childcare is a geojson data and it houses it's data in the description column, we need to break this up to get more meaningful data.
+plot for the KDE between july 2023 = december 2023.
 
-We can do a simple extraction from the `Description` attribute and map the data better. Assuming that each Table Row (TR) contains a Table Head (TH) and a Table Data (TD), we can map the data accordingly.
+```{r,fig.width=12, fig.height=10}
+
+tims <- c(7,8,9,10,11,12)
+ par(mfcol = c(2,3))
+ for(i in tims) {
+   plot(st_kde, i,
+        override.par=FALSE,
+        fix.range = TRUE,
+        main = paste("KDE at month", i)
+        )
+ }
+```
+
+## 5.6 Plotting the STKDE Object By Day Of Year & Improved
 
 ```{r}
-childcare_validity <- st_is_valid(childcare_sf)
-childcare_invalid <- which(!childcare_validity)
-if (length(childcare_invalid) > 0) {
-  print("ChildCare Invalid!")
-  print(childcare_sf[childcare_invalid, ])
-} else {
-  print("it's valid!")
-}
+fire_yday_ppp <- forestFire_sf %>% 
+  dplyr::select(DayofYear) %>%
+  as.ppp()
 
+fire_yday_owin <- fire_yday_ppp[kbb_owin]
 
-# Ensure the geometry column is preserved
-geometry_column <- st_geometry(childcare_sf)
-parse_description <- function(html_string) {
-  html <- read_html(html_string)
-  html <- html %>% html_nodes("tr") %>% .[!grepl("Attributes", .)]
-  headers <- html %>% html_nodes("th") %>% html_text(trim = TRUE)
-  values <- html %>% html_nodes("td") %>% html_text(trim = TRUE)
+```
+
+```{r}
+head(kde_yday)
+```
+
+```{r}
+set.seed(1234)
+BOOT.spattemp(fire_yday_owin) 
+
+kde_yday <- spattemp.density(
+  fire_yday_owin,
+  h = 9000,
+  lambda = 19)
+summary(kde_yday)
+```
+
+### 5.6.1 Making An Animated Time Series Gif Across Days
+
+First Make the data Streamlined into a Dataframe object
+
+```{r}
+# Assuming kde_yday$z.cond contains 343 frames (one for each day)
+days <- 1:343  # Adjust to match the number of days
+
+# Initialize an empty list to hold the data for each day
+kde_data_list <- lapply(days, function(day) {
+  # Extract the kernel density image for each day from z.cond
+  kde_day <- as.data.frame(kde_yday$z.cond[[day]])  # Convert to a data frame (adjust if necessary)
   
-  # Handle cases where the number of headers and values don't match
-  if (length(headers) != length(values)) {
-    max_length <- max(length(headers), length(values))
-    headers <- c(headers, rep("ExtraHeader", max_length - length(headers)))
-    values <- c(values, rep("NULL", max_length - length(values)))
-  }
+  # Rename the columns appropriately (adjust based on the actual structure)
+  colnames(kde_day) <- c("x", "y", "value")  # Ensure the correct column names for spatial data
   
-  setNames(values, headers)
-}
-
-# Apply parsing function, unnest the description fields, and remove the original 'Description' column
-childcare_sf <- childcare_sf %>% 
-  mutate(Description_parsed = map(Description, parse_description)) %>%
-  unnest_wider(Description_parsed) %>%
-  select(-Description)  # Remove the original 'Description' column
-
-# Overwrite the 'Name' column with the 'LANDYADDRESSPOINT' column values
-childcare_sf <- childcare_sf %>%
-  mutate(Name = NAME)  # Overwrite 'Name' with 'LANDYADDRESSPOINT'
-
-# Replace empty strings or NA across all columns with "NULL"
-childcare_sf <- childcare_sf %>%
-  mutate(across(!geometry, ~ ifelse(is.na(.) | . == "", "NULL", .)))
-
-# Reassign the geometry to the dataframe
-st_geometry(childcare_sf) <- geometry_column
-# Ensure it's still an sf object
-class(childcare_sf)
-```
-:::
-
-## 4.2 Mapping the geospatial datasets.
-
-::: panel-tabset
-### DIY PLOT Map
-
-Using the mapping methods you learned in Hands-on Exercise 3, prepare a static map
-
-```{r}
-# Suppress the tmap mode message
-suppressMessages({
-  tmap_mode("plot")  # Use "view" for an interactive map or "plot" for a static map
+  # Add a DayofYear column for animation
+  kde_day$DayofYear <- day
+  
+  return(kde_day)
 })
 
-# Create the map
-tm <- tm_shape(mpsz_sf) + 
-  tm_polygons(col = "grey", border.col = "black", alpha = 0.5) +  # Base map with subzones
-  tm_shape(childcare_sf) + 
-  tm_dots(col = "black", size = 0.05) +  # Plot childcare locations as dots
-   tm_layout(
-    main.title = "Childcare Locations on Singapore Map",
-    main.title.position = c("center"),  # Center the title at the top
-    outer.margins = c(0.1, 0, 0, 0),  # Adjust outer margins to make space for the title
-    legend.outside = TRUE,  # Keep legend outside the map area
-    legend.outside.position = "bottom"  # Position the legend at the bottom
-  )
-tm
+# Combine all days' data into a single data frame
+kde_data <- do.call(rbind, kde_data_list)
+
+# Check the structure of the combined data
+str(kde_data)  # Ensure it contains x, y, value, and DayofYear columns
 ```
 
-### DIY View Interactivity
-
-we can also prepare a pin map by using the code chunk below.
+Then get plot data into gif.
 
 ```{r}
-suppressMessages({
-  tmap_mode("view")  # Use "view" for an interactive map or "plot" for a static map
-})
+library(ggplot2)
+library(gganimate)
 
-tm <- tm_shape(mpsz_sf) + 
-  tm_polygons(col = "grey", border.col = "black", alpha = 0.5) +  # Base map with subzones
-  tm_shape(childcare_sf) + 
-  tm_dots(col = "black", size = 0.05) +  # Plot childcare locations as dots
-   tm_layout(
-    title = "Childcare Locations on Singapore Map",
-    title.position = c("center"),  # Center the title at the top
-    outer.margins = c(0.1, 0, 0, 0),  # Adjust outer margins to make space for the title
-    legend.outside = TRUE,  # Keep legend outside the map area
-    legend.outside.position = "bottom"  # Position the legend at the bottom
-  )
+# Create an animated plot using ggplot2
+p <- ggplot(kde_data, aes(x = x, y = y, fill = value)) +
+  geom_raster() +
+  scale_fill_viridis_c() +  # Use a color scale for density values
+  labs(title = "Kernel Density Estimation for Day {frame_time}",
+       x = "Longitude", y = "Latitude") +
+  coord_equal() +
+  transition_time(DayofYear) +  # Animate by DayofYear (1 to 343)
+  ease_aes('linear')
 
-tm
+# Animate the plot and save as a GIF
+animate(p, nframes = 343, fps = 10, width = 800, height = 600, renderer = gifski_renderer("kde_animation_343_days.gif"))
+
 ```
-:::
+
+Results!
+
+![](kde_animation_343_days.gif)

@@ -18,6 +18,12 @@ Population?
 State level
 Division Level
 Region?
+Ethinicity?
+Government? 
+Type of Acceident
+Death rate? 
+conflict rate?
+
 
 ```
 
@@ -26,6 +32,15 @@ Region?
 # 2.0 Data Description
 
 # 3.0 Data Pre-processing
+
+```{r}
+pacman::p_load(sf, raster, spatstat, sparr, tmap, tidyverse, stpp, skimr)
+```
+
+```{r}
+kbb_sf <- st_read(dsn = "data/raw/geospatial/mmr_polbnda2_adm1_250k_mimu_1", layer="mmr_polbnda2_adm1_250k_mimu_1") 
+plot(kbb_sf)
+```
 
 # 4.0 Exploratory Data analysis
 

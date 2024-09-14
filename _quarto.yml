@@ -21,7 +21,7 @@ website:
             href: "Hands_On_exercises/Hands_On_Exercise_4/Hands_On_Exercise4.html"
             icon: fas fa-code
           - text: "Hands-On Exercise 5"
-            href: "404.qmd"
+            href: "Hands_On_exercises/Hands_On_Exercise_5/Hands_On_Exercise5.html"
             icon: fas fa-code
           - text: "Hands-On Exercise 6"
             href: "404.qmd"
