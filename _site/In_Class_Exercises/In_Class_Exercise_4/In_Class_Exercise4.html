@@ -328,6 +328,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#including-owin-object" id="toc-including-owin-object" class="nav-link" data-scroll-target="#including-owin-object">5.3 Including Owin Object</a></li>
   <li><a href="#computing-spatio-temporal-kde" id="toc-computing-spatio-temporal-kde" class="nav-link" data-scroll-target="#computing-spatio-temporal-kde">5.4 Computing Spatio-temporal KDE</a></li>
   <li><a href="#plotting-the-spatio-temporal-kde-object" id="toc-plotting-the-spatio-temporal-kde-object" class="nav-link" data-scroll-target="#plotting-the-spatio-temporal-kde-object">5.5 Plotting the spatio-temporal KDE Object</a></li>
+  <li><a href="#plotting-the-stkde-object-by-day-of-year-improved" id="toc-plotting-the-stkde-object-by-day-of-year-improved" class="nav-link" data-scroll-target="#plotting-the-stkde-object-by-day-of-year-improved">5.6 Plotting the STKDE Object By Day Of Year &amp; Improved</a>
+  <ul class="collapse">
+  <li><a href="#making-an-animated-time-series-gif-across-days" id="toc-making-an-animated-time-series-gif-across-days" class="nav-link" data-scroll-target="#making-an-animated-time-series-gif-across-days">5.6.1 Making An Animated Time Series Gif Across Days</a></li>
+  </ul></li>
   </ul></li>
   </ul>
 </nav>
@@ -740,8 +744,144 @@ Evaluation
 </div>
 </div>
 </div>
+</section>
+<section id="plotting-the-stkde-object-by-day-of-year-improved" class="level2">
+<h2 class="anchored" data-anchor-id="plotting-the-stkde-object-by-day-of-year-improved">5.6 Plotting the STKDE Object By Day Of Year &amp; Improved</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>fire_yday_ppp <span class="ot">&lt;-</span> forestFire_sf <span class="sc">%&gt;%</span> </span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">select</span>(DayofYear) <span class="sc">%&gt;%</span></span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as.ppp</span>()</span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>fire_yday_owin <span class="ot">&lt;-</span> fire_yday_ppp[kbb_owin]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1234</span>)</span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a><span class="fu">BOOT.spattemp</span>(fire_yday_owin) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Initialising...Done.
+Optimising...
+h = 15102.47 ; lambda = 16.84806 
+h = 16612.72 ; lambda = 16.84806 
+h = 15102.47 ; lambda = 1527.095 
+h = 15480.03 ; lambda = 771.9715 
+h = 15668.81 ; lambda = 394.4098 
+h = 15763.2 ; lambda = 205.6289 
+h = 15810.4 ; lambda = 111.2385 
+h = 15833.99 ; lambda = 64.04328 
+h = 15845.79 ; lambda = 40.44567 
+h = 15851.69 ; lambda = 28.64687 
+h = 15863.49 ; lambda = 5.049258 
+h = 15854.64 ; lambda = 22.74746 
+h = 15860.54 ; lambda = 10.94866 
+h = 15859.07 ; lambda = 13.89836 
+h = 14348.82 ; lambda = 13.89836 
+h = 13216.87 ; lambda = 12.42351 
+h = 12460.27 ; lambda = 15.37321 
+h = 10760.88 ; lambda = 16.11064 
+h = 8875.282 ; lambda = 11.68608 
+h = 10432.08 ; lambda = 12.97658 
+h = 7976.084 ; lambda = 16.66371 
+h = 9286.281 ; lambda = 15.60366 
+h = 9615.08 ; lambda = 18.73771 
+h = 9206.581 ; lambda = 21.61828 
+h = 8140.483 ; lambda = 18.23073 
+h = 8795.582 ; lambda = 17.70071 
+h = 9124.381 ; lambda = 20.83477 
+h = 9164.856 ; lambda = 19.52699 
+h = 8345.358 ; lambda = 18.48998 
+h = 9297.65 ; lambda = 18.67578 
+h = 8928.375 ; lambda = 16.8495 
+h = 9105.736 ; lambda = 18.85762 
+Done.</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>         h     lambda 
+9105.73611   18.85762 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>kde_yday <span class="ot">&lt;-</span> <span class="fu">spattemp.density</span>(</span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>  fire_yday_owin,</span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">h =</span> <span class="dv">9000</span>,</span>
+<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">lambda =</span> <span class="dv">19</span>)</span>
+<span id="cb28-5"><a href="#cb28-5" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(kde_yday)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Spatiotemporal Kernel Density Estimate
+
+Bandwidths
+  h = 9000 (spatial)
+  lambda = 19 (temporal)
+
+No. of observations
+  741 
+
+Spatial bound
+  Type: polygonal
+  2D enclosure: [512066.8, 705559.4] x [9655398, 9834006]
+
+Temporal bound
+  [10, 352]
+
+Evaluation
+  128 x 128 x 343 trivariate lattice
+  Density range: [2.001642e-19, 2.445724e-12]</code></pre>
+</div>
+</div>
+<section id="making-an-animated-time-series-gif-across-days" class="level3">
+<h3 class="anchored" data-anchor-id="making-an-animated-time-series-gif-across-days">5.6.1 Making An Animated Time Series Gif Across Days</h3>
+<p>First Make the data Streamlined into a Dataframe object</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Assuming kde_yday$z.cond contains 343 frames (one for each day)</span></span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>days <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">343</span>  <span class="co"># Adjust to match the number of days</span></span>
+<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Initialize an empty list to hold the data for each day</span></span>
+<span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a>kde_data_list <span class="ot">&lt;-</span> <span class="fu">lapply</span>(days, <span class="cf">function</span>(day) {</span>
+<span id="cb30-6"><a href="#cb30-6" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Extract the kernel density image for each day from z.cond</span></span>
+<span id="cb30-7"><a href="#cb30-7" aria-hidden="true" tabindex="-1"></a>  kde_day <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(kde_yday<span class="sc">$</span>z.cond[[day]])  <span class="co"># Convert to a data frame (adjust if necessary)</span></span>
+<span id="cb30-8"><a href="#cb30-8" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb30-9"><a href="#cb30-9" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Rename the columns appropriately (adjust based on the actual structure)</span></span>
+<span id="cb30-10"><a href="#cb30-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">colnames</span>(kde_day) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"x"</span>, <span class="st">"y"</span>, <span class="st">"value"</span>)  <span class="co"># Ensure the correct column names for spatial data</span></span>
+<span id="cb30-11"><a href="#cb30-11" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb30-12"><a href="#cb30-12" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Add a DayofYear column for animation</span></span>
+<span id="cb30-13"><a href="#cb30-13" aria-hidden="true" tabindex="-1"></a>  kde_day<span class="sc">$</span>DayofYear <span class="ot">&lt;-</span> day</span>
+<span id="cb30-14"><a href="#cb30-14" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb30-15"><a href="#cb30-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(kde_day)</span>
+<span id="cb30-16"><a href="#cb30-16" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb30-17"><a href="#cb30-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-18"><a href="#cb30-18" aria-hidden="true" tabindex="-1"></a><span class="co"># Combine all days' data into a single data frame</span></span>
+<span id="cb30-19"><a href="#cb30-19" aria-hidden="true" tabindex="-1"></a>kde_data <span class="ot">&lt;-</span> <span class="fu">do.call</span>(rbind, kde_data_list)</span>
+<span id="cb30-20"><a href="#cb30-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-21"><a href="#cb30-21" aria-hidden="true" tabindex="-1"></a><span class="co"># Check the structure of the combined data</span></span>
+<span id="cb30-22"><a href="#cb30-22" aria-hidden="true" tabindex="-1"></a><span class="fu">str</span>(kde_data)  <span class="co"># Ensure it contains x, y, value, and DayofYear columns</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>'data.frame':   1875867 obs. of  4 variables:
+ $ x        : num  512823 512823 514334 514334 514334 ...
+ $ y        : num  9776098 9777493 9770517 9771912 9773307 ...
+ $ value    : num  2.11e-12 2.42e-12 1.19e-12 1.40e-12 1.64e-12 ...
+ $ DayofYear: int  1 1 1 1 1 1 1 1 1 1 ...</code></pre>
+</div>
+</div>
+<p>Then get plot data into gif.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(gganimate)</span>
+<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Create an animated plot using ggplot2</span></span>
+<span id="cb32-5"><a href="#cb32-5" aria-hidden="true" tabindex="-1"></a>p <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(kde_data, <span class="fu">aes</span>(<span class="at">x =</span> x, <span class="at">y =</span> y, <span class="at">fill =</span> value)) <span class="sc">+</span></span>
+<span id="cb32-6"><a href="#cb32-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_raster</span>() <span class="sc">+</span></span>
+<span id="cb32-7"><a href="#cb32-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_viridis_c</span>() <span class="sc">+</span>  <span class="co"># Use a color scale for density values</span></span>
+<span id="cb32-8"><a href="#cb32-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Kernel Density Estimation for Day {frame_time}"</span>,</span>
+<span id="cb32-9"><a href="#cb32-9" aria-hidden="true" tabindex="-1"></a>       <span class="at">x =</span> <span class="st">"Longitude"</span>, <span class="at">y =</span> <span class="st">"Latitude"</span>) <span class="sc">+</span></span>
+<span id="cb32-10"><a href="#cb32-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">coord_equal</span>() <span class="sc">+</span></span>
+<span id="cb32-11"><a href="#cb32-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">transition_time</span>(DayofYear) <span class="sc">+</span>  <span class="co"># Animate by DayofYear (1 to 343)</span></span>
+<span id="cb32-12"><a href="#cb32-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ease_aes</span>(<span class="st">'linear'</span>)</span>
+<span id="cb32-13"><a href="#cb32-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-14"><a href="#cb32-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Animate the plot and save as a GIF</span></span>
+<span id="cb32-15"><a href="#cb32-15" aria-hidden="true" tabindex="-1"></a><span class="fu">animate</span>(p, <span class="at">nframes =</span> <span class="dv">343</span>, <span class="at">fps =</span> <span class="dv">10</span>, <span class="at">width =</span> <span class="dv">800</span>, <span class="at">height =</span> <span class="dv">600</span>, <span class="at">renderer =</span> <span class="fu">gifski_renderer</span>(<span class="st">"kde_animation_343_days.gif"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Results!</p>
+<p><img src="kde_animation_343_days.gif" class="img-fluid"></p>
 
 
+</section>
 </section>
 </section>
 

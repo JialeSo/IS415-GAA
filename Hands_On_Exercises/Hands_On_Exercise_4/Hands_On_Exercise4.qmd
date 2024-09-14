@@ -205,10 +205,6 @@ fire_yday_owin <- fire_yday_ppp[kbb_owin]
 ```
 
 ```{r}
-head(kde_yday)
-```
-
-```{r}
 set.seed(1234)
 BOOT.spattemp(fire_yday_owin) 
 
@@ -250,7 +246,7 @@ str(kde_data)  # Ensure it contains x, y, value, and DayofYear columns
 
 Then get plot data into gif.
 
-```{r}
+```{r, eval= FALSE}
 library(ggplot2)
 library(gganimate)
 
