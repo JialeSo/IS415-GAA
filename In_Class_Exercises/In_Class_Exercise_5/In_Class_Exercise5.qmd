@@ -1,0 +1,142 @@
+---
+title: "In Class Exercise 5: Spatio-Temporal Point Patterns Analysis"
+author: "Jiale SO"
+date: "September 09, 2024"
+date-modified: "last-modified"
+execute: 
+  eval: true  
+  echo: true
+  freeze: true
+  warning: false
+  message: false
+  cache: true
+---
+
+# 1.0 Introduction
+
+A spatio-temporal point process (also called space-time or spatial-temporal point process) is a random collection of points, where each point represents the time and location of an event. Examples of events include incidence of disease, sightings or births of a species, or the occurrences of fires, earthquakes, lightning strikes, tsunamis, or volcanic eruptions.
+
+The analysis of spatio-temporal point patterns is becoming increasingly necessary, given the rapid emergence of geographically and temporally indexed data in a wide range of fields. Several spatio-temporal point patterns analysis methods have been introduced and implemented in R in the last ten years. This chapter shows how various R packages can be combined to run a set of spatio-temporal point pattern analyses in a guided and intuitive way. A real world forest fire events in Kepulauan Bangka Belitung, Indonesia from 1st January 2023 to 31st December 2023 is used to illustrate the methods, procedures and interpretations.
+
+## 1.1 Research Questions
+
+The specific question we would like to answer is:
+
+-   are the locations of forest fire in Kepulauan Bangka Belitung spatial and spatio-temporally independent?
+
+-   if the answer is NO, where and when the observed forest fire locations tend to cluster?
+
+# 2.0 Setup and Requirements
+
+For the purpose of this study, five R packages will be used. They are:
+
+-   `rgdal` for importing geospatial data in GIS file format such as shapefile into R and save them as Spatial\*DataFrame,
+
+-   `maptools` for converting Spatial\* object into ppp object,
+
+-   `raster` for handling raster data in R,
+
+-   `sparr` provides function to estimate fixed and adaptive kernel-smoothed spatial relative risk surfaces via the density-ratio method and perform subsequent inference. fixed-bandwidth spati=temporal density and relative risk estimation is also supported
+
+-   `spatstat` for performing Spatial Point Patterns Analysis such as kcross, Lcross, etc., and
+
+-   `tmap` for producing cartographic quality thematic maps
+
+```{r}
+pacman::p_load(sf, raster, spatstat, sparr, tmap, tidyverse, stpp, skimr, GWmodel)
+```
+
+Two data sets will be used in this hands-on exercise, they are:
+
+-   Hunan county boundary layer. This is a geospatial data set in ESRI shapefile format.
+
+-   Hunan_2012.csv: This csv file contains selected Hunan’s local development indicators in 2012.
+
+::: panel-tabset
+## Importing Hunan ShapeFile
+
+```{r, eval = FALSE}
+hunan <- st_read(dsn = "data/geospatial", layer = "Hunan")
+hunan <- st_transform(hunan, 32647)
+
+```
+
+## importing Hunan Table
+
+```{r, eval = FALSE}
+hunan2012 <- read_csv("data/aspatial/Hunan_2012.csv")
+```
+
+## Joining
+
+```{r, eval = FALSE}
+hunan <- left_join(hunan,hunan2012) %>%
+  select(1:3,7,9,16,31,32)
+```
+:::
+
+```{r, eval = FALSE}
+write_rds(hunan, "data/rds/hunan_rds")
+```
+
+```{r, echo = FALSE}
+hunan_sf <- read_rds("data/rds/hunan_rds")
+hunan_sp <- hunan_sf %>%
+  as_Spatial()
+
+```
+
+# 3.0 Geographically weighted summary statistic with adaptive bandwidth
+
+## 3.1 Determine adaptive bandwidth
+
+::: panel-tabset
+## Cross-Validation
+
+```{r}
+bw_AIC <- bw.gwr(GDPPC ~ 1,
+            data = hunan_sp,
+            approach = "CV f",
+            adaptive = TRUE,
+            kernel = 'bisquare',
+            longlat = T
+                 )
+```
+
+## AIC
+
+```{r}
+bw_AIC <- bw.gwr(GDPPC ~ 1,
+            data = hunan_sp,
+            approach = "AIC",
+            adaptive = TRUE,
+            kernel = 'bisquare',
+            longlat = T
+                 )
+```
+:::
+
+## 3.2 Fixed Distance
+
+```{r}
+bw_AIC <- bw.gwr(GDPPC ~ 1,
+            data = hunan_sp,
+            approach = "CV f",
+            adaptive = FALSE,
+            kernel = 'bisquare',
+            longlat = T
+                 )
+```
+
+Computing Geographically weighted summary statistics
+
+```{r}
+gwstat <- gwss(data = hunan_sp,
+               vars = "GDPPC",
+               bw = bw_AIC,
+               kernel = "bisquare",
+               adaptive = TRUE,
+               longlat = T
+               )
+
+```
