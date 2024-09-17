@@ -1,0 +1,683 @@
+---
+title: "Take_Home Exercise 1: Geospatial Analytics for Social Good: Application of Spatial and Spatio-temporal Point Patterns Analysis to discover the geographical distribution of Armed Conflict in Myanmar"
+author: "Jiale SO"
+date: "August 22, 2024"
+date-modified: "last-modified"
+execute: 
+  eval: true
+  echo: true #not seeing the code chunk
+  freeze: true
+  preview: false
+  execute: false
+---
+
+# 1.0 Introduction
+
+The study of armed conflicts in Myanmar has gained critical importance in understanding the geographical distribution and intensity of violence across different regions. Myanmar's complex ethnic composition and ongoing civil strife make it a unique case for geospatial analysis. This project aims to apply **spatial and spatio-temporal point pattern analysis** methods to uncover the patterns of armed conflict between January 2021 and June 2024.
+
+By leveraging conflict data from the Armed Conflict Location & Event Data [(ACLED)](https://acleddata.com/) and geospatial tools, we will focus on visualizing and interpreting conflict density through heat maps, Kernel Density Estimation (KDE), and advanced spatio-temporal analysis.
+
+![](images/clipboard-2109894583.png)
+
+Our analysis will focus on four types of conflict events:
+
+1.  **Battles**,
+2.  **Explosion/Remote violence**,
+3.  **Strategic developments**,
+4.  **Violence against civilians**,
+
+with particular attention paid to quarterly patterns in conflict occurrence. This study not only seeks to uncover spatial clusters of conflict but also to highlight areas of humanitarian concern.
+
+# 2.0 Setting Up The Environment & Dataset
+
+## 2.1 Installing the required Packages
+
+**Key Packages Used in the Project:**
+
+1.  **`sf`**: Handles simple features in R, allowing for spatial data manipulation and analysis. It is crucial for reading and managing geospatial data like shapefiles (e.g., Myanmar’s administrative boundaries).
+
+2.  **`raster`**: Used for raster-based spatial data manipulation, especially for working with raster maps, such as Kernel Density Estimation (KDE) results.
+
+3.  **`spatstat`**: A powerful package for spatial point pattern analysis. It helps to analyze and visualize spatial point data, particularly for identifying clusters or patterns in armed conflict events.
+
+4.  **`sparr`**: Builds on `spatstat` and focuses on performing spatial and spatio-temporal kernel smoothing, which will be crucial for KDE and heatmap creation.
+
+5.  **`tmap`**: A thematic mapping package that will allow us to create maps, including KDE visualizations on an OpenStreetMap base.
+
+6.  **`tidyverse`**: A collection of data manipulation packages like `dplyr`, `ggplot2`, and `purrr`. It’s essential for data cleaning, manipulation, and visualization tasks.
+
+7.  **`stpp`**: Used for spatio-temporal point pattern analysis, crucial for analyzing how conflict events evolve in both space and time.
+
+8.  **`skimr`**: A quick and comprehensive tool to provide summaries and descriptive statistics for datasets, helping in the initial exploration.
+
+9.  **`gganimate`**: Extends `ggplot2` to create animated visualizations. We can use this for animated time-series or evolving conflict maps.
+
+10. **`ggplot2`**: The core plotting package in R, essential for creating visualizations like time series plots and KDE heatmaps.
+
+11. **`plotly`**: Useful for creating interactive visualizations, allowing users to explore spatial data interactively (e.g., hover over points to see conflict details).
+
+12. `pacman`: is a package management tool in R designed to streamline the process of loading and installing packages.
+
+```{r, eval = TRUE}
+pacman::p_load(sf, raster, spatstat, sparr, tmap, tidyverse, stpp, skimr, gganimate, ggplot2, plotly, flexdashboard, shiny, DT)
+```
+
+## 2.2 Data-set involved in this topic
+
+For this analysis, we use two key datasets:
+
+### 2.2.1 **ACLED Armed Conflict Data**
+
+[Location & Event Data (ACLED)](https://acleddata.com/data-export-tool/)platform, which maintains an extensive record of conflict events globally. For this specific analysis, we will limit the dataset by filtering based on the following parameters to streamline data preparation and minimize the need for extensive data cleaning:
+
++----------------+----------------------------------------+
+| Data Parameter | Filter Category                        |
++================+========================================+
+| Date Range     | From **01/01/2021** to **30/06/2024**. |
++----------------+----------------------------------------+
+| Event Type     | 1\. Battles\                           |
+|                | 2. Violence Against Civilians\         |
+|                | 3. Explosions/Remote Violence\         |
+|                | 4. Strategic Developments              |
++----------------+----------------------------------------+
+| Country        | Myanmar                                |
++----------------+----------------------------------------+
+
+<details>
+
+<summary>ACLED Configuration Image</summary>
+
+![](images/ACLEDConfiguration.png)
+
+</details>
+
+<details>
+
+<summary>Code to Import ACLED Dataset</summary>
+
+```{r, eval = TRUE }
+ACLEDData <- read_csv("data/raw/aspatial/2021-01-01-2024-06-30-Myanmar.csv")
+```
+
+</details>
+
+#### 2.2.1.1 Understanding the data set fields.
+
+Referencing this [ACLED Official codebook,](https://acleddata.com/knowledge-base/codebook/#violence-against-civilians) this is the dataset that we are working with, not to bore you with the details are mainly interested in the following fields,
+
+-   **Event ID**: Unique identifier for each conflict event.
+
+-   **Event Date**: Date of occurrence.
+
+-   **Event Type**: Type of conflict event (e.g., Battles, Remote Violence).
+
+-   **Latitude/Longitude**: Coordinates of the event.
+
+-   **Fatalities**: Number of fatalities resulting from the event.
+
+-   **Actors**: The groups or individuals involved in the conflict (e.g., state actors, ethnic armed groups).
+
+-   **Admin Levels**: Administrative region, district, and township where the event took place.
+
+If you're interested in the data set fields to explore more, here's the full fields!
+
+<details>
+
+<summary>ACLED Full Table Fields Summary</summary>
+
++--------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| **Fields name**    | **Fields Description**                                                                                                                                                                                                                                                           | **Values**                                                                                                                                                                                                       |
++--------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| event_id_cnty      | A unique alphanumeric event identifier by number and country acronym. This identifier remains constant even when the event details are updated.                                                                                                                                  | E.g. ETH9766                                                                                                                                                                                                     |
++--------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| event_date         | The date on which the event took place. Recorded as Year-Month-Day.                                                                                                                                                                                                              | E.g. 2023-02-16                                                                                                                                                                                                  |
++--------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| year               | The year in which the event took place.                                                                                                                                                                                                                                          | E.g. 2018                                                                                                                                                                                                        |
++--------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| time_precision     | A numeric code between 1 and 3 indicating the level of precision of the date recorded for the event. The higher the number, the lower the precision.                                                                                                                             | 1, 2, or 3; with 1 being the most precise.                                                                                                                                                                       |
++--------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| disorder_type      | The disorder category an event belongs to.                                                                                                                                                                                                                                       | Political violence, Demonstrations, or Strategic developments.                                                                                                                                                   |
++--------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| event_type         | The type of event; further specifies the nature of the event.                                                                                                                                                                                                                    | [E.g. BattlesFor the full list of ACLED event types, see the ACLED Event Types table.](https://acleddata.com/knowledge-base/codebook/#events-table)                                                              |
++--------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| sub_event_type     | A subcategory of the event type.                                                                                                                                                                                                                                                 | [E.g. Armed clashFor the full list of ACLED sub-event types, see the ACLED Event Types table.](https://acleddata.com/knowledge-base/codebook/#events-table)                                                      |
++--------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| actor1             | [One of two main actors involved in the event (does not necessarily indicate the aggressor).](https://acleddata.com/resources/quick-guide-to-acled-data/#s22)                                                                                                                    | E.g. Rioters (Papua New Guinea)                                                                                                                                                                                  |
++--------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| assoc_actor_1      | Actor(s) involved in the event alongside ‘Actor 1’ or actor designations that further identify ‘Actor 1’.                                                                                                                                                                        | E.g. Labor Group (Spain); Women (Spain)Can have multiple actors separated by a semicolon, or can be blank.                                                                                                       |
++--------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| inter1             | [A numeric code between 0 and 8 indicating the type of ‘Actor 1’ (for more, see the section Actor Names, Types, and ‘Inter’ Codes).](https://acleddata.com/knowledge-base/codebook/#actor-names-types-and-inter-codes)                                                           | 1, 2, 3, 4, 5, 6, 7, or 8.                                                                                                                                                                                       |
++--------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| actor2             | [One of two main actors involved in the event (does not necessarily indicate the target or victim).](https://acleddata.com/resources/quick-guide-to-acled-data/#s22)                                                                                                             | E.g. Civilians (Kenya)Can be blank.                                                                                                                                                                              |
++--------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| assoc_actor_2      | Actor(s) involved in the event alongside ‘Actor 2’ or actor designation further identifying ‘Actor 2’.                                                                                                                                                                           | E.g. Labor Group (Spain); Women (Spain)Can have multiple actors separated by a semicolon, or can be blank.                                                                                                       |
++--------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| inter2             | [A numeric code between 0 to 8 indicating the type of ‘Actor 2’ (for more, see the section Actor Names, Types, and ‘Inter’ Codes).](https://acleddata.com/knowledge-base/codebook/#actor-names-types-and-inter-codes)                                                            | 0, 1, 2, 3, 4, 5, 6, 7, or 8.                                                                                                                                                                                    |
++--------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| interaction        | [A two-digit numeric code (combination of ‘Inter 1’ and ‘Inter 2’) indicating the two actor types interacting in the event (for more, see the section Actor Names, Types, and ‘Inter’ Codes).](https://acleddata.com/knowledge-base/codebook/#actor-names-types-and-inter-codes) | E.g.3, 58                                                                                                                                                                                                        |
++--------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| civilian_targeting | This column indicates whether the event involved civilian targeting.                                                                                                                                                                                                             | Either ‘Civilians targeted’ or blank.                                                                                                                                                                            |
++--------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| iso                | [A unique three-digit numeric code assigned to each country or territory according to ISO 3166.](https://www.iso.org/iso-3166-country-codes.html)                                                                                                                                | E.g. 231 for Ethiopia                                                                                                                                                                                            |
++--------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| region             | The region of the world where the event took place.                                                                                                                                                                                                                              | E.g. Eastern Africa                                                                                                                                                                                              |
++--------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| country            | The country or territory in which the event took place.                                                                                                                                                                                                                          | E.g. Ethiopia                                                                                                                                                                                                    |
++--------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| admin1             | The largest sub-national administrative region in which the event took place.                                                                                                                                                                                                    | E.g. Oromia                                                                                                                                                                                                      |
++--------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| admin2             | The second largest sub-national administrative region in which the event took place.                                                                                                                                                                                             | E.g. ArsiCan be blank.                                                                                                                                                                                           |
++--------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| admin3             | The third largest sub-national administrative region in which the event took place.                                                                                                                                                                                              | E.g. MertiCan be blank.                                                                                                                                                                                          |
++--------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| location           | The name of the location at which the event took place.                                                                                                                                                                                                                          | E.g. Abomsa                                                                                                                                                                                                      |
++--------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| latitude           | The latitude of the location in four decimal degrees notation (EPSG:32647).                                                                                                                                                                                                      | E.g. 8.5907                                                                                                                                                                                                      |
++--------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| longitude          | The longitude of the location in four decimal degrees notation (EPSG:32647).                                                                                                                                                                                                     | E.g. 39.8588                                                                                                                                                                                                     |
++--------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| geo_precision      | A numeric code between 1 and 3 indicating the level of certainty of the location recorded for the event. The higher the number, the lower the precision.                                                                                                                         | 1, 2, or 3; with 1 being the most precise.                                                                                                                                                                       |
++--------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| source             | The sources used to record the event. Separated by a semicolon.                                                                                                                                                                                                                  | E.g. Ansar Allah; Yemen Data Project                                                                                                                                                                             |
++--------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| source\_ scale     | [An indication of the geographic closeness of the used sources to the event (for more, see the section Source Scale).](https://acleddata.com/knowledge-base/codebook/#source-scale)                                                                                              | E.g. Local partner-National                                                                                                                                                                                      |
++--------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| notes              | A short description of the event.                                                                                                                                                                                                                                                | E.g. On 16 February 2023, OLF-Shane abducted an unidentified number of civilians after stopping a vehicle in an area near Abomsa (Merti, Arsi, Oromia). The abductees were traveling from Adama to Abomsa, Arsi. |
++--------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| fatalities         | The number of reported fatalities arising from an event. When there are conflicting reports, the most conservative estimate is recorded.                                                                                                                                         | E.g. 3No information on fatalities is recorded as 0 reported fatalities.                                                                                                                                         |
++--------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| tags               | Additional structured information about the event. Separated by a semicolon.                                                                                                                                                                                                     | E.g. women targeted: politicians; sexual violence                                                                                                                                                                |
++--------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| timestamp          | [An automatically generated Unix timestamp that represents the exact date and time an event was uploaded to the ACLED API.](https://www.unixtimestamp.com/)                                                                                                                      | E.g. 1676909320                                                                                                                                                                                                  |
++--------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+
+</details>
+
+### **2.2.2 Myanmar Administrative Boundaries (Shapefiles)**:
+
+Obtained through [Geonode Mimu](https://geonode.themimu.info/layers/geonode%3Ammr_polbnda_adm2_250k_mimu), this shapefile helps us to build the map and set the boundary zone of each district of myanmar. This dataset provides the geographical boundaries of Myanmar's administrative divisions, from the national level down to the township level. It is essential for mapping conflict events to specific regions.
+
+::: callout-note
+***Myanmar has State, District and Township level, why District Level?***
+
+Choosing the **district level** over the **township level** for conflict analysis provides a better balance between detail and clarity. The district level allows us to capture broader regional trends without overwhelming the analysis with too many granular data points, as township-level data can be overly detailed. It also improves **computational efficiency** and makes visualizations clearer, while still offering enough specificity to reveal conflict hotspots. Additionally, population and auxiliary data are more readily available at the district level, making the analysis more consistent and manageable.
+:::
+
+<details>
+
+<summary>Code to Import Shapefile Dataset</summary>
+
+```{r, eval = TRUE }
+
+m_sf <- st_read(dsn="data/raw/geospatial", layer = "mmr_polbnda_adm2_250k_mimu") 
+```
+
+</details>
+
+#### 2.2.2.1 Understanding the data set fields.
+
++------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Field Name | Description                                                                                                                                                                                                                          |
++------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| OBJECTID   | This is a unique identifier for each feature in the dataset, typically used to identify individual records or polygons in the shapefile.                                                                                             |
++------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| ST         | This represents the State or Region in Myanmar. For example, in your dataset, "Ayeyarwady" refers to a state/region.                                                                                                                 |
++------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| ST_PCODE   | This stands for State Postal Code. It is a standardized code that represents each state or region in Myanmar, such as "MMR017" for Ayeyarwady.                                                                                       |
++------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| DT         | This stands for District or Township within the respective state/region. For example, "Hinthada" is a district or township within Ayeyarwady.                                                                                        |
++------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| DT_PCODE   | This stands for District/Township Postal Code. It is a standardized postal code for each district or township, such as "MMR017D002" for the Hinthada district/township in Ayeyarwady.                                                |
++------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| DT_MMR     | This field could be the District/Township name in Myanmar script, written in the local language. It may be an alternative representation of the "DT" field, showing the name of the district/township in Myanmar's native language.  |
++------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| PCODE_V    | This could be a Version of the Postal Code or a verification value used internally in the dataset. In this case, the value is "9.4", possibly indicating a specific version of postal codes or an accuracy measure.                  |
++------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| geometry   | This column represents the spatial data for each district/township. It contains the geometrical shape (MULTIPOLYGON) defining the boundaries of the state or district/township, with coordinates provided in longitude and latitude. |
++------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+
+# 3.0 Data Pre-processing
+
+To ensure accuracy and usability of the data, several preprocessing steps will be undertaken for the different datasets.
+
+## 3.1 Myanmar Shapefile
+
+### 3.1.1 Setting the CRS for the
+
+Since Myanmar uses CRS of 32647 and when we download the map it's in WGS84, we should change it to 32647 .
+
+```{r, eval - TRUE}
+st_crs(m_sf)
+# Set the CRS for m_sf, assuming the appropriate CRS is WGS 84 (EPSG:32647)
+m_sf <- st_transform(m_sf, 32647)
+# Verify that the CRS has been correctly set
+print(st_crs(m_sf))
+
+```
+
+### 3.1.2 Renaming and removal of column names and
+
+```{r, eval = TRUE}
+colnames(m_sf) <- c("OBJECTID", "state", "state_code", "district", "district_code", "district_mmr", "mimi_version", "geometry")
+m_sf <- m_sf %>% select(state, district, district_mmr, geometry)
+```
+
+### 3.1.3 Checking for validity of data
+
+When working with spatial data, it’s crucial to ensure that all geometries are valid. Invalid geometries can cause errors in analysis and visualization.
+
+1.  **Checking Validity with `st_is_valid()`**:
+
+2.  **Identifying Invalid Geometries**:
+
+3.  **Fixing Invalid Geometries with `st_make_valid()`**
+
+```{r, eval = TRUE}
+#checking if it's valid
+m_sf_validity <- st_is_valid(m_sf)
+m_sf_invalid <- which(!m_sf_validity)
+if (length(m_sf_invalid) > 0) {
+  print("MPZ Invalid!")
+  print(m_sf[m_sf_invalid, ])
+} else {
+  print("it's valid!")
+}
+```
+
+### 3.1.4 Visualizing the mynamar map
+
+On the top right, you can toggle between the district level and also the state level to understand more about the boundaries of Myanmar.
+
+```{r, eval = TRUE}
+tmap_mode("view")  # Enable interactive mode for tmap
+
+# Create the base map colored by district, and add pop-ups with column information
+tm_shape(m_sf) +  # Base map (Myanmar boundaries)
+  tm_polygons("district",  # Color the base map by district
+              palette = "Set3",  # Use Set3 color palette for districts
+              border.col = "gray", 
+              legend.show = FALSE,
+              alpha = 0.5,  # Semi-transparent polygons
+              title = "Districts of Myanmar",
+              popup.vars = c("District Name" = "district",  
+                             "State" = "state",  
+                             "District In Myanmar" = "district_mmr"
+                          )) 
+```
+
+## 3.2 ACLED Data
+
+### 3.2.1 Changing the Column Names
+
+Since Myanmar's regional hierarchy follows **State**, **District**, and **Township** levels, we will rename the columns accordingly:
+
+-   `admin1` → **State**
+
+-   `admin2` → **District**
+
+-   `admin3` → **Township**
+
+This is important because different countries use different administrative hierarchies. For example, in Singapore, the hierarchy is organized by **Region** and **Subzones**. Adjusting these names ensures that our dataset aligns with Myanmar’s specific regional structure for accurate analysis.
+
+```{r,  eval = TRUE}
+ACLEDDataCleanse <- ACLEDData
+colnames(ACLEDDataCleanse)[which(names(ACLEDDataCleanse) == "admin1")] <- "state"
+colnames(ACLEDDataCleanse)[which(names(ACLEDDataCleanse) == "admin2")] <- "district"
+colnames(ACLEDDataCleanse)[which(names(ACLEDDataCleanse) == "admin3")] <- "township"
+ACLEDDataCleanse %>%
+  mutate(across(where(is.character), ~ replace_na(.x, "NA")),  # Replace NA in character columns with "NA"
+         across(where(is.numeric), ~ replace_na(.x, 0)))  # Replace NA in numeric columns with 0 (or leave it as NA if desired)
+```
+
+### 3.2.2 Adding a "Quarter-Year" Column
+
+To facilitate our temporal analysis, we need to add a **"quarter-year"** column based on the `event_date` field. This can be done by adjusting the date format to represent the quarter and year, ensuring that each event is categorized by the specific quarter it occurred in (e.g., **Q1-2021**, **Q2-2022**). This will allow for easier analysis of conflict trends over time.
+
+```{r,  eval = TRUE}
+# Convert event_date to Date format (if it's not already a date)
+ACLEDDataCleanse$event_date <- as.Date(ACLEDDataCleanse$event_date, format="%d-%b-%y")  # Adjust the format if needed
+# Add a new column that shows the quarter and year
+ACLEDDataCleanse <- ACLEDDataCleanse %>%
+  mutate(quarter_year = paste0("Q", quarter(event_date), "-", year(event_date)))
+
+head(ACLEDDataCleanse)
+
+```
+
+### 3.2.3 Joining ACLED's Codebook Description
+
+ACLED's stores their data for the column "interaction" and "inter1" and "inter2" in codes, using their code book, let's reorganise their data for simplier view, we can reference the code book here to know what each code represent. Map it out as a csv file read it in and change accordingly.
+
+#### 3.2.3.1 Left joining inter1 and inter's description.
+
+For more details about [each inter code read here.](https://acleddata.com/knowledge-base/codebook/#actor-names-types-and-inter-codes)
+
+```{r,  eval = TRUE}
+ACLEDActorInterCode <- read_csv("data/raw/aspatial/ActorTypesInterCode.csv")
+ACLEDDataCleanse <- ACLEDDataCleanse %>%
+  left_join(ACLEDActorInterCode, by = c("inter1" = "code")) %>%
+  rename(inter1_description = Description)
+# Left join again for inter2
+ACLEDDataCleanse <- ACLEDDataCleanse %>%
+  left_join(ACLEDActorInterCode, by = c("inter2" = "code")) %>%
+  rename(inter2_description = Description)
+
+datatable(head(ACLEDDataCleanse, 5), options = list(pageLength = 5, autoWidth = TRUE))
+
+```
+
+#### 3.2.3.2 Left joining interaction description.
+
+For more details about [each interaction code read here.](https://acleddata.com/knowledge-base/codebook/#interaction-codes)
+
+```{r, eval = TRUE}
+ACLEDInteractionCode <- read_csv("data/raw/aspatial/AcledInteractionCodes.csv")
+ACLEDDataCleanse <- ACLEDDataCleanse %>%
+  left_join(ACLEDInteractionCode, by = c("interaction" = "code")) %>%
+  rename(interaction_description = Description)
+
+head(ACLEDDataCleanse)
+```
+
+### 3.2.3 Making it a SF Object and reverse geolocate state and district
+
+Since ACLED provides longitude and latitude data, I prefer to reverse geolocate the points to match Myanmar's official state and district boundaries. We are uncertain how ACLED assigns these regions, so to ensure consistency, we remove the original state and district columns from the ACLED data and replace them with the geolocated values.
+
+***Steps:***
+
+1.  **Convert ACLED Data to an SF Object**: Using longitude and latitude coordinates, transform the ACLED dataset into a spatial object. Remember taht we have to set CRS 32647 here as well.
+
+2.  **Perform a Spatial Join**: Match the points from ACLED with the corresponding state and district boundaries from the `m_sf` shapefile, selecting only those columns.
+
+3.  **Remove Original Columns**: After the spatial join, drop the original `state`, `district`, and `township` columns from the ACLED dataset.
+
+4.  **Rename the Joined Columns**: Rename the newly joined `state.y` and `district.y` to `state` and `district`, effectively replacing the original columns with the reverse-geolocated values.
+
+```{r}
+# Step 1: Convert ACLEDDataCleanse to an sf object using longitude and latitude
+ACLEDDataCleanse_sf <- st_as_sf(ACLEDDataCleanse, coords = c("longitude", "latitude"), crs = 4326, remove = FALSE)
+
+# Step 2: Transform ACLEDDataCleanse_sf to the same CRS as m_sf (EPSG: 32637)
+ACLEDDataCleanse_sf <- st_transform(ACLEDDataCleanse_sf, crs = 32637)
+m_sf <- st_transform(m_sf, crs = 32637)
+
+# Step 3: Perform a spatial join, selecting only the state and district from m_sf
+reverse_geolocated <- st_join(ACLEDDataCleanse_sf, m_sf[, c("state", "district")], join = st_intersects)
+
+# Step 4: Remove original 'state', 'district', and 'township' columns from ACLEDDataCleanse (if they exist)
+ACLEDData_sf <- reverse_geolocated %>%
+  select(-contains("state.x"), -contains("district.x"), -contains("township")) %>%  # Remove original state, district, township
+  rename(state = state.y, district = district.y)  # Rename the newly joined columns
+
+# Step 5: View the cleaned ACLEDDataCleanse dataset
+head(ACLEDData_sf)
+```
+
+### 3.2.4 Visualizing it by Event Type
+
+```{r}
+ACLEDData_324 <- ACLEDData_sf %>%
+  select(state, district, location, event_date, event_type, actor1, actor2, fatalities, geometry, interaction_description)
+
+
+# Step 2: Enable interactive mode for tmap
+tmap_mode("view")
+tm_shape(m_sf) + 
+
+    tm_polygons("district", alpha = 0.3, border.col = "gray") +  # Base map with higher transparency
+
+# Step 3: Create the tmap object with the base map and event markers
+  # Add event markers (bubbles) with size based on fatalities
+  tm_shape(ACLEDData_324) + 
+  tm_bubbles(size = "fatalities",  # Marker size based on fatalities
+             col = "event_type",  # Color markers by event type
+             popup.vars = c("state", "district", "location", "event_date", "event_type", "actor1", "actor2", "fatalities"),  # Popup fields
+             palette = "Set1",  # Use Set1 color palette for event types
+             border.col = "black",  # Border color for bubbles
+             border.alpha = 0.5,  # Semi-transparent border
+             title.size = "Number of Fatalities",  # Title for bubble size legend
+             title.col = "Event Types")  # Title for event type legend
+
+```
+
+## 3.3 Aggregation of Data For Explanatory Purposes
+
+```{r}
+# Fixing the expand.grid function to use consistent column names
+all_combinations <- expand.grid(
+  district = unique(m_sf$district),                # Unique districts from shapefile
+  event_type = unique(ACLEDDataCleanse$event_type), # Unique event types
+  quarter_year = unique(ACLEDDataCleanse$quarter_year), # Unique quarters
+  interaction_description = unique(ACLEDDataCleanse$interaction_description),  # Unique interactions
+  inter1_description = unique(ACLEDDataCleanse$inter1_description),  # Actor 1 descriptions
+  inter2_description = unique(ACLEDDataCleanse$inter2_description)   # Actor 2 descriptions
+)
+
+# Aggregate the data by quarter_year, district, event_type, interaction_description, inter1_description, inter2_description
+agg_data <- ACLEDDataCleanse %>%
+  group_by(quarter_year, district, event_type, interaction_description, inter1_description, inter2_description) %>%
+  summarise(count = n(),                       # Count the number of events
+            fatalities = sum(fatalities, na.rm = TRUE),  # Sum the fatalities
+            .groups = "drop")
+
+# Perform a full join with all_combinations to keep all districts, event types, interactions, etc.
+full_data <- all_combinations %>%
+  left_join(agg_data, by = c("district", "event_type", "quarter_year", "interaction_description", "inter1_description", "inter2_description")) %>%
+  mutate(count = ifelse(is.na(count), 0, count),        # Replace NAs in count with 0
+         fatalities = ifelse(is.na(fatalities), 0, fatalities))  # Replace NAs in fatalities with 0
+
+```
+
+## 3.4 Spatial Classes Wrangling
+
+### 3.4.1 Setting up the Owin Window for Myanmar.
+
+n this part of the code, we are setting up a spatial **window** for Myanmar, which defines the **boundaries** within which the spatial point pattern analysis will take place. This is done using the **`owin`** function from the **spatstat** package, which converts the polygonal boundary of Myanmar into a format that can be used for further spatial analysis.
+
+```{r}
+myanmar_owin <- as.owin(m_sf)
+plot(myanmar_owin)
+summary(myanmar_owin)
+```
+
+-   **Polygonal Boundary**: The spatial window for Myanmar is made up of **1,069 polygons**. Some areas within these polygons are excluded, representing **504 holes** (such as lakes or unmeasured regions).
+
+-   **Enclosing Rectangle**: The window is enclosed by a rectangle with coordinates ranging from **92.17 to 101.17 (longitude)** and **9.70 to 28.55 (latitude)**, creating a rectangle that is **8.998 units wide** and **18.85 units high**.
+
+-   **Window Area**: The total area of the window (i.e., the land within Myanmar's boundary being analyzed) is **58.24 square units**.
+
+-   **Fraction of Frame Area**: The polygon window covers **34.3%** of the enclosing rectangle, meaning that a significant portion of the bounding rectangle is either empty or excluded.
+
+### 3.4.2 Setting up the ACLED Spatial Class Owin
+
+In this section, we set up the **ACLED spatial data** as a point pattern while applying **`jitter`** to account for conflicts that may occur at the same location over different time periods (e.g., quarters).
+
+-   **Jittering Coordinates**:
+
+    -   We apply a **small jitter** to the **x (longitude)** and **y (latitude)** coordinates using the **`jitter()`** function. This helps separate events that may have occurred in the exact same location across different time periods.
+
+-   **Defining the Window**:
+
+    -   We define the **spatial window** (area of interest) using the **bounding box** of the UTM-projected data. This sets the valid geographic region for analysis.
+
+-   **Creating the `ppp` Object**:
+
+    -   The **`ppp` object** is created using the jittered coordinates and the defined window. This object is used for spatial point pattern analysis in the **spatstat** package.
+
+```{r}
+ACLEDData_coords <- st_coordinates(ACLEDData_sf)
+ACLED_ppp <- ppp(x = ACLEDData_coords[, 1], y = ACLEDData_coords[, 2], window = myanmar_owin)
+# Check the summary to ensure the point pattern was created correctly
+summary(ACLED_ppp)
+```
+
+24 points were marked as illegal and rejected because they fell outside the specified window. However, these points are important, and we can check how far they are from the window. The following code identifies the rejected points and allows us to visualize their distance from the window.
+
+```{r}
+# Step 4: Check if points are outside the window (i.e., rejected)
+rejected_idx <- !inside.owin(ACLEDData_coords[, 1], ACLEDData_coords[, 2], myanmar_owin)
+
+# Step 5: Force rejected points inside the window
+if (any(rejected_idx)) {
+  bbox <- as.rectangle(myanmar_owin)
+  
+  # Force rejected points to the nearest edge within the bounding box
+  ACLEDData_coords[rejected_idx, 1] <- pmax(pmin(ACLEDData_coords[rejected_idx, 1], bbox$xrange[2]), bbox$xrange[1])
+  ACLEDData_coords[rejected_idx, 2] <- pmax(pmin(ACLEDData_coords[rejected_idx, 2], bbox$yrange[2]), bbox$yrange[1])
+  
+  # Add a larger jitter to push points well inside the window
+  jitter_amount <- 0.1  # Increased jitter to make sure points are fully inside
+  ACLEDData_coords[rejected_idx, 1] <- ACLEDData_coords[rejected_idx, 1] + runif(sum(rejected_idx), -jitter_amount, jitter_amount)
+  ACLEDData_coords[rejected_idx, 2] <- ACLEDData_coords[rejected_idx, 2] + runif(sum(rejected_idx), -jitter_amount, jitter_amount)
+}
+
+# Step 6: Recreate the ppp object with the updated coordinates
+ACLED_ppp_forced <- ppp(x = ACLEDData_coords[, 1], y = ACLEDData_coords[, 2], window = myanmar_owin)
+
+# Step 7: Check the summary to ensure no points are rejected
+summary(ACLED_ppp_forced)  # Ensure no points are rejected
+
+# Step 8: Optionally, plot the adjusted point pattern
+plot(ACLED_ppp_forced)
+
+```
+
+Viola, we successfully managed to keep all the points and now we are ready to check if there are any duplicate.
+
+```{r}
+any(duplicated(ACLED_ppp_forced))
+```
+
+```{r}
+unique_quarters <- unique(ACLEDDataCleanse_sf$quarter_year)
+unique_event_types <- unique(ACLEDDataCleanse_sf$event_type)
+
+# List to store filtered data for each combination
+owin_objects <- list()
+
+# Process each quarter and event type
+for (quarter in unique_quarters) {
+  for (event_type in unique_event_types) {
+    # Step 3: Filter the data for the current quarter and event_type
+    filtered_data <- ACLEDDataCleanse_sf[ACLEDDataCleanse_sf$quarter_year == quarter & ACLEDDataCleanse_sf$event_type == event_type, ]
+    
+    # Generate dynamic name for each quarter-event combination
+    owin_name <- paste0("owin_", quarter, "_", event_type)
+    
+    # Store filtered data in the list using the dynamic name
+    owin_objects[[owin_name]] <- filtered_data
+  }
+}
+# Check the results
+print(owin_objects)
+
+
+32537
+```
+
+We confirmed that there are no duplicates, and now we are ready to map the data.
+
+```{r}
+conflict_ppp = ACLED_ppp_forced[myanmar_owin]
+summary(conflict_ppp)
+plot(conflict_ppp)
+
+```
+
+```{r}
+any(duplicated(ACLED_ppp_corrected_ppp))
+```
+
+## 3.5 Summary of Data sets
+
+We have created a total of **five datasets**, each serving a distinct purpose in our spatial analysis:
+
+1.  **`ACLEDData_SF`**: This is the **cleaned and formatted ACLED dataset**, stored as an **sf (simple feature)** object. It contains the key event data, including attributes like location, event type, and time period, and will be used for further spatial analysis.
+
+2.  **`M_SF`**: This dataset represents the **Myanmar boundary** as an **sf object**. It will be used as the **base layer** in the analysis, defining the spatial extent and providing a reference map for the region.
+
+3.  **`Aggregated Level`**: This dataset is used for **exploratory analysis** and contains **aggregated data** for different event types, quarters, or other relevant categories. It allows for a broader overview before diving into more detailed spatial point pattern analyses.
+
+4.  **`ACLED_ppp_corrected`**`:` This is the **point pattern dataset** created from the ACLED data. It includes the corrected **coordinates** (with jittering applied) and is stored as a **`ppp` object** (planar point pattern) for use in **spatstat**. This object will be used for more in-depth spatial analyses, such as density estimation or clustering.
+
+5.  **`myanmar_owin`**`:` This is the **spatial window object** representing the boundary of Myanmar. It defines the geographic limits for our spatial point pattern analysis and ensures that all event data is analyzed within this boundary.
+
+# 4.0 Exploratory Data analysis
+
+With the data cleansed let's do a very touch down analysis on our data-set, to figure out what are some statistic of the analysis Below are some exploratory analysis on the conflicts of
+
+4.1 Number of Conflicts and Across State, Township and Quarter, By Event Type.
+
+Alternatively, use this dashboard to play around with the data set to see what you're working with.
+
+Number
+
+# 5.0 Deriving the Quarterly Kernel Density Estimation Layers
+
+## 5.1 Setting up Adaptive vs Fixed Bandwidth
+
+5.1.1 Rescaling KDE Values
+
+```{r}
+conflicts_ppp <- rescale.ppp(conflict_ppp, 1000, "km")
+summary(conflict_ppp)
+plot(conflict_ppp)
+
+```
+
+```{r}
+
+ACLED_Q22022 <- ACLEDData_sf %>% filter(quarter_year == "Q2-2022")
+ACLED_Q22022_coords <- st_coordinates(ACLED_Q22022)
+
+ACLED_Q22022_ppp <- ppp(x = ACLED_Q22022_coords[, 1], y = ACLED_Q22022_coords[, 2], window = myanmar_owin)
+summary(ACLED_Q22022_ppp)
+plot(ACLED_Q22022_ppp)
+```
+
+```{r}
+bw.ppl(ACLED_Q22022_ppp)
+
+```
+
+```{r}
+ACLED_Q22022_ppp_bw <- adaptive.density(ACLED_Q22022_ppp, pilot = "bw.diggle", edge = TRUE)
+plot(ACLED_Q22022_ppp)
+```
+
+```{r}
+# Step 1: Apply adaptive kernel density estimation with pilot bandwidth selection
+ACLED_Q22022_ppp_adaptive <- adaptive.density(ACLED_Q22022_ppp, 
+                                              pilot = "bw.diggle", 
+                                              edge = TRUE)
+
+# Step 2: Plot the adaptive density estimate
+plot(ACLED_Q22022_ppp_adaptive, main = "Adaptive Gaussian-like Kernel Density for ACLED_Q22022")
+
+```
+
+## 5.2 Quarterly Kernel Density
+
+### 5.2.1 Battle
+
+### 5.2.2 Explosions/Remote violence
+
+### 5.2.3 Violence against civilians
+
+### 5.2.4 Strategic Developments
+
+### 5.2.5 Across The Event Types
+
+# 6.0 **Perform 2nd-Order Spatial Point Pattern Analysis**:
+
+# 7.0 **Derive Quarterly Spatio-Temporal KDE Layers**:
+
+# 8.0 **Perform 2nd-Order Spatio-Temporal Point Patterns Analysis**:
+
+# 7.0 Results and Interpretation
+
+# 8.0 Conclusion
+
+# 9.0 References
+
+# 

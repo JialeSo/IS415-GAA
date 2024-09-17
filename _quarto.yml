@@ -1,6 +1,5 @@
 project:
   type: website
-
 website:
   title: "IS415-GAA: JialeSo"
   navbar:
@@ -63,7 +62,7 @@ website:
             href: "In_Class_exercises/In_Class_Exercise_4/In_Class_Exercise4.html"
             icon: fas fa-file-alt
           - text: "In-Class Exercise 5"
-            href: "404.qmd"
+            href: "In_Class_exercises/In_Class_Exercise_5/In_Class_Exercise5.html"
             icon: fas fa-file-alt
           - text: "In-Class Exercise 6"
             href: "404.qmd"
@@ -93,7 +92,8 @@ website:
         icon: fas fa-home
         menu:
           - text: "Take-Home Exercise 1"
-            href: "Take_Home_Exercises/Take_Home_Exercise_1/Take_Home_Exercise1.html"
+            href: "404.qmd"
+            # href: "Take_Home_Exercises/Take_Home_Exercise_1/Take_Home_Exercise1.html"
             icon: fas fa-file-alt
     right:
       - href: index.qmd
@@ -102,7 +102,7 @@ website:
       - href: "404.qmd"
         text: "About"
         icon: fas fa-info-circle
-
+   
 format:
   html:
     theme: Darkly 
