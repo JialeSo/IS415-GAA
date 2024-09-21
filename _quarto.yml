@@ -23,7 +23,7 @@ website:
             href: "Hands_On_exercises/Hands_On_Exercise_5/Hands_On_Exercise5.html"
             icon: fas fa-code
           - text: "Hands-On Exercise 6"
-            href: "404.qmd"
+            href: "Hands_On_exercises/Hands_On_Exercise_6/Hands_On_Exercise6.html"
             icon: fas fa-code
           - text: "Hands-On Exercise 7"
             href: "404.qmd"

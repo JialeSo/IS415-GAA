@@ -605,6 +605,10 @@ kde_childcareSG_bw <- density(childcareSG_ppp,
 plot(kde_childcareSG_bw)
 ```
 
+```{r}
+st_crs(kde_childcareSG_bw)
+```
+
 Retrieving the bandwidth to compute the kde layer
 
 ```{r}
@@ -707,7 +711,7 @@ plot(kde_childcareSG.scott, main = "bw.scott")
 ## 6.3 working with different kernel methods.
 
 | Kernel Method | Shape                    | Characterisitics                                                                                           |
-|---------------|--------------------------|------------------------------------------------------------------------------------------------------------|
+|-------------|-------------|----------------------------------------------|
 | Gaussian      | Bell shaped- normal      | Very smooth, widely used, good for most applications, but might oversmooth and miss finer details.         |
 | Epanechnikov  | Parabolic                | Efficient, minimizes estimation error, compact support (affects nearby points), less smooth than Gaussian. |
 | Quartic       | Bell Shape with flat top | Balanced smoothness and efficiency, compact support, focuses on nearby points, similar to Epanechnikov.    |

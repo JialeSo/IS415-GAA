@@ -5,8 +5,9 @@ date: "August 22, 2024"
 date-modified: "last-modified"
 execute: 
   eval: true
-  echo: true #not seeing the code chunk
+  echo: true #not seeing the code chunka
   freeze: true
+  warning: false
   preview: false
   execute: false
 ---
@@ -26,7 +27,7 @@ Our analysis will focus on four types of conflict events:
 3.  **Strategic developments**,
 4.  **Violence against civilians**,
 
-with particular attention paid to quarterly patterns in conflict occurrence. This study not only seeks to uncover spatial clusters of conflict but also to highlight areas of humanitarian concern.
+with particular attention paid to quarterly patterns in conflict occurrence.
 
 # 2.0 Setting Up The Environment & Dataset
 
@@ -59,7 +60,7 @@ with particular attention paid to quarterly patterns in conflict occurrence. Thi
 12. `pacman`: is a package management tool in R designed to streamline the process of loading and installing packages.
 
 ```{r, eval = TRUE}
-pacman::p_load(sf, raster, spatstat, sparr, tmap, tidyverse, stpp, skimr, gganimate, ggplot2, plotly, flexdashboard, shiny, DT)
+pacman::p_load(sf, raster, spatstat, sparr, tmap, tidyverse, stpp, skimr, gganimate, ggplot2, plotly, flexdashboard, DT,gridExtra, rlist, grid,future)
 ```
 
 ## 2.2 Data-set involved in this topic
@@ -263,7 +264,7 @@ Since Myanmar uses CRS of 32647 and when we download the map it's in WGS84, we s
 ```{r}
 st_crs(M_State_Sf)
 # Set the CRS for m_sf, assuming the appropriate CRS is WGS 84 (EPSG:32647)
-M_State_Sf <- st_transform(M_State_Sf, crs = 32637)
+M_State_Sf <- st_transform(M_State_Sf, crs = 32647)
 # Verify that the CRS has been correctly set
 print(st_crs(M_State_Sf))
 ```
@@ -273,11 +274,9 @@ print(st_crs(M_State_Sf))
 ```{r}
 st_crs(M_District_Sf)
 # Set the CRS for m_sf, assuming the appropriate CRS is WGS 84 (EPSG:32647)
-M_District_Sf <- st_transform(M_District_Sf, crs = 32637)
+M_District_Sf <- st_transform(M_District_Sf, crs = 32647)
 # Verify that the CRS has been correctly set
 print(st_crs(M_District_Sf))
-
-
 ```
 :::
 
@@ -350,6 +349,7 @@ On the top right, you can toggle between the district level and also the state l
 ## State
 
 ```{r, eval = TRUE, message = FALSE }
+tmap_mode("plot")
 tm_shape(M_State_Sf_Cleansed) +  # Base map (Myanmar boundaries)
   tm_polygons("state",  # Color the base map by state
               palette = "Set3",  # Use Set3 color palette for states
@@ -357,14 +357,14 @@ tm_shape(M_State_Sf_Cleansed) +  # Base map (Myanmar boundaries)
               alpha = 0.5,  # Semi-transparent polygons
               title = "State",  # Legend title for states
               legend.show = TRUE,  # Show legend for state colors
-              popup.vars = c("State Name" = "state",  # Popup info
-                             "District In Myanmar" = "district_mmr"
-                             )) +
+             ) +
   tm_layout(main.title = "States of Myanmar",  # Main map title
             legend.outside = TRUE)  # Position the legend outside the map
 ```
 
 ## District
+
+There is more than 80 district here, so it only showcases 30 :)
 
 ```{r, eval = TRUE, message = FALSE }
 tm_shape(M_District_Sf_Cleansed) +  # Base map (Myanmar boundaries)
@@ -374,10 +374,7 @@ tm_shape(M_District_Sf_Cleansed) +  # Base map (Myanmar boundaries)
               alpha = 0.5,  # Semi-transparent polygons
               title = "District",  # Legend title for districts
               legend.show = TRUE,  # Show legend for district colors
-              popup.vars = c("District Name" = "district",  # Popup info for district
-                             "State" = "state",  # Show state in the popup
-                             "District In Myanmar" = "district_mmr"
-                             )) +
+              ) +
   tm_layout(main.title = "Districts of Myanmar",  # Main map title
             legend.outside = TRUE)  # Position the legend outside the map
 
@@ -412,7 +409,7 @@ ACLEDData_Cleanse <- ACLEDData %>%
 
 To facilitate our temporal analysis, we need to add a **"quarter-year"** column based on the `event_date` field. This can be done by adjusting the date format to represent the quarter and year, ensuring that each event is categorized by the specific quarter it occurred in (e.g., **Q1-2021**, **Q2-2022**). This will allow for easier analysis of conflict trends over time.
 
-```{r,  eval = TRUE}
+```{r}
 # Convert event_date to Date format (if it's not already a date)
 ACLEDData_Cleanse$event_date <- as.Date(ACLEDData_Cleanse$event_date, format="%d-%b-%y")  # Adjust the format if needed
 # Add a new column that shows the quarter and year
@@ -431,7 +428,7 @@ ACLED's stores their data for the column "interaction" and "inter1" and "inter2"
 
 For more details about [each inter code read here.](https://acleddata.com/knowledge-base/codebook/#actor-names-types-and-inter-codes)
 
-```{r,  eval = TRUE}
+```{r}
 ACLEDActorInterCode <- read_csv("data/raw/aspatial/ActorTypesInterCode.csv")
 ACLEDData_Cleanse <- ACLEDData_Cleanse %>%
   left_join(ACLEDActorInterCode, by = c("inter1" = "code")) %>%
@@ -454,7 +451,6 @@ ACLEDInteractionCode <- read_csv("data/raw/aspatial/AcledInteractionCodes.csv")
 ACLEDData_Cleanse <- ACLEDData_Cleanse %>%
   left_join(ACLEDInteractionCode, by = c("interaction" = "code")) %>%
   rename(interaction_description = Description)
-
 head(ACLEDData_Cleanse)
 ```
 
@@ -464,7 +460,7 @@ Since ACLED provides longitude and latitude data, I prefer to reverse geolocate 
 
 ***Steps:***
 
-1.  **Convert ACLED Data to an SF Object**: Using longitude and latitude coordinates, transform the ACLED dataset into a spatial object. Remember taht we have to set CRS 32647 here as well.
+1.  **Convert ACLED Data to an SF Object**: Using longitude and latitude coordinates, transform the ACLED dataset into a spatial object. Remember thatt we have to set CRS 32647 here as well.
 
 2.  **Perform a Spatial Join**: Match the points from ACLED with the corresponding state and district boundaries from the `m_sf` shapefile, selecting only those columns.
 
@@ -476,19 +472,25 @@ Since ACLED provides longitude and latitude data, I prefer to reverse geolocate 
 # Step 1: Convert ACLEDDataCleanse to an sf object using longitude and latitude
 ACLEDData_Cleanse_Sf <- st_as_sf(ACLEDData_Cleanse, coords = c("longitude", "latitude"), crs = 4326, remove = FALSE)
 
-# Step 2: Transform ACLEDDataCleanse_sf to the same CRS as m_sf (EPSG: 32637)
-ACLEDData_Cleanse_Sf <- st_transform(ACLEDData_Cleanse_Sf, crs = 32637)
+# Step 2: Transform ACLEDDataCleanse_sf to the same CRS as m_sf (EPSG: 32647)
+ACLEDData_Cleanse_Sf <- st_transform(ACLEDData_Cleanse_Sf, crs = 32647)
 
 # Step 3: Perform a spatial join, selecting only the state and district from m_sf
-reverse_geolocated <- st_join(ACLEDData_Cleanse_Sf, M_District_Sf_Cleansed[, c("state", "district")], join = st_intersects)
+reverse_geolocated_state <- st_join(ACLEDData_Cleanse_Sf, M_State_Sf_Cleansed[, c("state")], join = st_intersects)
 
-# Step 4: Remove original 'state', 'district', and 'township' columns from ACLEDDataCleanse (if they exist)
-ACLEDData_Cleanse_Sf <- reverse_geolocated %>%
-  select(-contains("state.x"), -contains("district.x"), -contains("township")) %>%  # Remove original state, district, township
-  rename(state = state.y, district = district.y)  # Rename the newly joined columns
+# Step 2: Spatial join to add 'district' from M_District_Sf_Cleansed
+reverse_geolocated_district <- st_join(reverse_geolocated_state, M_District_Sf_Cleansed[, c("district")], join = st_intersects)
 
-# Step 5: View the cleaned ACLEDDataCleanse dataset
-head(ACLEDData_Cleanse_Sf)
+# Step 3: Remove original 'state', 'district', and 'township' columns from ACLEDData_Cleanse (if they exist)
+# This step removes the original columns, and then renames the newly joined columns
+ACLEDData_Cleanse_Sf <- reverse_geolocated_district %>%
+  select(-contains("state.x"), -contains("district.x"), -contains("township")) %>%  # Remove old state, district, township columns
+  rename(state = state.y, district = district.y)  # Rename newly joined columns
+
+ACLEDData_Cleanse <- st_drop_geometry(ACLEDData_Cleanse_Sf)
+
+# View the updated data
+print(ACLEDData_Cleanse_Sf)
 ```
 
 ### 3.2.5 Visualizing it by Event Type
@@ -532,379 +534,2383 @@ With the data cleansed, let's conduct a high-level analysis of our dataset to de
 
 The central question we're exploring is:
 
-::: callout-note
-"Which **district** in Myanmar has the highest number of conflicts that may be concerning to civilians?"
-:::
+**"Which district in Myanmar has the highest number of conflicts that may be concerning to civilians?"**
 
-In 3.2.5, we analyse that there is Mynanmar has too many states and conflicts within this period, so we will build an aggregated on a state level first to filter out for states that we should focus on, base on the key figures
+In section 3.2.5, we recognized that Myanmar has many states and numerous conflicts during this period. Therefore, we will aggregate the data at the state level to prioritize states based on the following key figures:
 
-1.  total conflict: explain here
-2.  total fatalities: explain here
-3.  and also the event_type actor's must involve at least a civilian. for etither actor 1 or actor 2
-4.  conflict by density for state
-5.  fatalities by density for state.
-6.  Event type numbers
-    1.  Since we are alreadying looking at events that concern civilians, we can also categorise on an aggregate level to the number of event type for that state in an overall view.
-7.  We also want to see a Year on year growth for this base on
+-   **Civilian Involvement**: We focus on events where either Actor 1 or Actor 2 is a civilian, as these are likely to raise humanitarian concerns.
+
+-   **Total Conflicts**: This measures the overall number of conflict events in each state, helping us identify which states experienced the most conflict.
+
+-   **Conflict Density**: This calculates the number of conflicts per square kilometer in each state, allowing us to understand the intensity of conflicts relative to the size of the state.
+
+-   **Total Fatalities**: This sums up the total number of fatalities within each state, highlighting areas with the highest death toll, which are likely experiencing the most severe impacts.
+
+-   **Fatalities Density**: This measures the fatalities per square kilometer, giving a sense of how deadly the conflicts are in each state in relation to its area.
+
+This analysis will allow us to focus on the states most affected by conflicts that pose the greatest risk to civilians.
 
 ## 4.1 Aggregation of Data for exploratory purposes
 
-Setting up the question
+**Step 1: Filter Data for Civilians**
+
+In this first step, the data (`ACLEDData_Cleanse`) is filtered so that only rows where either "Civilians" are involved in the conflict (`inter1_description` or `inter2_description`) are kept. Additionally, rows where the state information is missing (`NA`) are removed because these conflicts can't be assigned to a specific geographical area.
 
 ```{r}
-# Fixing the expand.grid function to use consistent column names
-all_combinations <- expand.grid(
-  district = unique(m_sf$district),                # Unique districts from shapefile
-  event_type = unique(ACLEDDataCleanse$event_type), # Unique event types
-  quarter_year = unique(ACLEDDataCleanse$quarter_year), # Unique quarters
-  interaction_description = unique(ACLEDDataCleanse$interaction_description),  # Unique interactions
-  inter1_description = unique(ACLEDDataCleanse$inter1_description),  # Actor 1 descriptions
-  inter2_description = unique(ACLEDDataCleanse$inter2_description)   # Actor 2 descriptions
-)
-
-# Aggregate the data by quarter_year, district, event_type, interaction_description, inter1_description, inter2_description
-agg_data <- ACLEDDataCleanse %>%
-  group_by(quarter_year, district, event_type, interaction_description, inter1_description, inter2_description) %>%
-  summarise(count = n(),                       # Count the number of events
-            fatalities = sum(fatalities, na.rm = TRUE),  # Sum the fatalities
-            .groups = "drop")
-
-# Perform a full join with all_combinations to keep all districts, event types, interactions, etc.
-full_data <- all_combinations %>%
-  left_join(agg_data, by = c("district", "event_type", "quarter_year", "interaction_description", "inter1_description", "inter2_description")) %>%
-  mutate(count = ifelse(is.na(count), 0, count),        # Replace NAs in count with 0
-         fatalities = ifelse(is.na(fatalities), 0, fatalities))  # Replace NAs in fatalities with 0
-
+filtered_data <- ACLEDData_Cleanse %>%
+  filter((inter1_description == "Civilians" | inter2_description == "Civilians") & !is.na(state))
 ```
 
+**Step 2: Calculate State Area in Square Kilometers**
+
+Next, the code calculates the area for each state from the `M_State_Sf_Cleansed` spatial dataset. The `st_area` function retrieves the area in square meters, and dividing by 1 million (`1e6`) converts it into square kilometers. This information will be used later to calculate conflict and fatality density.
+
 ```{r}
-filtered_data <- ACLEDDataCleanse %>%
-  filter(inter1_description == "Civilians" | inter2_description == "Civilians")
+state_area_km2 <- st_area(M_State_Sf_Cleansed) / 1e6
+state_area_df <- data.frame(state = M_State_Sf_Cleansed$state, area_km2 = as.numeric(state_area_km2))
+```
 
-unique_states <- unique(m_sf$state)
-unique_event_types <- unique(ACLEDDataCleanse$event_type)
+**Step 3: Aggregate Total Conflicts and Fatalities by State**
 
+The next step is to group the filtered data by state and calculate two key metrics: the total number of conflicts and the total number of fatalities for each state. This is done using `group_by` and `summarise`.
 
-all_combinations <- expand.grid(
-  state = unique_states, 
-  event_type = unique_event_types
-)
-
+```{r}
 agg_data_by_state <- filtered_data %>%
-  group_by(state, event_type) %>%
+  group_by(state) %>%
   summarise(
-    total_conflicts = n(),                        # Total number of conflicts
-    total_fatalities = sum(fatalities, na.rm = TRUE),  # Total number of fatalities
+    total_conflicts = n(), 
+    total_fatalities = sum(fatalities, na.rm = TRUE), 
     .groups = "drop"
   )
+```
 
-full_data <- all_combinations %>%
-  left_join(agg_data_by_state, by = c("state", "event_type")) %>%
+**Step 4: Convert to Non-Spatial Data Frame**
+
+Here, the spatial data is converted into a regular data frame by dropping the geometry information. This allows easier manipulation of the non-spatial data for further processing.
+
+```{r}
+filtered_data_df <- st_drop_geometry(filtered_data)
+```
+
+**Step 5: Prepare Data Frame for Yearly Data**
+
+To store yearly conflict and fatality data for each state, an empty data frame is initialized by selecting distinct states from the filtered data
+
+```{r}
+final_result <- filtered_data_df %>% select(state) %>% distinct()
+```
+
+**Step 6: Loop Through Each Year and Calculate Yearly Conflicts/Fatalities**
+
+In this step, the code iterates over each unique year in the dataset. For each year, it calculates the total conflicts and fatalities for each state. The results are merged back into the `final_result` data frame, with columns named according to the year (e.g., `conflicts_2021`, `fatalities_2021`).
+
+```{r}
+unique_years <- unique(filtered_data_df$year)
+
+for (yr in unique_years) {
+  yearly_data <- filtered_data_df %>%
+    filter(year == yr) %>%
+    group_by(state) %>%
+    summarise(
+      conflicts = n(), 
+      fatalities = sum(fatalities, na.rm = TRUE)
+    ) %>%
+    rename_at(vars(conflicts, fatalities), ~ paste0(., "_", yr))  # Rename with year
+  
+  final_result <- left_join(final_result, yearly_data, by = "state")
+}
+
+```
+
+**Step 7: Replace NAs with 0**
+
+Any missing data for a state-year combination (e.g., a state with no conflicts in a particular year) is replaced with 0 to avoid leaving gaps in the analysis.
+
+```{r}
+final_result <- final_result %>%
+  mutate(across(everything(), ~ ifelse(is.na(.), 0, .)))
+```
+
+**Step 8: Calculate Conflict and Fatality Density**
+
+Now, the code calculates the density of conflicts and fatalities per square kilometer for each state. The results from Step 3 (`agg_data_by_state`) are joined with the state area data from Step 2. The density is simply the number of conflicts or fatalities divided by the area in square kilometers.
+
+```{r}
+agg_data_with_density <- agg_data_by_state %>%
+  left_join(state_area_df, by = "state") %>%
   mutate(
-    total_conflicts = ifelse(is.na(total_conflicts), 0, total_conflicts),    # Replace NAs with 0
-    total_fatalities = ifelse(is.na(total_fatalities), 0, total_fatalities)  # Replace NAs with 0
+    conflict_density = total_conflicts / area_km2,
+    fatality_density = total_fatalities / area_km2
   )
 ```
 
+**Step 9: Merge Yearly Data and Density with Spatial Data**
+
+Finally, the spatial data (`M_State_Sf_Cleansed`) is merged with the yearly conflict/fatality data (`final_result`) and the density data (`agg_data_with_density`). Additional calculations are made to find the fatality-per-conflict ratio which are then added to the final spatial dataset.
+
 ```{r}
-# Step 2: Pivot the data from long format to wide format
-wide_data <- full_data %>%
-  pivot_wider(
-    names_from = event_type,               # Convert event_type into columns
-    values_from = c(total_conflicts, total_fatalities),  # Use both conflicts and fatalities
-    values_fill = list(total_conflicts = 0, total_fatalities = 0)  # Fill missing values with 0
+finalized_map <- M_State_Sf_Cleansed %>%
+  left_join(final_result, by = "state") %>%
+  left_join(agg_data_with_density, by = "state")
+
+finalized_map <- finalized_map %>%
+  mutate(conflict_fatality_ratio = ifelse(total_fatalities == 0, NA, total_fatalities / total_conflicts))
+
+finalized_map <- finalized_map %>%
+  mutate(
+    fatality_per_conflict = ifelse(total_conflicts == 0, NA, total_fatalities / total_conflicts),
   )
 
-# Step 3: Calculate total conflicts and fatalities for each state
-# Sum across all event types to get the total
-wide_data <- wide_data %>%
-  rowwise() %>%
+finalized_map <- finalized_map %>%
   mutate(
-    total_conflicts = sum(c_across(starts_with("total_conflicts_"))),
-    total_fatalities = sum(c_across(starts_with("total_fatalities_")))
-  ) %>%
-  ungroup()
-
-
-m_sf_equal_area <- st_transform(m_sf, crs = 6933)  # EPSG 6933 is a global equal-area projection
-m_sf_equal_area <- m_sf_equal_area %>%
-  mutate(area_km2 = st_area(.) / 10^6)  # Convert area from square meters to square kilometers
-
-# Step 2: Join the wide_data (with total conflicts and fatalities by event type) with the spatial data
-wide_data_with_area <- m_sf_equal_area %>%
-  left_join(wide_data, by = "state")
-
-# Step 3: Compute density columns for each event type
-# Assuming event_type columns are named like "total_conflicts_<event_type>"
-for (event_type in unique_event_types) {
-  wide_data_with_area <- wide_data_with_area %>%
-    mutate(
-      !!paste0("density_", event_type, "_Conflicts") := get(paste0("total_conflicts_", event_type)) / area_km2,
-      !!paste0("density_", event_type, "_Fatalities") := get(paste0("total_fatalities_", event_type)) / area_km2
-    )
-}
-
-# Step 4: Compute overall density for total conflicts and fatalities
-wide_data_with_area <- wide_data_with_area %>%
-  mutate(
-    density_total_conflicts = total_conflicts / area_km2,
-    density_total_fatalities = total_fatalities / area_km2
+    rank_total_conflicts = rank(-total_conflicts, ties.method = "min"),  # Rank total_conflicts (largest to smallest)
+    rank_total_fatalities = rank(-total_fatalities, ties.method = "min"),  # Rank total_fatalities (largest to smallest)
+    rank_conflict_density = rank(-conflict_density, ties.method = "min"),  # Rank conflict_density (largest to smallest)
+    rank_fatality_density = rank(-fatality_density, ties.method = "min"),  # Rank fatality_density (largest to smallest)
+    rank_fatality_per_conflict = rank(-fatality_per_conflict, ties.method = "min")  # Rank fatality_per_conflict (largest to smallest)
   )
 
-# Step 5: Prepare to plot using tmap
-# Set tmap mode to interactive
+```
+
+**Final Output: Display the Data**
+
+The `finalized_map` contains all the processed information, including conflict/fatality counts, densities, and state geometry, which can now be visualized or further analyzed.
+
+```{r}
+head(finalized_map)
+```
+
+### 4.2 Visualizing the aggregated data.
+
+For each column that we created earlier, we can now showcase it in a choropleth map to highlight the states with the highest values in each category. These maps will help visually identify which state has the highest value for each column. You can navigate through the tabset to explore the different metrics and easily view the data on a map!
+
+::: panel-tabset
+## Total Civilian Conflicts
+
+```{r}
+# Create the tmap object for total civilian conflicts
+tm_total_conflicts <- tm_basemap(server = c("Esri.WorldGrayCanvas", "OpenStreetMap", "Esri.WorldTopoMap")) +
+  # Layer for total civilian conflicts
+  tm_shape(finalized_map) +
+  tm_polygons("total_conflicts", 
+              title = "Total Civilian Conflicts",
+              palette = "Reds", 
+              border.col = "black", 
+              alpha = 0.8,  # Transparency for polygons
+              border.alpha = 0.5,  # Semi-transparent border
+              id = "state") +  # Set state as identifier for the polygons
+
+  # Layout settings matching your style
+  tm_layout(
+    main.title = "Myanmar's State by Total Civilian Related Conflicts",  # Main map title
+    main.title.size = 1.5,  # Title font size
+    legend.outside = TRUE,  # Position legend outside the map
+    legend.outside.size = 0.5,  # Adjust size of outside legend
+    legend.position = c("left", "top"),  # Position for the event type legend
+    legend.title.size = 1.2,  # Size of the legend title
+    legend.text.size = 1,  # Size of the legend text
+    legend.bg.color = "white",  # Background color for the legend
+    legend.bg.alpha = 0.5,  # Transparency for the legend background
+    inner.margins = c(0.05, 0.05, 0.05, 0.05)  # Set inner margins for better spacing
+  )
+tm_total_conflicts
+```
+
+## Total Fatalities for civilians related conflicts.
+
+```{r}
+# Create the tmap object for total civilian conflicts
+tm_total_fatalities <- tm_basemap(server = c("Esri.WorldGrayCanvas", "OpenStreetMap", "Esri.WorldTopoMap")) +
+  # Layer for total civilian conflicts
+  tm_shape(finalized_map) +
+  tm_polygons("total_fatalities", 
+              title = "Total Fatalities by Civilian Related Conflicts",
+              palette = "Blues", 
+              border.col = "black", 
+              alpha = 0.8,  # Transparency for polygons
+              border.alpha = 0.5,  # Semi-transparent border
+              id = "state") +  # Set state as identifier for the polygons
+
+  # Layout settings matching your style
+  tm_layout(
+    main.title = "Myanmar's State by Total Fatatlies For Civilian Related Conflicts",  # Main map title
+    main.title.size = 1.0,  # Title font size
+    legend.outside = TRUE,  # Position legend outside the map
+    legend.outside.size = 0.5,  # Adjust size of outside legend
+    legend.position = c("left", "top"),  # Position for the event type legend
+    legend.title.size = 1.2,  # Size of the legend title
+    legend.text.size = 1,  # Size of the legend text
+    legend.bg.color = "white",  # Background color for the legend
+    legend.bg.alpha = 0.5,  # Transparency for the legend background
+    inner.margins = c(0.05, 0.05, 0.05, 0.05)  # Set inner margins for better spacing
+  )
+
+tm_total_fatalities
+```
+
+## Civilian Conflict Density
+
+```{r}
+tm_conflict_density <- tm_basemap(server = c("Esri.WorldGrayCanvas", "OpenStreetMap", "Esri.WorldTopoMap")) +
+  # Layer for total civilian conflicts
+  tm_shape(finalized_map) +
+  tm_polygons("conflict_density", 
+              title = "Myanmar State by Civilian Related Conflicts Density",
+              palette = "Blues", 
+              border.col = "black", 
+              alpha = 0.8,  # Transparency for polygons
+              border.alpha = 0.5,  # Semi-transparent border
+              id = "state") +  # Set state as identifier for the polygons
+
+  # Layout settings matching your style
+  tm_layout(
+    main.title = "Myanmar State by Civilian Related Conflicts Density",  # Main map title
+    main.title.size = 1.0,  # Title font size
+    legend.outside = TRUE,  # Position legend outside the map
+    legend.outside.size = 0.5,  # Adjust size of outside legend
+    legend.position = c("left", "top"),  # Position for the event type legend
+    legend.title.size = 1.2,  # Size of the legend title
+    legend.text.size = 1,  # Size of the legend text
+    legend.bg.color = "white",  # Background color for the legend
+    legend.bg.alpha = 0.5,  # Transparency for the legend background
+    inner.margins = c(0.05, 0.05, 0.05, 0.05)  # Set inner margins for better spacing
+  )
+
+tm_conflict_density
+```
+
+## Fatality Density
+
+```{r}
+tm_fatalities_conflict <- tm_basemap(server = c("Esri.WorldGrayCanvas", "OpenStreetMap", "Esri.WorldTopoMap")) +
+  # Layer for total civilian conflicts
+  tm_shape(finalized_map) +
+  tm_polygons("fatality_density", 
+              title = "Myanmar State by Fatalies For Civilians Related Conflicts Density Per Km^2",
+              palette = "Blues", 
+              border.col = "black", 
+              alpha = 0.8,  # Transparency for polygons
+              border.alpha = 0.5,  # Semi-transparent border
+              id = "state") +  # Set state as identifier for the polygons
+
+  # Layout settings matching your style
+  tm_layout(
+    main.title = "Myanmar State by Fatalies For Civilians Related Conflicts Density Per Km^2",  # Main map title
+    main.title.size = 1.0,  # Title font size
+    legend.outside = TRUE,  # Position legend outside the map
+    legend.outside.size = 0.5,  # Adjust size of outside legend
+    legend.position = c("left", "top"),  # Position for the event type legend
+    legend.title.size = 1.0,  # Size of the legend title
+    legend.text.size = 0.8,  # Size of the legend text
+    legend.bg.color = "white",  # Background color for the legend
+    legend.bg.alpha = 0.5,  # Transparency for the legend background
+    inner.margins = c(0.05, 0.05, 0.05, 0.05)  # Set inner margins for better spacing
+  )
+
+tm_fatalities_conflict
+```
+
+## Fatality Per Civilian Conflict
+
+```{r}
+tm_fatalities_density <- tm_basemap(server = c("Esri.WorldGrayCanvas", "OpenStreetMap", "Esri.WorldTopoMap")) +
+  # Layer for total civilian conflicts
+  tm_shape(finalized_map) +
+  tm_polygons("fatality_per_conflict", 
+              title = "Myanmar State by Fatalies for Civilian Related Conflicts",
+              palette = "Blues", 
+              border.col = "black", 
+              alpha = 0.8,  # Transparency for polygons
+              border.alpha = 0.5,  # Semi-transparent border
+              id = "state") +  # Set state as identifier for the polygons
+
+  # Layout settings matching your style
+  tm_layout(
+    main.title = "Myanmar State by Fatalies for Civilian Related Conflicts",  # Main map title
+    main.title.size = 1.0,  # Title font size
+    legend.outside = TRUE,  # Position legend outside the map
+    legend.outside.size = 0.5,  # Adjust size of outside legend
+    legend.position = c("left", "top"),  # Position for the event type legend
+    legend.title.size = 1.0,  # Size of the legend title
+    legend.text.size = 0.8,  # Size of the legend text
+    legend.bg.color = "white",  # Background color for the legend
+    legend.bg.alpha = 0.5,  # Transparency for the legend background
+    inner.margins = c(0.05, 0.05, 0.05, 0.05)  # Set inner margins for better spacing
+  )
+
+tm_fatalities_density
+```
+:::
+
+## 4.3 Analysis on the aggregated data to find top 3 state to analyse
+
+### 4.3.1 Choose which States to analyse?
+
+With the maps above, everyone can choose what they would like to analyze, whether it’s total civilian conflicts or fatalities by state. However, I would like to focus on the central question:
+
+**Which state has the highest amount of conflict and fatality density?**
+
+By using density, I’ve aimed to assess fatalities in relation to conflicts and ensure a fair comparison by adjusting for density.
+
+::: callout-note
+Keep in mind, this is not the most precise analysis, as other factors—such as ethnicity, population demographics, and gender—could also be considered. However, for the purpose of this study, I have chosen to focus on solely on the state's conflict and fatality density.
+:::
+
+**Conflict Density**: This is the number of conflicts per square kilometer in a state.
+
+1.  Conflict Density=Total ConflictsArea of State (km²)\text{Conflict Density} = \frac{\text{Total Conflicts}}{\text{Area of State (km²)}}Conflict Density=Area of State (km²)Total Conflicts​
+
+    This tells you how many conflicts occur per unit of area (1 km²) in each state.
+
+2.  **Fatality Density**: This is the number of fatalities per square kilometer.
+
+    Fatality Density=Total FatalitiesArea of State (km²)\text{Fatality Density} = \frac{\text{Total Fatalities}}{\text{Area of State (km²)}}Fatality Density=Area of State (km²)Total Fatalities​
+
+### 4.3.2 Viewing the top 3 states across
+
+Using the map below, you can interactively explore the Conflict and Fatality Density. We observe that the top three states are as follows, and here’s how they compare across the data set.
+
+You can use the layer toggle to switch between fatalities and conflicts, or click on the map layers to view detailed, aggregated data for each state.
+
+```{r}
+# Step 1: Set tmap mode to view for interactive maps
 tmap_mode("view")
 
-# Step 6: Plot the total conflict density by state
-tm_shape(wide_data_with_area) +
-  tm_polygons(
-    "density_total_conflicts", 
-    title = "Conflict Density (per km²)", 
-    palette = "YlOrRd", 
-    style = "pretty"
-  ) +
-  tm_borders() +
-  tm_layout(
-    title = "Total Conflict Density by State",
-    legend.outside = TRUE
-  )
+# Step 2: Define popup variables to show all relevant columns when clicking on a state
+popup_variables <- c( 
+                     "Total Civilian Conflicts" = "total_conflicts",
+                     "Fatalities" = "total_fatalities",
+                     "Civilian Conflict Density" = "conflict_density",
+                     "Fatality Density" = "fatality_density",
+                     "Fatality Per Civilian Conflict" = "fatality_per_conflict",
+                     "Ranked For Total Conflict By State (Out of 15)" = "rank_total_conflicts",
+                     "Ranked For Total Fatalities By State (Out of 15)" = "rank_total_fatalities",
+                     "Ranked For Conflict Density By State (Out of 15)" = "rank_conflict_density",
+                     "Ranked For Fatalities Density By State (Out of 15)" = "rank_fatality_density",
+                     "Ranked For Fatalies/Conflict By State (Out of 15)" = "rank_fatality_per_conflict"
+                     )
 
-# Step 7: Plot the total fatality density by state
-tm_shape(wide_data_with_area) +
-  tm_polygons(
-    "density_total_fatalities", 
-    title = "Fatality Density (per km²)", 
-    palette = "Blues", 
-    style = "pretty"
-  ) +
-  tm_borders() +
+# Step 3: Create the map with 6 layers for toggling
+tm <- tm_basemap(server = c("Esri.WorldGrayCanvas", "OpenStreetMap", "Esri.WorldTopoMap")) +
+  tm_shape(finalized_map) +
+  tm_polygons("conflict_density", 
+              title = "Civilian Conflict Density",
+              palette = "Oranges", 
+              border.col = "black",
+              popup.vars = popup_variables,
+              id = "state", 
+              group = "Civilian Conflict Density") +
+  tm_shape(finalized_map) +
+  tm_polygons("fatality_density", 
+              title = "Fatality Density",
+              palette = "Purples", 
+              border.col = "black",
+              popup.vars = popup_variables,
+              id = "state", 
+              group = "Fatality Density") +
   tm_layout(
-    title = "Total Fatality Density by State",
-    legend.outside = TRUE
+    legend.outside = TRUE,
+    legend.outside.size = 0.5,  # Adjust the size of the legend
+    legend.position = c("left", "top")  # Position the legend
   )
+# Step 5: Display the interactive map
+tm
+tmap_mode("plot")
 
-# Step 8: You can also visualize individual event-type densities
-for (event_type in unique_event_types) {
-  print(
-    tm_shape(wide_data_with_area) +
-      tm_polygons(
-        paste0("density_", event_type, "_Conflicts"), 
-        title = paste("Conflict Density for", event_type, "(per km²)"), 
-        palette = "YlOrRd", 
-        style = "pretty"
-      ) +
-      tm_borders() +
-      tm_layout(
-        title = paste("Conflict Density by State for", event_type),
-        legend.outside = TRUE
-      )
-  )
+```
+
+```{r}
+finalized_data_df <- as.data.frame(st_drop_geometry(finalized_map))
+# Sort the data by conflict_density and fatality_density in descending order
+finalized_data_df <- finalized_data_df %>%
+  arrange(desc(conflict_density), desc(fatality_density))
+
+# Format the densities to show "per km²"
+finalized_data_df$conflict_density_label <- paste0(round(finalized_data_df$conflict_density, 2), " per km²")
+finalized_data_df$fatality_density_label <- paste0(round(finalized_data_df$fatality_density, 2), " per km²")
+
+# Create bar chart for Conflict Density (sorted by conflict_density)
+conflict_density_plot <- ggplot(finalized_data_df, aes(x = reorder(state, -conflict_density), y = conflict_density)) +
+  geom_bar(stat = "identity", fill = "orange") +
+  geom_text(aes(label = conflict_density_label), vjust = 1.8, size = 1.5, color = "black", position = position_stack(vjust = 0.5)) +  # Place text at bottom of bar
+  ggtitle("Top States by Conflict Density (per km²)") +
+  xlab("State") +
+  ylab("Conflict Density (per km²)") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# Create bar chart for Fatality Density (sorted by fatality_density)
+fatality_density_plot <- ggplot(finalized_data_df, aes(x = reorder(state, -fatality_density), y = fatality_density)) +
+  geom_bar(stat = "identity", fill = "purple") +
+  geom_text(aes(label = fatality_density_label), vjust = 1.8, size = 1.5, color = "black", position = position_stack(vjust = 0.5)) +  # Place text at bottom of bar
+  ggtitle("Top States by Fatality Density (per km²)") +
+  xlab("State") +
+  ylab("Fatality Density (per km²)") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# Display both charts side by side
+grid.arrange(conflict_density_plot, fatality_density_plot, ncol = 2)
+```
+
+### **4.3.3 Top 3 Chosen state for further analysis**
+
+#### 4.3.3.1 Yangon
+
+#### ![](images/clipboard-1120231091.png)
+
+**Yangon**, Myanmar’s largest city and former capital, remains the country’s **economic and cultural hub**. Although it is no longer the political capital, Yangon holds the highest population density in the country, making it a vital urban center with significant influence.
+
+According to the data, **Yangon ranks 5th** for total conflicts, with **1,489 civilian conflicts** reported, and **8th in fatalities**, with **431 deaths**. However, it stands out with the **highest civilian conflict density (0.0531)** and **fatality density (0.01536)** among Myanmar’s 15 states. This means that while the overall number of conflicts may not be the highest, they are **more concentrated** within Yangon’s urban area, resulting in the **highest per-unit area conflict rate**.
+
+Yangon's **urbanization** and strategic **economic importance** likely make it a hotspot for civilian unrest. Social tensions in a densely populated city lead to frequent conflicts, reflected in its **rank of 1st for conflict density and fatality density**. Despite fewer total conflicts compared to other states, Yangon’s density of unrest highlights its vulnerability to civil tensions.
+
+#### 4.3.3.2 Mandalay
+
+![](images/clipboard-255608195.png)
+
+Mandalay, the second-largest city in Myanmar, is known for its cultural significance and central location in the country. It holds a key strategic position in the economy and transportation networks, making it vulnerable to unrest.
+
+The data shows **Mandalay ranks 2nd** for total civilian conflicts with **2,021 conflicts** and **950 fatalities**. Its **civilian conflict density** is **0.0255**, placing it **3rd** in density, while its **fatality density** is **0.0120**, ranked **2nd**. Despite being second in conflict counts, the concentration of conflicts and fatalities suggests that civil unrest is deeply rooted in the region, but not as dense as in Yangon.
+
+Mandalay's high fatality-to-conflict ratio (**0.4701 fatalities per conflict**) highlights the deadly nature of conflicts, ranking **7th** in fatalities per conflict. This reflects a region where conflicts, though frequent, lead to significant loss of life compared to other states.
+
+#### 4.3.3.3 Sagaling.
+
+![](images/clipboard-3297902840.png)
+
+Sagaing, located in northern Myanmar, is one of the country’s most conflict-ridden regions, often affected by armed insurgencies and ethnic clashes due to its proximity to volatile borders.
+
+The data reveals that **Sagaing ranks 1st** in total civilian conflicts with **5,346 conflicts** and **3,319 fatalities**, giving it the highest fatality count as well. However, its **civilian conflict density** is **0.0241** (ranked **3rd**) and its **fatality density** is **0.01497** (ranked **3rd**), indicating a widespread yet slightly less concentrated conflict zone compared to Yangon and Mandalay.
+
+Sagaing’s **fatality per civilian conflict** ratio of **0.6208** ranks **2nd**, emphasizing the high lethality of conflicts in the region. With both the largest number of conflicts and a high fatality rate, Sagaing represents one of the most dangerous and unstable areas in Myanmar for civilians/
+
+## 4.4 Final Round of Cleansing ACLED Data
+
+In this final stage of the data cleansing process, we focus on preparing the **ACLED (Armed Conflict Location & Event Data)** for the different states. The key steps include:
+
+1.  **Filtering**: We first filter the dataset to focus on data specific to **Yangon**.
+
+2.  **Converting to Spatial Format**: Using the `st_as_sf()` function, we transform the filtered data into a **simple features (sf)** object, a format commonly used for spatial data in R. This involves specifying **longitude** and **latitude** as the coordinates and setting the correct **WGS84 (CRS 4326)** coordinate system for global geographic data.
+
+3.  **Coordinate System Transformation**: We apply the `st_transform()` function to project the spatial data from **WGS84 (CRS 4326)** to **UTM Zone 47N (CRS 32647)**, which is more appropriate for spatial analysis in Myanmar. This step ensures accurate distance and area calculations.
+
+4.  **Validity Check**: Using `st_is_valid()`, we validate the geometries in the spatial data to ensure there are no invalid shapes, such as self-intersecting polygons, which could cause errors during analysis.
+
+5.  **Conversion to Spatial Data Frame**: Finally, we convert the **sf** object into a **Spatial Data Frame** (`as_Spatial()`) for compatibility with specific spatial analysis functions that require this format.
+
+This process ensures that the **States** data is accurately represented in a geospatial format, with proper **coordinate transformation** and **validity checks** applied. It prepares the data for further geospatial operations, such as mapping and spatial pattern analysis, with the confidence that the dataset is clean and valid for use.
+
+::: panel-tabset
+## Yangon
+
+```{r}
+# Filter data for Yangon state from the entire ACLED dataset
+Yangon_ACLED_Data <- filtered_data %>% 
+  filter(state %in% c("Yangon"))
+
+# Check the class of the data to confirm it's a dataframe
+class(Yangon_ACLED_Data)
+
+# Convert the filtered data into a spatial format (simple features object)
+# Use longitude and latitude columns as coordinates, with WGS84 (CRS 4326) as the coordinate system
+Yangon_ACLED_Data_Sf <- st_as_sf(Yangon_ACLED_Data, coords = c("longitude", "latitude"), crs = 4326, remove = FALSE)
+
+# Transform the coordinate system to UTM Zone 47N (CRS 32647) for better spatial precision in Myanmar
+Yangon_ACLED_Data_Sf <- st_transform(Yangon_ACLED_Data_Sf, crs = 32647)
+
+# Check the class of the spatial object to confirm conversion
+class(Yangon_ACLED_Data_Sf)
+
+# Validate the spatial object to ensure all geometries are valid (no broken or self-intersecting geometries)
+Yangon_ACLED_Validity <- st_is_valid(Yangon_ACLED_Data_Sf)
+
+# Identify any invalid geometries and print them if they exist
+Yangon_invalid <- which(!Yangon_ACLED_Validity)
+if (length(Yangon_invalid) > 0) {
+  print("Yangon is Invalid!")
+  print(Yangon_ACLED_Data_Sf[Yangon_invalid, ])
+} else {
+  print("Yangon_ACLED_Data_Sf is valid!")
 }
 
+# Convert the sf object into a Spatial Data Frame (for compatibility with certain spatial analysis functions)
+Yangon_ACLED_SFDF <- as_Spatial(Yangon_ACLED_Data_Sf)
+
+# Final output - Yangon ACLED data in spatial data frame format, ready for analysis
+Yangon_ACLED_SFDF
 ```
 
-# FUCK THIS PART WE IGNORE HERE THIS IS WRONG IGNORE
-
-## 3.4 Spatial Classes Wrangling
-
-### 3.4.1 Setting up the Owin Window for Myanmar.
-
-n this part of the code, we are setting up a spatial **window** for Myanmar, which defines the **boundaries** within which the spatial point pattern analysis will take place. This is done using the **`owin`** function from the **spatstat** package, which converts the polygonal boundary of Myanmar into a format that can be used for further spatial analysis.
+## Mandalay
 
 ```{r}
-myanmar_owin <- as.owin(m_sf)
-plot(myanmar_owin)
-summary(myanmar_owin)
-```
+# Filter data for Mandalay state from the entire ACLED dataset
+Mandalay_ACLED_Data <- filtered_data %>% 
+  filter(state %in% c("Mandalay"))
+# Check the class of the filtered data to confirm it's still a dataframe
+class(Mandalay_ACLED_Data)
 
--   **Polygonal Boundary**: The spatial window for Myanmar is made up of **1,069 polygons**. Some areas within these polygons are excluded, representing **504 holes** (such as lakes or unmeasured regions).
+# Convert the filtered data into a spatial format (simple features object)
+# Longitude and latitude are used as coordinates, and WGS84 (CRS 4326) is set as the coordinate system
+Mandalay_ACLED_Data_Sf <- st_as_sf(Mandalay_ACLED_Data, coords = c("longitude", "latitude"), crs = 4326, remove = FALSE)
 
--   **Enclosing Rectangle**: The window is enclosed by a rectangle with coordinates ranging from **92.17 to 101.17 (longitude)** and **9.70 to 28.55 (latitude)**, creating a rectangle that is **8.998 units wide** and **18.85 units high**.
+# Transform the coordinate system to UTM Zone 47N (CRS 32647) for better accuracy in the Myanmar region
+Mandalay_ACLED_Data_Sf <- st_transform(Mandalay_ACLED_Data_Sf, crs = 32647)
 
--   **Window Area**: The total area of the window (i.e., the land within Myanmar's boundary being analyzed) is **58.24 square units**.
+# Verify that the data has been successfully converted into a spatial object
+class(Mandalay_ACLED_Data_Sf)
 
--   **Fraction of Frame Area**: The polygon window covers **34.3%** of the enclosing rectangle, meaning that a significant portion of the bounding rectangle is either empty or excluded.
+# Validate the spatial data to check for any invalid geometries (e.g., self-intersections, broken polygons)
+Mandalay_ACLED_Validity <- st_is_valid(Mandalay_ACLED_Data_Sf)
 
-### 3.4.2 Setting up the ACLED Spatial Class Owin
-
-In this section, we set up the **ACLED spatial data** as a point pattern while applying **`jitter`** to account for conflicts that may occur at the same location over different time periods (e.g., quarters).
-
--   **Jittering Coordinates**:
-
-    -   We apply a **small jitter** to the **x (longitude)** and **y (latitude)** coordinates using the **`jitter()`** function. This helps separate events that may have occurred in the exact same location across different time periods.
-
--   **Defining the Window**:
-
-    -   We define the **spatial window** (area of interest) using the **bounding box** of the UTM-projected data. This sets the valid geographic region for analysis.
-
--   **Creating the `ppp` Object**:
-
-    -   The **`ppp` object** is created using the jittered coordinates and the defined window. This object is used for spatial point pattern analysis in the **spatstat** package.
-
-```{r}
-ACLEDData_coords <- st_coordinates(ACLEDData_sf)
-ACLED_ppp <- ppp(x = ACLEDData_coords[, 1], y = ACLEDData_coords[, 2], window = myanmar_owin)
-# Check the summary to ensure the point pattern was created correctly
-summary(ACLED_ppp)
-```
-
-24 points were marked as illegal and rejected because they fell outside the specified window. However, these points are important, and we can check how far they are from the window. The following code identifies the rejected points and allows us to visualize their distance from the window.
-
-```{r}
-# Step 4: Check if points are outside the window (i.e., rejected)
-rejected_idx <- !inside.owin(ACLEDData_coords[, 1], ACLEDData_coords[, 2], myanmar_owin)
-
-# Step 5: Force rejected points inside the window
-if (any(rejected_idx)) {
-  bbox <- as.rectangle(myanmar_owin)
-  
-  # Force rejected points to the nearest edge within the bounding box
-  ACLEDData_coords[rejected_idx, 1] <- pmax(pmin(ACLEDData_coords[rejected_idx, 1], bbox$xrange[2]), bbox$xrange[1])
-  ACLEDData_coords[rejected_idx, 2] <- pmax(pmin(ACLEDData_coords[rejected_idx, 2], bbox$yrange[2]), bbox$yrange[1])
-  
-  # Add a larger jitter to push points well inside the window
-  jitter_amount <- 0.1  # Increased jitter to make sure points are fully inside
-  ACLEDData_coords[rejected_idx, 1] <- ACLEDData_coords[rejected_idx, 1] + runif(sum(rejected_idx), -jitter_amount, jitter_amount)
-  ACLEDData_coords[rejected_idx, 2] <- ACLEDData_coords[rejected_idx, 2] + runif(sum(rejected_idx), -jitter_amount, jitter_amount)
+# Identify any invalid geometries and print them for inspection, if found
+Mandalay_invalid <- which(!Mandalay_ACLED_Validity)
+if (length(Mandalay_invalid) > 0) {
+  print("Mandalay is Invalid!")
+  print(Mandalay_ACLED_Data_Sf[Mandalay_invalid, ])
+} else {
+  # If all geometries are valid, print confirmation
+  print("Mandalay_ACLED_Data_Sf is valid!")
 }
 
-# Step 6: Recreate the ppp object with the updated coordinates
-ACLED_ppp_forced <- ppp(x = ACLEDData_coords[, 1], y = ACLEDData_coords[, 2], window = myanmar_owin)
+# Convert the simple features object to a Spatial Data Frame for compatibility with spatial functions
+Mandalay_ACLED_SFDF <- as_Spatial(Mandalay_ACLED_Data_Sf)
 
-# Step 7: Check the summary to ensure no points are rejected
-summary(ACLED_ppp_forced)  # Ensure no points are rejected
+# Final output - Mandalay ACLED data in spatial data frame format, ready for analysis
+Mandalay_ACLED_SFDF
+```
 
-# Step 8: Optionally, plot the adjusted point pattern
-plot(ACLED_ppp_forced)
+## Sagaing
+
+```{r}
+Sagaing_ACLED_Data <- filtered_data %>% 
+  filter(state %in% c("Sagaing"))
+
+# Check the class of the filtered data to confirm it's still a dataframe
+class(Sagaing_ACLED_Data)
+
+# Convert the filtered data into a spatial format (simple features object)
+# Longitude and latitude are used as coordinates, and WGS84 (CRS 4326) is set as the coordinate system
+Sagaing_ACLED_Data_Sf <- st_as_sf(Sagaing_ACLED_Data, coords = c("longitude", "latitude"), crs = 4326, remove = FALSE)
+
+# Transform the coordinate system to UTM Zone 47N (CRS 32647) for better accuracy in the Myanmar region
+Sagaing_ACLED_Data_Sf <- st_transform(Sagaing_ACLED_Data_Sf, crs = 32647)
+
+# Verify that the data has been successfully converted into a spatial object
+class(Sagaing_ACLED_Data_Sf)
+
+# Validate the spatial data to check for any invalid geometries (e.g., self-intersections, broken polygons)
+Sagaing_ACLED_Validity <- st_is_valid(Sagaing_ACLED_Data_Sf)
+
+# Identify any invalid geometries and print them for inspection, if found
+Sagaing_invalid <- which(!Sagaing_ACLED_Validity)
+if (length(Sagaing_invalid) > 0) {
+  print("Sagaing is Invalid!")
+  print(Sagaing_ACLED_Data_Sf[Sagaing_invalid, ])
+} else {
+  # If all geometries are valid, print confirmation
+  print("Sagaing_ACLED_Data_Sf is valid!")
+}
+
+# Convert the simple features object to a Spatial Data Frame for compatibility with spatial functions
+Sagaing_ACLED_SFDF <- as_Spatial(Sagaing_ACLED_Data_Sf)
+
+# Final output - Sagaing ACLED data in spatial data frame format, ready for analysis
+Sagaing_ACLED_SFDF
+
+
+```
+:::
+
+# 5.0 Spatial Data Wrangling
+
+Spatial data wrangling is a crucial step in preparing the dataset for **spatial point pattern analysis**. This section involves setting up the spatial boundaries for each state and transforming the data into appropriate formats for analysis. The goal is to define the area within which the point patterns (conflict events) will be analyzed and ensure that the data is in the correct format for further spatial operations.
+
+## 5.1 Setting up the Owin Window for States.
+
+In this step, we are setting up an **owin** object for each state using the **spatstat** package. An **owin** object defines the **spatial window**—or the boundary—within which our point pattern analysis will take place. Essentially, this window will encapsulate the polygonal boundary of each state, allowing us to focus on conflict data within those precise boundaries.
+
+To create the **owin** object, we will:
+
+-   Extract the polygon boundaries for each state from the spatial data.
+
+-   Convert these boundaries into an **owin** object using the `as.owin()` function.
+
+-   These spatial windows will ensure that all spatial operations, such as density estimation and pattern analysis, occur strictly within the boundaries of the specified state (e.g., **Yangon**, **Mandalay**, **Sagaing**).
+
+This setup is crucial for ensuring that our spatial analysis focuses only on relevant geographic areas and doesn't incorporate any points outside the boundaries.
+
+::: panel-tabset
+## Yangon
+
+```{r}
+Yangon_Sf <- M_State_Sf %>% 
+  filter(state %in% c("Yangon"))
+# Step 1: Extract the individual polygons from the multipolygon
+yangon_polygons <- st_cast(Yangon_Sf$geometry, "POLYGON")
+yangon_polygons_filtered <- yangon_polygons[-c(1, 2)]
+yangon_multipolygon_filtered <- st_combine(yangon_polygons_filtered)
+# Add the filtered multipolygon back to the Yangon_Sf object
+Yangon_Sf$geometry <- yangon_multipolygon_filtered
+Yangon <- as_Spatial(Yangon_Sf)
+Yangon_Owin <- as.owin(Yangon_Sf)
+plot(Yangon_Owin)
+summary(Yangon_Owin)
+st_is_valid(Yangon_Sf)
 
 ```
 
-Viola, we successfully managed to keep all the points and now we are ready to check if there are any duplicate.
+## Mandalay
 
 ```{r}
-any(duplicated(ACLED_ppp_forced))
+# Filter the dataset to only include data for Mandalay state
+Mandalay_Sf <- M_State_Sf %>% 
+  filter(state %in% c("Mandalay"))
+# Convert the Mandalay spatial dataframe into a Spatial Data Frame for further spatial operations
+Mandalay <- as_Spatial(Mandalay_Sf)
+
+# Convert the Mandalay spatial dataframe into an owin object for spatial point pattern analysis
+Mandalay_Owin <- as.owin(Mandalay_Sf)
+
+# Plot the owin object to visualize the boundaries of Mandalay
+plot(Mandalay_Owin)
+
+# Provide a summary of the owin object, showing its properties like dimensions and bounding box
+summary(Mandalay_Owin)
+
+
 ```
 
+## Sagaing
+
 ```{r}
-unique_quarters <- unique(ACLEDDataCleanse_sf$quarter_year)
-unique_event_types <- unique(ACLEDDataCleanse_sf$event_type)
+# Filter the dataset to only include data for Sagaing state
+Sagaing_Sf <- M_State_Sf %>% 
+  filter(state %in% c("Sagaing"))
 
-# List to store filtered data for each combination
-owin_objects <- list()
+# Convert the Sagaing spatial dataframe into a Spatial Data Frame for further spatial operations
+Sagaing <- as_Spatial(Sagaing_Sf)
 
-# Process each quarter and event type
-for (quarter in unique_quarters) {
-  for (event_type in unique_event_types) {
-    # Step 3: Filter the data for the current quarter and event_type
-    filtered_data <- ACLEDDataCleanse_sf[ACLEDDataCleanse_sf$quarter_year == quarter & ACLEDDataCleanse_sf$event_type == event_type, ]
+# Convert the Sagaing spatial dataframe into an owin object for spatial point pattern analysis
+Sagaing_Owin <- as.owin(Sagaing_Sf)
+
+# Plot the owin object to visualize the boundaries of Sagaing
+plot(Sagaing_Owin)
+
+# Provide a summary of the owin object, showing its properties like dimensions and bounding box
+summary(Sagaing_Owin)
+
+```
+:::
+
+## 5.2 Setting up the ACLED Spatial Class
+
+After defining the **owin** window for each state, we need to convert the conflict data into a suitable **spatial point pattern** object (typically using **spatstat's ppp** class). This class is essential for performing spatial point pattern analysis, as it links the geographic coordinates of conflict events to the state boundary.
+
+Here’s what we’ll do:
+
+-   We will first ensure that the conflict data is transformed into the appropriate spatial projection (UTM or other applicable projections).
+
+-   The conflict data points will be linked to the **owin** window to define where these events occur within the state's boundary.
+
+-   The result will be a **ppp** (point pattern) object, which is necessary for conducting spatial operations like **density estimation**, **K-function analysis**, or **G-function analysis**.
+
+This step transforms our dataset into a fully spatially aware format, ready for statistical analysis.
+
+::: panel-tabset
+## Yangon
+
+```{r}
+# Extract the coordinates (longitude, latitude) from the Yangon spatial object
+Yangon_ACLED_coords <- st_coordinates(Yangon_ACLED_Data_Sf)
+
+# Define the bounding box (xmin, xmax, ymin, ymax) for Yangon, which sets the spatial extent of the window
+Yangon_ACLED_bbox <- st_bbox(Yangon_ACLED_Data_Sf)
+
+# Create the spatial window (owin object) for Yangon using the bounding box ranges
+Yangon_ACLED_window <- owin(xrange = Yangon_ACLED_bbox[c("xmin", "xmax")], yrange = Yangon_ACLED_bbox[c("ymin", "ymax")])
+
+# Create a ppp (point pattern) object for Yangon using the extracted coordinates and the defined window
+Yangon_ACLED_ppp <- ppp(x = Yangon_ACLED_coords[, 1], y = Yangon_ACLED_coords[, 2], window = Yangon_ACLED_window)
+
+# Check the summary of the ppp object to verify the number of points, window dimensions, and other properties
+summary(Yangon_ACLED_ppp)
+
+# Plot the ppp object to visually inspect the spatial distribution of conflict points in Yangon
+plot(Yangon_ACLED_ppp)
+
+
+```
+
+## Mandalay
+
+```{r}
+# Extract the coordinates (longitude, latitude) from the Mandalay spatial object
+Mandalay_ACLED_coords <- st_coordinates(Mandalay_ACLED_Data_Sf)
+
+# Define the bounding box (xmin, xmax, ymin, ymax) for Mandalay, which sets the spatial extent of the window
+Mandalay_ACLED_bbox <- st_bbox(Mandalay_ACLED_Data_Sf)
+
+# Create the spatial window (owin object) for Mandalay using the bounding box ranges
+Mandalay_ACLED_window <- owin(xrange = Mandalay_ACLED_bbox[c("xmin", "xmax")], yrange = Mandalay_ACLED_bbox[c("ymin", "ymax")])
+
+# Create a ppp (point pattern) object for Mandalay using the extracted coordinates and the defined window
+Mandalay_ACLED_ppp <- ppp(x = Mandalay_ACLED_coords[, 1], y = Mandalay_ACLED_coords[, 2], window = Mandalay_ACLED_window)
+
+# Check the summary of the ppp object to verify the number of points, window dimensions, and other properties
+summary(Mandalay_ACLED_ppp)
+
+# Plot the ppp object to visually inspect the spatial distribution of conflict points in Mandalay
+plot(Mandalay_ACLED_ppp)
+
+```
+
+## Sagaing
+
+```{r}
+# Extract the coordinates (longitude, latitude) from the Sagaing spatial object
+Sagaing_ACLED_coords <- st_coordinates(Sagaing_ACLED_Data_Sf)
+
+# Define the bounding box (xmin, xmax, ymin, ymax) for Sagaing, which sets the spatial extent of the window
+Sagaing_ACLED_bbox <- st_bbox(Sagaing_ACLED_Data_Sf)
+
+# Create the spatial window (owin object) for Sagaing using the bounding box ranges
+Sagaing_ACLED_window <- owin(xrange = Sagaing_ACLED_bbox[c("xmin", "xmax")], yrange = Sagaing_ACLED_bbox[c("ymin", "ymax")])
+
+# Create a ppp (point pattern) object for Sagaing using the extracted coordinates and the defined window
+Sagaing_ACLED_ppp <- ppp(x = Sagaing_ACLED_coords[, 1], y = Sagaing_ACLED_coords[, 2], window = Sagaing_ACLED_window)
+
+# Check the summary of the ppp object to verify the number of points, window dimensions, and other properties
+summary(Sagaing_ACLED_ppp)
+
+# Plot the ppp object to visually inspect the spatial distribution of conflict points in Sagaing
+plot(Sagaing_ACLED_ppp)
+
+```
+:::
+
+::: callout-note
+**Why dont you jitter, delete or mark any conflicts?**
+
+The reason I did not apply jittering, deletion, or marking of the **conflicts** at this stage is that all the conflicts are **unique** and occurred across different **time zones**. Since there is no overlap in terms of exact location or time, it makes no sense to modify the data at this point. We will consider **jittering** later if we find that events are clustered too closely together in space, but for now, each conflict is distinct, and no adjustments are necessary.
+:::
+
+## 5.3 Combining them both
+
+Finally, we will merge the **owin** object (state boundary) and the **spatial point pattern** data (conflict events) into a single object. This combination ensures that:
+
+-   The spatial window constrains the analysis, focusing on the area within each state's boundary.
+
+-   All conflict events are accurately represented within the confines of the defined boundary.
+
+This step allows for **robust spatial point pattern analysis**, ensuring that both the boundaries and events are properly accounted for. With this merged object, we can perform advanced geospatial techniques, such as analyzing the distribution of conflict events, identifying hotspots, and calculating density functions within the state.
+
+::: panel-tabset
+## Yangon
+
+```{r}
+Yangon_ACLED_ppp = Yangon_ACLED_ppp[Yangon_Owin]
+plot(Yangon_ACLED_ppp)
+```
+
+## Mandalay
+
+```{r}
+Mandalay_ACLED_ppp = Mandalay_ACLED_ppp[Mandalay_Owin]
+plot(Mandalay_ACLED_ppp)
+```
+
+## Sagaing
+
+```{r}
+Mandalay_ACLED_ppp = Mandalay_ACLED_ppp[Mandalay_Owin]
+plot(Mandalay_ACLED_ppp)
+```
+:::
+
+# 6.0 Summary of Data sets Prepared
+
+We have created several distinct datasets, each serving a specific role in our spatial analysis of conflict events in Myanmar. Here’s a summary of each dataset, including the type of data they represent and a brief description of their purpose:
+
+1.  **`M_State_SF` (sf object)**
+
+    -   **Type**: Simple feature object (sf)
+
+    -   **Description**: This is the cleaned and formatted dataset containing conflict events from ACLED (Armed Conflict Location & Event Data). It includes attributes like **location**, **event type**, and **time period**. This dataset serves as the foundation for further spatial analysis.
+
+2.  **`{State}_SF` (sf object)**
+
+    -   **Type**: Simple feature object (sf)
+
+    -   **Description**: This dataset represents the **Myanmar boundary** and is used as the base map for the analysis. It defines the spatial extent and provides a reference layer for plotting conflict events within the country.
+
+3.  **`Finalized_map` (aggregated data)**
+
+    -   **Type**: Aggregated dataset
+
+    -   **Description**: This dataset contains aggregated data for different **event types**, **quarters**, or other relevant categories. It is primarily used for **exploratory analysis** to get an overview of trends and patterns before performing detailed spatial point pattern analysis.
+
+4.  **`filtered_data` (filtered ACLED data)**
+
+    -   **Type**: Filtered dataset
+
+    -   **Description**: This dataset consists of ACLED data filtered specifically for **civilian-related conflicts**. It focuses on events where civilians are involved, either in **inter 1** or **inter 2**, and is the primary dataset for analyzing civilian conflict events.
+
+5.  **`{State}_ACLED_Data_Sf` (sf object)**
+
+    -   **Type**: Simple feature object (sf)
+
+    -   **Description**: These datasets (e.g., **Yangon_ACLED_Data_Sf**, **Mandalay_ACLED_Data_Sf**) are state-specific **ACLED data** stored as sf objects. They contain conflict data for individual states and will be used to analyze conflict patterns within each state’s boundary.
+
+6.  **`{State}_ACLED_ppp` (ppp object)**
+
+    -   **Type**: Planar point pattern object (ppp)
+
+    -   **Description**: These are **point pattern datasets** created from the state-specific ACLED data (e.g., **Yangon_ACLED_ppp**, **Mandalay_ACLED_ppp**). They store the coordinates of conflict events and are used for in-depth spatial analyses, such as **density estimation** and **clustering**. If needed, jittering is applied to handle close events.
+
+7.  **`{State}_Owin`(owin object)**
+
+    -   **Type**: Spatial window object (owin)
+
+    -   **Description**: These objects represent the **spatial boundary** of each state (e.g., **Yangon_Owin**, **Mandalay_Owin**). The **owin** window defines the geographic limits for the spatial point pattern analysis, ensuring that all conflict events are analyzed within the correct state boundary.
+
+# 7.0 Deriving the Quarterly Kernel Density Estimation Layers
+
+Kernel Density Estimation (KDE) is a key technique for spatial analysis, allowing us to estimate the probability density of events occurring in space. By applying KDE across different **quarters** for each state (Yangon, Mandalay, and Sagaing), we can visualize how the intensity of conflict events evolves over time. This will give us insights into **hotspots** and help track the spread or concentration of conflicts across Myanmar. Our analysis will focus on generating KDE layers for each quarter, comparing them, and identifying significant patterns.
+
+## 7.1 Setting up a function to create quarterly for each state
+
+We will create a function that takes the conflict data for each state and computes the **quarterly KDE**. This function will:
+
+-   Filter the conflict events by **quarter**.
+
+-   Apply the **KDE** to estimate the spatial density of events for that quarter.
+
+-   Return a KDE layer that can be used for visualization and analysis.
+
+<details>
+
+<summary>Full Code</summary>
+
+```{r}
+process_quarter_conflicts <- function(region_sf, region_window, region_name, data_sf, sigma_type, kernel_method) {
+  # Extract unique quarters (reversed for correct order)
+  quarters <- rev(unique(data_sf$quarter_year))
+  
+  # Initialize empty lists to store ppp and KDE objects
+  region_quarters_conflict <- list()
+  kde_plot_list <- list()
+  
+  # Step 2: Loop over each quarter and process conflict data
+  for (quarter in quarters) {
+    # Filter the data for the current quarter
+    quarter_data <- data_sf %>%
+      filter(quarter_year == quarter)
     
-    # Generate dynamic name for each quarter-event combination
-    owin_name <- paste0("owin_", quarter, "_", event_type)
+    # Extract coordinates for this quarter
+    quarter_coords <- st_coordinates(quarter_data)
     
-    # Store filtered data in the list using the dynamic name
-    owin_objects[[owin_name]] <- filtered_data
+    # Create a ppp object for this quarter
+    quarter_ppp <- ppp(
+      x = quarter_coords[, 1],
+      y = quarter_coords[, 2],
+      window = region_window
+    )
+    
+    # Step 3: Remove rejected points that fall outside the window
+    valid_points <- inside.owin(quarter_ppp$x, quarter_ppp$y, region_window)
+    quarter_ppp <- quarter_ppp[valid_points]
+    
+    # Step 4: Jitter duplicates to avoid overplotting
+    is_duplicate <- duplicated(quarter_ppp)
+    jittered_x <- quarter_ppp$x + ifelse(is_duplicate, runif(npoints(quarter_ppp), -0.1, 0.1), 0)
+    jittered_y <- quarter_ppp$y + ifelse(is_duplicate, runif(npoints(quarter_ppp), -0.1, 0.1), 0)
+    
+    # Create a jittered ppp object with the new coordinates
+    jittered_ppp <- ppp(
+      x = jittered_x,
+      y = jittered_y,
+      window = region_window
+    )
+    
+    # Step 5: Store the jittered ppp object for later use
+    region_quarters_conflict[[quarter]] <- jittered_ppp
+    
+    # Step 6: Rescale to kilometers and calculate KDE with specified sigma type and kernel method
+    jittered_ppp_km <- rescale(jittered_ppp, 1000, "km")
+    
+    # Use selected sigma type
+    if (sigma_type == "scott") {
+      sigma_value <- bw.scott(jittered_ppp_km)
+      kde_quarter <- density(jittered_ppp_km, sigma = bw.scott(jittered_ppp_km), edge = TRUE, kernel = kernel_method)
+    } else if (sigma_type == "diggle") {
+      sigma_value <- bw.scott(jittered_ppp_km)
+      kde_quarter <- density(jittered_ppp_km, sigma = bw.diggle(jittered_ppp_km), edge = TRUE, kernel = kernel_method)
+    } else if (sigma_type == "ppl") {
+      sigma_value <- bw.scott(jittered_ppp_km)
+      kde_quarter <- density(jittered_ppp_km, sigma = bw.ppl(jittered_ppp_km), edge = TRUE, kernel = kernel_method)
+    } else if (sigma_type == "cvl") {
+      sigma_value <- bw.scott(jittered_ppp_km)
+      kde_quarter <- density(jittered_ppp_km, sigma = bw.CvL(jittered_ppp_km), edge = TRUE, kernel = kernel_method)
+    } else {
+      stop("Invalid sigma_type specified.")
+    }
+    
+    # Step 7: Store the KDE object for later use
+    kde_plot_list[[quarter]] <- kde_quarter
+    
+    # Print a message after processing each quarter
+    print(paste("KDE - Quarter:", quarter, "| Kernel:", kernel_method, "| Sigma:", sigma_type, " | Sigma Value: ", sigma_value))
   }
+  
+  # Return the processed ppp and KDE objects
+  return(list(
+    "ppp_list" = region_quarters_conflict,
+    "kde_list" = kde_plot_list
+  ))
 }
-# Check the results
-print(owin_objects)
 
-
-32537
 ```
 
-We confirmed that there are no duplicates, and now we are ready to map the data.
+</details>
+
+## 7.2 Setting up a function to display the visual across quarters
+
+Next, we will create a function to **visualize** the KDE layers for each quarter, enabling us to compare the intensity of conflict events over time. The function will:
+
+-   Take the KDE layers from each quarter.
+
+-   Display them side by side or as an animation to show how conflict density changes across quarters.
+
+-   This visualization will help us observe trends, including whether conflicts are becoming more **localized** or **dispersed** over time.
 
 ```{r}
-conflict_ppp = ACLED_ppp_forced[myanmar_owin]
-summary(conflict_ppp)
-plot(conflict_ppp)
+# Visualization Function for Conflict Points and KDE
+visualize_conflict_results <- function(results, region_name, sigma_type, kernel_method) {
+  ppp_list <- results$ppp_list
+  kde_list <- results$kde_list
+  
+  # Plotting Kernel Density Estimates (KDE) for each quarter
+  kde_plots <- lapply(names(kde_list), function(quarter) {
+    kde_data <- as.data.frame(as.im(kde_list[[quarter]]))
+    
+    ggplot() +
+      geom_raster(data = kde_data, aes(x = x, y = y, fill = value), alpha = 0.8) +
+      scale_fill_viridis_c(option = "inferno", name = "Density") +
+      labs(title = paste("KDE for Civilian Conflict", region_name, "-", quarter)) +
+      theme_void() +  # Removes axis, background, and grid
+      theme(
+        plot.title = element_text(hjust = 0.5, face = "bold", size = 10, margin = margin(t = 10, b = 10)),  # Centers and adds margin to the title
+        plot.margin = margin(t = 5, r = 5, b = 5, l = 5)  # Adjusts the margin around the plot
+      )
+  })
+  
+  # Combine all plots into a grid layout with a main title
+  kde_grid <- grid.arrange(grobs = kde_plots, ncol = 4, top = textGrob(
+    paste(region_name, " Civilian Conflicts KDE By", sigma_type, "Using", kernel_method, "Kernel"),
+    gp = gpar(fontface = "bold", fontsize = 16)
+  ))
+  
+  return(kde_grid)
+}
+```
+
+## 7.3 State's Quarterly Kernel Density estimation.
+
+For each state, we will calculate and visualize the **Kernel Density Estimation (KDE)** using two different kernels. We focus on (You can use any we are flexible in the function above!)
+
+-   **Kernel 1: Gaussian Kernel**
+
+-   **Kernel 2: Epanechnikov Kernel**
+
+The **Gaussian Kernel** is smooth and gives a global view of the density, whereas the **Epanechnikov Kernel** is more efficient and provides sharper boundaries, making it easier to identify clusters or hotspots.
+
+We will also compute the KDE with different **bandwidths**, which controls the smoothness of the density estimates. A **larger bandwidth** results in smoother KDE, while a **smaller bandwidth** captures more local variations.
+
+### 7.3.1 Yangon
+
+#### **7.3.1.1 Kernel 1: Gaussian Kernel**
+
+::: panel-tabset
+## Diggle
+
+```{r, fig.width=15, fig.height=15}
+#| warning: false
+
+Yangon_Results_Diggle_Gaussian <- process_quarter_conflicts(
+  region_sf = Yangon_Sf,
+  region_window = Yangon_Owin,
+  region_name = "Yangon",
+  data_sf = Yangon_ACLED_Data_Sf,
+  sigma_type = "diggle",  # Can change to "scott", "diggle", or "ppl"
+  kernel_method = "gaussian"  # Can change to "epanechnikov", "quartic", or others
+)
+
+# Step 4: Visualize the results with a main title
+visualizations <- visualize_conflict_results(Yangon_Results_Diggle_Gaussian, "Yangon", "Diggle", "Gaussian")
+```
+
+## Scott
+
+```{r, fig.width=15, fig.height=15}
+#| warning: false
+
+Yangon_Results_Scott_Gaussian <- process_quarter_conflicts(
+  region_sf = Yangon_Sf,
+  region_window = Yangon_Owin,
+  region_name = "Yangon",
+  data_sf = Yangon_ACLED_Data_Sf,
+  sigma_type = "scott",  # Can change to "scott", "diggle", or "ppl"
+  kernel_method = "gaussian"  # Can change to "epanechnikov", "quartic", or others
+)
+
+# Step 4: Visualize the results with a main title
+Yangon_Results_Scott_Gaussian_Visualisation <- visualize_conflict_results(Yangon_Results_Scott_Gaussian, "Yangon", "Scott", "Gaussian")
+```
+
+## CvL
+
+```{r, fig.width=15, fig.height=15}
+#| warning: false
+
+Yangon_Results_CvL_Gaussian <- process_quarter_conflicts(
+  region_sf = Yangon_Sf,
+  region_window = Yangon_Owin,
+  region_name = "Yangon",
+  data_sf = Yangon_ACLED_Data_Sf,
+  sigma_type = "cvl",  # Can change to "scott", "diggle", or "ppl"
+  kernel_method = "gaussian"  # Can change to "epanechnikov", "quartic", or others
+)
+
+# Step 4: Visualize the results with a main title
+Yangon_Results_CvL_Gaussian_visualizations <- visualize_conflict_results(Yangon_Results_CvL_Gaussian, "Yangon", "CvL", "Gaussian")
+```
+
+## PPL
+
+```{r, fig.width=15, fig.height=15}
+#| warning: false
+
+Yangon_Results_PPL_Gaussian <- process_quarter_conflicts(
+  region_sf = Yangon_Sf,
+  region_window = Yangon_Owin,
+  region_name = "Yangon",
+  data_sf = Yangon_ACLED_Data_Sf,
+  sigma_type = "ppl",  # Can change to "scott", "diggle", or "ppl"
+  kernel_method = "gaussian"  # Can change to "epanechnikov", "quartic", or others
+)
+
+# Step 4: Visualize the results with a main title
+Yangon_Results_PPL_Gaussian_visualizations <- visualize_conflict_results(Yangon_Results_PPL_Gaussian, "Yangon", "PPL", "Gaussian")
+```
+:::
+
+#### **7.3.1.2 Kernel 2: Epanechnikov Kernel**
+
+::: panel-tabset
+## Diggle
+
+```{r, fig.width=15, fig.height=15}
+#| warning: false
+
+Yangon_Results_Diggle_Epanechnikov <- process_quarter_conflicts(
+  region_sf = Yangon_Sf,
+  region_window = Yangon_Owin,
+  region_name = "Yangon",
+  data_sf = Yangon_ACLED_Data_Sf,
+  sigma_type = "diggle",  # Can change to "scott", "diggle", or "ppl"
+  kernel_method = "epanechnikov"  # Can change to "epanechnikov", "quartic", or others
+)
+
+# Step 4: Visualize the results with a main title
+Yangon_Results_Diggle_Epanechnikov_visualizations <- visualize_conflict_results(Yangon_Results_Diggle_Epanechnikov, "Yangon", "Diggle", "Epanechnikov")
+```
+
+## Scott
+
+```{r, fig.width=15, fig.height=15}
+#| warning: false
+
+Yangon_Results_Scott_Epanechnikov <- process_quarter_conflicts(
+  region_sf = Yangon_Sf,
+  region_window = Yangon_Owin,
+  region_name = "Yangon",
+  data_sf = Yangon_ACLED_Data_Sf,
+  sigma_type = "scott",  # Can change to "scott", "diggle", or "ppl"
+  kernel_method = "epanechnikov"  # Can change to "epanechnikov", "quartic", or others
+)
+
+# Step 4: Visualize the results with a main title
+Yangon_Results_Scot_Epanechnikov_visualizations <- visualize_conflict_results(Yangon_Results_Scott_Epanechnikov, "Yangon", "Scott", "Epanechnikov")
+```
+
+## CvL
+
+```{r, fig.width=15, fig.height=15}
+#| warning: false
+
+Yangon_Results_CvL_Epanechnikov <- process_quarter_conflicts(
+  region_sf = Yangon_Sf,
+  region_window = Yangon_Owin,
+  region_name = "Yangon",
+  data_sf = Yangon_ACLED_Data_Sf,
+  sigma_type = "cvl",  # Can change to "scott", "diggle", or "ppl"
+  kernel_method = "epanechnikov"  # Can change to "epanechnikov", "quartic", or others
+)
+
+# Step 4: Visualize the results with a main title
+Yangon_Results_CvL_Epanechnikov_visualizations <- visualize_conflict_results(Yangon_Results_CvL_Epanechnikov, "Yangon", "CvL", "Epanechnikov")
+```
+
+## PPL
+
+```{r, fig.width=15, fig.height=15}
+#| warning: false
+
+Yangon_Results_PPL_Epanechnikov <- process_quarter_conflicts(
+  region_sf = Yangon_Sf,
+  region_window = Yangon_Owin,
+  region_name = "Yangon",
+  data_sf = Yangon_ACLED_Data_Sf,
+  sigma_type = "ppl",  # Can change to "scott", "diggle", or "ppl"
+  kernel_method = "epanechnikov"  # Can change to "epanechnikov", "quartic", or others
+)
+
+# Step 4: Visualize the results with a main title
+Yangon_Results_PPL_Epanechnikov_visualizations <- visualize_conflict_results(Yangon_Results_PPL_Epanechnikov, "Yangon", "PPL", "Epanechnikov")
+```
+:::
+
+### 7.3.2 Mandalay
+
+#### **7.3.2.1 Mandalay Kernel 1: Gaussian Kernel**
+
+::: panel-tabset
+## Diggle
+
+```{r, fig.width=15, fig.height=15}
+#| warning: false
+
+Mandalay_Results_Diggle_Gaussian <- process_quarter_conflicts(
+  region_sf = Mandalay_Sf,
+  region_window = Mandalay_Owin,
+  region_name = "Mandalay",
+  data_sf = Mandalay_ACLED_Data_Sf,
+  sigma_type = "diggle",  # Can change to "scott", "diggle", or "ppl"
+  kernel_method = "gaussian"  # Can change to "epanechnikov", "quartic", or others
+)
+
+# Step 4: Visualize the results with a main title
+Mandalay_Results_Diggle_Gaussian_visualizations <- visualize_conflict_results(Mandalay_Results_Diggle_Gaussian, "Mandalay", "Diggle", "Gaussian")
+```
+
+## Scott
+
+```{r, fig.width=15, fig.height=15}
+#| warning: false
+
+Mandalay_Results_Scott_Gaussian <- process_quarter_conflicts(
+  region_sf = Mandalay_Sf,
+  region_window = Mandalay_Owin,
+  region_name = "Mandalay",
+  data_sf = Mandalay_ACLED_Data_Sf,
+  sigma_type = "scott",  # Can change to "scott", "diggle", or "ppl"
+  kernel_method = "gaussian"  # Can change to "epanechnikov", "quartic", or others
+)
+
+# Step 4: Visualize the results with a main title
+Mandalay_Results_Scott_Gaussian_visualizations <- visualize_conflict_results(Mandalay_Results_Scott_Gaussian, "Mandalay", "Scott", "Gaussian")
+```
+
+## CvL
+
+```{r, fig.width=15, fig.height=15}
+#| warning: false
+
+Mandalay_Results_CvL_Gaussian <- process_quarter_conflicts(
+  region_sf = Mandalay_Sf,
+  region_window = Mandalay_Owin,
+  region_name = "Mandalay",
+  data_sf = Mandalay_ACLED_Data_Sf,
+  sigma_type = "cvl",  # Can change to "scott", "diggle", or "ppl"
+  kernel_method = "gaussian"  # Can change to "epanechnikov", "quartic", or others
+)
+
+# Step 4: Visualize the results with a main title
+Mandalay_Results_CvL_Gaussian_visualizations <- visualize_conflict_results(Mandalay_Results_CvL_Gaussian, "Mandalay", "CvL", "Gaussian")
+```
+
+## PPL
+
+```{r, fig.width=15, fig.height=15}
+#| warning: false
+Mandalay_Results_PPL_Gaussian <- process_quarter_conflicts(
+  region_sf = Mandalay_Sf,
+  region_window = Mandalay_Owin,
+  region_name = "Mandalay",
+  data_sf = Mandalay_ACLED_Data_Sf,
+  sigma_type = "ppl",  # Can change to "scott", "diggle", or "ppl"
+  kernel_method = "gaussian"  # Can change to "epanechnikov", "quartic", or others
+)
+# Step 4: Visualize the results with a main title
+Mandalay_Results_PPL_Gaussian_visualizations <- visualize_conflict_results(Mandalay_Results_PPL_Gaussian, "Mandalay", "PPL", "Gaussian")
+```
+:::
+
+#### **7.3.2.2 Mandalay Kernel 2: Epanechnikov Kernel**
+
+::: panel-tabset
+## Diggle
+
+```{r, fig.width=15, fig.height=15}
+#| warning: false
+
+Mandalay_Results_Diggle_Epanechnikov <- process_quarter_conflicts(
+  region_sf = Mandalay_Sf,
+  region_window = Mandalay_Owin,
+  region_name = "Mandalay ",
+  data_sf = Mandalay_ACLED_Data_Sf,
+  sigma_type = "diggle",  # Can change to "scott", "diggle", or "ppl"
+  kernel_method = "epanechnikov"  # Can change to "epanechnikov", "quartic", or others
+)
+
+# Step 4: Visualize the results with a main title
+Mandalay_Results_Diggle_Epanechnikov_visualizations <- visualize_conflict_results(Mandalay_Results_Diggle_Epanechnikov, "Mandalay ", "Diggle", "Epanechnikov")
+```
+
+## Scott
+
+```{r, fig.width=15, fig.height=15}
+#| warning: false
+
+Mandalay_Results_Scott_Epanechnikov <- process_quarter_conflicts(
+  region_sf = Mandalay_Sf,
+  region_window = Mandalay_Owin,
+  region_name = "Mandalay ",
+  data_sf = Mandalay_ACLED_Data_Sf,
+  sigma_type = "scott",  # Can change to "scott", "diggle", or "ppl"
+  kernel_method = "epanechnikov"  # Can change to "epanechnikov", "quartic", or others
+)
+
+# Step 4: Visualize the results with a main title
+Mandalay_Results_Scott_Epanechnikov_visualizations <- visualize_conflict_results(Mandalay_Results_Scott_Epanechnikov, "Mandalay ", "Scott", "Epanechnikov")
+```
+
+## CvL
+
+```{r, fig.width=15, fig.height=15}
+#| warning: false
+Mandalay_Results_CvL_Epanechnikov <- process_quarter_conflicts(
+  region_sf = Mandalay_Sf,
+  region_window = Mandalay_Owin,
+  region_name = "Mandalay ",
+  data_sf = Mandalay_ACLED_Data_Sf,
+  sigma_type = "cvl",  # Can change to "scott", "diggle", or "ppl"
+  kernel_method = "epanechnikov"  # Can change to "epanechnikov", "quartic", or others
+)
+
+# Step 4: Visualize the results with a main title
+Mandalay_Results_CvL_Epanechnikov_visualizations <- visualize_conflict_results(Mandalay_Results_CvL_Epanechnikov, "Mandalay ", "CvL", "Epanechnikov")
+```
+
+## PPL
+
+```{r, fig.width=15, fig.height=15}
+#| warning: false
+
+Mandalay_Results_PPL_Epanechnikov <- process_quarter_conflicts(
+  region_sf = Mandalay_Sf,
+  region_window = Mandalay_Owin,
+  region_name = "Mandalay",
+  data_sf = Mandalay_ACLED_Data_Sf,
+  sigma_type = "ppl",  # Can change to "scott", "diggle", or "ppl"
+  kernel_method = "epanechnikov"  # Can change to "epanechnikov", "quartic", or others
+)
+
+# Step 4: Visualize the results with a main title
+Mandalay_Results_PPL_Epanechnikov_visualizations <- visualize_conflict_results(Mandalay_Results_PPL_Epanechnikov, "Mandalay ", "PPL", "Epanechnikov")
+```
+:::
+
+### 7.3.3 Sagaing
+
+#### **7.3.3.1 Sagaing Kernel 1: Gaussian Kernel**
+
+::: panel-tabset
+## Diggle
+
+```{r, fig.width=15, fig.height=15}
+#| warning: false
+
+Sagaing_Results_Diggle_Gaussian <- process_quarter_conflicts(
+  region_sf = Sagaing_Sf,
+  region_window = Sagaing_Owin,
+  region_name = "Sagaing",
+  data_sf = Sagaing_ACLED_Data_Sf,
+  sigma_type = "diggle",  # Can change to "scott", "diggle", or "ppl"
+  kernel_method = "gaussian"  # Can change to "epanechnikov", "quartic", or others
+)
+
+# Step 4: Visualize the results with a main title
+Sagaing_Results_Diggle_Gaussian_visualizations <- visualize_conflict_results(Sagaing_Results_Diggle_Gaussian, "Sagaing", "Diggle", "Gaussian")
+```
+
+## Scott
+
+```{r, fig.width=15, fig.height=15}
+#| warning: false
+
+Sagaing_Results_Scott_Gaussian <- process_quarter_conflicts(
+  region_sf = Sagaing_Sf,
+  region_window = Sagaing_Owin,
+  region_name = "Sagaing",
+  data_sf = Sagaing_ACLED_Data_Sf,
+  sigma_type = "scott",  # Can change to "scott", "diggle", or "ppl"
+  kernel_method = "gaussian"  # Can change to "epanechnikov", "quartic", or others
+)
+
+# Step 4: Visualize the results with a main title
+Sagaing_Results_Scott_Gaussian_visualizations <- visualize_conflict_results(Sagaing_Results_Scott_Gaussian, "Sagaing", "Scott", "Gaussian")
+```
+
+## CvL
+
+```{r, fig.width=15, fig.height=15}
+#| warning: false
+
+Sagaing_Results_CVL_Gaussian <- process_quarter_conflicts(
+  region_sf = Sagaing_Sf,
+  region_window = Sagaing_Owin,
+  region_name = "Sagaing",
+  data_sf = Sagaing_ACLED_Data_Sf,
+  sigma_type = "cvl",  # Can change to "scott", "diggle", or "ppl"
+  kernel_method = "gaussian"  # Can change to "epanechnikov", "quartic", or others
+)
+
+# Step 4: Visualize the results with a main title
+Sagaing_Results_CVL_Gaussian_visualizations <- visualize_conflict_results(Sagaing_Results_CVL_Gaussian, "Sagaing", "CVL", "Gaussian")
+```
+
+## PPL
+
+```{r, fig.width=15, fig.height=15}
+#| warning: false
+
+Sagaing_Results_PPL_Gaussian <- process_quarter_conflicts(
+  region_sf = Sagaing_Sf,
+  region_window = Sagaing_Owin,
+  region_name = "Sagaing",
+  data_sf = Sagaing_ACLED_Data_Sf,
+  sigma_type = "ppl",  # Can change to "scott", "diggle", or "ppl"
+  kernel_method = "gaussian"  # Can change to "epanechnikov", "quartic", or others
+)
+
+# Step 4: Visualize the results with a main title
+Sagaing_Results_PPL_Gaussian_visualizations <- visualize_conflict_results(Sagaing_Results_PPL_Gaussian, "Sagaing", "PPL", "Gaussian")
+```
+:::
+
+#### **7.3.3.2 Sagaing Kernel 2: Epanechnikov Kernel**
+
+::: panel-tabset
+## Diggle
+
+```{r, fig.width=15, fig.height=15}
+#| warning: false
+
+Sagaing_Results_Diggle_Epanechnikov <- process_quarter_conflicts(
+  region_sf = Sagaing_Sf,
+  region_window = Sagaing_Owin,
+  region_name = "Sagaing",
+  data_sf = Sagaing_ACLED_Data_Sf,
+  sigma_type = "diggle",  # Can change to "scott", "diggle", or "ppl"
+  kernel_method = "epanechnikov"  # Can change to "epanechnikov", "quartic", or others
+)
+
+# Step 4: Visualize the results with a main title
+Sagaing_Results_Diggle_Epanechnikov_visualizations <- visualize_conflict_results(Sagaing_Results_Diggle_Epanechnikov, "Sagaing", "Diggle", "Epanechnikov")
+```
+
+## Scott
+
+```{r, fig.width=15, fig.height=15}
+#| warning: false
+
+Sagaing_Results_Scott_Epanechnikov <- process_quarter_conflicts(
+  region_sf = Sagaing_Sf,
+  region_window = Sagaing_Owin,
+  region_name = "Sagaing",
+  data_sf = Sagaing_ACLED_Data_Sf,
+  sigma_type = "scott",  # Can change to "scott", "diggle", or "ppl"
+  kernel_method = "epanechnikov"  # Can change to "epanechnikov", "quartic", or others
+)
+
+# Step 4: Visualize the results with a main title
+Sagaing_Results_Scott_Epanechnikov_visualizations <- visualize_conflict_results(Sagaing_Results_Scott_Epanechnikov, "Sagaing", "Scott", "Epanechnikov")
+```
+
+## CvL
+
+```{r, fig.width=15, fig.height=15}
+#| warning: false
+
+Sagaing_Results_Cvl_Epanechnikov <- process_quarter_conflicts(
+  region_sf = Sagaing_Sf,
+  region_window = Sagaing_Owin,
+  region_name = "Sagaing",
+  data_sf = Sagaing_ACLED_Data_Sf,
+  sigma_type = "cvl",  # Can change to "scott", "diggle", or "ppl"
+  kernel_method = "epanechnikov"  # Can change to "epanechnikov", "quartic", or others
+)
+
+# Step 4: Visualize the results with a main title
+Sagaing_Results_CvL_Epanechnikov_visualizations <- visualize_conflict_results(Sagaing_Results_Cvl_Epanechnikov, "Sagaing", "CvL", "Epanechnikov")
+```
+
+## PPL
+
+```{r, fig.width=15, fig.height=15}
+#| warning: false
+
+Sagaing_Results_PPL_Epanechnikov <- process_quarter_conflicts(
+  region_sf = Sagaing_Sf,
+  region_window = Sagaing_Owin,
+  region_name = "Sagaing",
+  data_sf = Sagaing_ACLED_Data_Sf,
+  sigma_type = "ppl",  # Can change to "scott", "diggle", or "ppl"
+  kernel_method = "epanechnikov"  # Can change to "epanechnikov", "quartic", or others
+)
+
+# Step 4: Visualize the results with a main title
+Sagaing_Results_PPL_Epanechnikov_visualizations <- visualize_conflict_results(Sagaing_Results_PPL_Epanechnikov, "Sagaing", "PPL", "Epanechnikov")
+```
+:::
+
+# 8.0 **Perform 2nd-Order Spatial Point Pattern Analysis**
+
+In this analysis, we aim to determine whether conflicts are **clustered** or **randomly distributed** within the study area. To achieve this, we use **2nd-order spatial point pattern analysis**, which examines the relationships between individual conflict events at varying distances. This helps us detect patterns of clustering or dispersion across the state.
+
+### **Why Use Only K and L Functions**
+
+We focus on the **K Function** and **L Function** because they provide the most straightforward and effective means of identifying clustering or dispersion. The **K Function** measures clustering at multiple scales, while the **L Function** simplifies interpretation by stabilizing variance, making it easier to identify spatial patterns in conflict events. These methods are ideal for capturing the **spatial structure** of conflicts across varying distances.
+
+## 8.1 Yangon
+
+For the **Yangon conflict events**, we'll perform a detailed spatial point pattern analysis using the **Clark-Evans test**, **Ripley’s K-function**, and **L-function**. This will help us understand whether the conflict events are randomly distributed, clustered, or dispersed, and at what scales clustering occurs.
+
+### **Null and Alternative Hypothesis:**
+
+-   **Ho (Null Hypothesis):** The distribution of civilian-related conflicts in **Yangon** is **randomly distributed** (CSR: Complete Spatial Randomness).
+
+-   **H1 (Alternative Hypothesis):** The distribution of civilian-related conflicts in **Yangon** is **not randomly distributed** (it is clustered or dispersed).
+
+### 8.1.1 Yangon's Clark and Evan Test
+
+```{r}
+# Perform the Clark-Evans test for clustering
+Yangon_ClarksEvan <- clarkevans.test(Yangon_ACLED_ppp, 
+                                      correction = "none", 
+                                      clipregion = Yangon_Owin, 
+                                      alternative = c("clustered"),
+                                      nsim = 30)
+
+# Print Clark-Evans p-value and R-statistic
+print(Yangon_ClarksEvan)
+```
+
+### 8.1.2 Yangon's K-Function Method
+
+::: panel-tabset
+## K-Function
+
+```{r, eval = FALSE }
+K_Yangon <- Kest(Yangon_ACLED_ppp, correction = "Ripley")
+```
+
+```{r}
+# Step 2: Plot the K-function, showing K(d) - r
+plot(K_Yangon, . -r ~ r, ylab = "K(d) - r", xlab = "d(KM)", main = "Ripley's K-Function for Yangon Civilian Related Conflicts")
+```
+
+## Envelope Test
+
+```{r, eval = FALSE}
+K_Yangon_CSR <- envelope(Yangon_ACLED_ppp, Kest, nsim = 30, rank = 1, global = TRUE)
+```
+
+```{r}
+plot(K_Yangon_CSR, . - r ~ r, xlab = "d(KM", ylab = "K(d) - r", main = "Envelope for K-Function (CSR) - Yangon Civilian Related Conflicts")
+```
+:::
+
+#### 8.1.2.2 Yangon's K-Function Method Observation Table
+
+```{r}
+# Step 1: Define key distances (e.g., 20000m, 30000m, 40000m)
+key_distances <- c(5, 10, 15,20,25)
+
+# Step 2: Extract observed K-function values and CSR bounds at distances closest to key distances
+closest_indices <- sapply(key_distances, function(d) which.min(abs(K_Yangon_CSR$r - d)))
+
+# Step 3: Create a table summarizing observed and CSR envelope bounds at the closest distances
+observed_table <- data.frame(
+  Distance = K_Yangon_CSR$r[closest_indices],       # Actual distances used in the analysis
+  K_Obs = K_Yangon_CSR$obs[closest_indices],        # Observed K-function values
+  K_Lo = K_Yangon_CSR$lo[closest_indices],          # Lower bound of CSR envelope
+  K_Hi = K_Yangon_CSR$hi[closest_indices]           # Upper bound of CSR envelope
+)
+
+# Display the observed table
+print(observed_table)
+```
+
+### 8.1.2 Yangon's L Functions
+
+::: panel-tabset
+## L Function
+
+```{r, eval = FALSE}
+L_Yangon <- Lest(Yangon_ACLED_ppp, correction = "Ripley")
+```
+
+```{r}
+plot(L_Yangon, . -r ~ r, ylab = "L(d) - r", xlab = "d(KM)", main = "Ripley's L-Function for Yangon Civilian Related Conflicts")
+```
+
+## Envelope Test
+
+```{r, eval = FALSE}
+L_Yangon_CSR <- envelope(Yangon_ACLED_ppp, Lest, nsim = 30, rank = 1, global = TRUE, savefuns = TRUE)
+```
+
+```{r}
+plot(L_Yangon_CSR, . - r ~ r, xlab = "d(km)", ylab = "L(d) - r", main = "Envelope for L-Function (CSR) - Yangon Civilian Related Conflicts")
+```
+:::
+
+### 8.1.2.2 Yangon's L Functions Observation Table
+
+```{r}
+key_distances <- c(5, 10, 15,20,25)
+# Step 2: Extract observed K-function values and CSR bounds at distances closest to key distances
+closest_indices <- sapply(key_distances, function(d) which.min(abs(L_Yangon_CSR$r - d)))
+# Step 3: Create a table summarizing observed and CSR envelope bounds at the closest distances
+observed_table <- data.frame(
+  Distance = L_Yangon_CSR$r[closest_indices],       # Actual distances used in the analysis
+  K_Obs = L_Yangon_CSR$obs[closest_indices],        # Observed K-function values
+  K_Lo = L_Yangon_CSR$lo[closest_indices],          # Lower bound of CSR envelope
+  K_Hi = L_Yangon_CSR$hi[closest_indices]           # Upper bound of CSR envelope
+)
+# Display the observed table
+print(observed_table)
+```
+
+### 8.1.4 Yangons- Analysis and Interpretation
+
+Based on the analysis of the **Clark-Evans test**, **K-function**, and **L-function**, we can draw the following conclusions:
+
+1.  **Clark-Evans Test**:
+
+    -   R = 0.099924, p-value \< 2.2e-16 . The **R-value** is less than 1, and the **p-value** is very small, which means the civilian related conflict events in Yangon are **not randomly distributed** and are significantly **clustered**.
+
+2.  **K-function Analysis**:
+
+    ![](images/clipboard-39079916.png){width="325"}![](images/clipboard-1729039739.png){width="325"}
+
+    -   The **observed K-function** consistently exceeds the **upper bound** of the CSR envelope across all distances, indicating that the **clustering** is prominent over a wide range of distances (up to 25km). The clustering becomes more pronounced as the distance increases.
+
+3.  **L-function Analysis**:
+
+    ![](images/clipboard-2079316601.png){width="325"}![](images/clipboard-3737981288.png){width="320"}x
+
+    -   The **observed L-function** also exceeds the CSR envelope's upper bounds, confirming the presence of clustering at multiple spatial scales. This supports the findings from the K-function.
+
+    1.  **Observed Tables**:
+
+        | Distance | K_Obs    | K_Lo      | K_Hi      |
+        |----------|----------|-----------|-----------|
+        | 4.99309  | 24.08843 | 4.778285  | 5.207894  |
+        | 9.98618  | 40.78681 | 9.771375  | 10.200984 |
+        | 14.97927 | 50.83615 | 14.764465 | 15.194074 |
+        | 20.02663 | 55.51990 | 19.811827 | 20.241437 |
+        | 25.01972 | 58.32548 | 24.804917 | 25.234526 |
+
+        -   The **observed K-function** and **L-function** tables confirm that the observed values are significantly higher than the expected values under CSR, particularly at distances of 5km, 10km, 15km, and beyond, suggesting clustering at larger spatial scales.
+
+We reject the **null hypothesis** of **Complete Spatial Randomness (CSR)** for **Yangon civilian-related conflicts**. The Clark-Evans test shows significant clustering, and both the K-function and L-function support this finding by indicating clustering over a broad range of distances. The observed tables further confirm this, as the observed values consistently exceed the CSR bounds. Therefore, the civilian conflict events in **Yangon** are significantly **clustered** rather than randomly distributed.
+
+## 8.2 Mandalay
+
+For the **Mandalay** **conflict events**, we'll perform a detailed spatial point pattern analysis using the **Clark-Evans test**, **Ripley’s K-function**, and **L-function**. This will help us understand whether the conflict events are randomly distributed, clustered, or dispersed, and at what scales clustering occurs.
+
+### **Null and Alternative Hypothesis:**
+
+-   **Ho (Null Hypothesis):** The distribution of civilian-related conflicts in **Mandalay** is **randomly distributed** (CSR: Complete Spatial Randomness).
+
+-   **H1 (Alternative Hypothesis):** The distribution of civilian-related conflicts in **Mandalay** is **not randomly distributed** (it is clustered or dispersed).
+
+### 8.2.1 Clarks Evan Test
+
+```{r}
+# Perform the Clark-Evans test for clustering
+Mandalay_ClarksEvan <- clarkevans.test(Mandalay_ACLED_ppp, 
+                              correction = "none", 
+                              clipregion = Mandalay_Owin, 
+                              alternative = c("clustered"),
+                              nsim = 30)
+# Print Clark-Evans p-value and R-statistic
+print(Mandalay_ClarksEvan)
+```
+
+### 8.2.2 K Function
+
+::: panel-tabset
+## K-Function Data
+
+```{r, eval = FALSE}
+K_Mandalay <- Kest(Mandalay_ACLED_ppp, correction = "Ripley")
+```
+
+```{r}
+plot(K_Mandalay, . -r ~ r, ylab = "K(d) - r", xlab = "d(KM)", main = "Ripley's K-Function for Mandalay Civilian Related Conflicts")
+```
+
+## K-Function Envelope Test
+
+```{r, eval = FALSE}
+K_Mandalay_CSR <- envelope(Mandalay_ACLED_ppp, Kest, nsim = 30, rank = 1, global = TRUE)
+```
+
+```{r}
+plot(K_Mandalay_CSR, . -r ~ r, ylab = "K(d) - r", xlab = "d(Km)", main = "Ripley's K-Function for Mandalay Civilian Related Conflicts")
+```
+:::
+
+#### 8.2.2.2 Observed Table (K-Function at Key Distances)
+
+```{r}
+# Step 1: Define key distances (e.g., 20000m, 30000m, 40000m)
+key_distances <- c(10,20,30,40)
+
+# Step 2: Extract observed K-function values and CSR bounds at distances closest to key distances
+closest_indices <- sapply(key_distances, function(d) which.min(abs(K_Mandalay_CSR$r - d)))
+
+# Step 3: Create a table summarizing observed and CSR envelope bounds at the closest distances
+observed_table <- data.frame(
+  Distance = K_Mandalay_CSR$r[closest_indices],       # Actual distances used in the analysis
+  K_Obs = K_Mandalay_CSR$obs[closest_indices],        # Observed K-function values
+  K_Lo = K_Mandalay_CSR$lo[closest_indices],          # Lower bound of CSR envelope
+  K_Hi = K_Mandalay_CSR$hi[closest_indices]           # Upper bound of CSR envelope
+)
+
+# Display the observed table
+print(observed_table)
+```
+
+### 8.2.3 L Function
+
+::: panel-tabset
+## Mandalay L Function
+
+```{r eval = FALSE}
+L_Mandalay <- Lest(Mandalay_ACLED_ppp, correction = "Ripley")
+```
+
+```{r}
+plot(L_Mandalay, . -r ~ r, ylab = "L(d) - r", xlab = "d(KM)", main = "Ripley's L-Function for Mandalay Civilian Related Conflicts")
+```
+
+## Mandalay Envelope Test
+
+```{r eval = FALSE}
+L_Mandalay_CSR <- envelope(Mandalay_ACLED_ppp, Lest, nsim = 30, rank = 1, global = TRUE, savefuns = TRUE)
+```
+
+```{r}
+plot(L_Mandalay_CSR, . - r ~ r, xlab = "d(KM)", ylab = "L(d) - r", main = "Envelope for L-Function (CSR) - Mandalay Civilian Related Conflicts")
+```
+:::
+
+#### 8.2.3.2 Observed Table (L-Function at Key Distances)
+
+```{r}
+key_distances <- c(10,20,30,40)
+
+# Step 2: Extract observed K-function values and CSR bounds at distances closest to key distances
+closest_indices <- sapply(key_distances, function(d) which.min(abs(L_Mandalay_CSR$r - d)))
+
+# Step 3: Create a table summarizing observed and CSR envelope bounds at the closest distances
+observed_table <- data.frame(
+  Distance = L_Mandalay_CSR$r[closest_indices],       # Actual distances used in the analysis
+  K_Obs = L_Mandalay_CSR$obs[closest_indices],        # Observed K-function values
+  K_Lo = L_Mandalay_CSR$lo[closest_indices],          # Lower bound of CSR envelope
+  K_Hi = L_Mandalay_CSR$hi[closest_indices]           # Upper bound of CSR envelope
+)
+
+# Display the observed table
+print(observed_table)
+```
+
+### 8.2.4 Mandalay- Analysis and Interpretation
+
+Based on the analysis of the **Clark-Evans test**, **K-function**, and **L-function**, we can draw the following conclusions:
+
+1.  **Clark-Evans Test**:
+
+    -   R = 0.14898, p-value \< 2.2e-16. The **R-value** is less than 1, and the **p-value** is very small, which means the civilian related conflict events in Mandalay are **not randomly distributed** and are significantly **clustered**.
+
+2.  **K-function Analysis**:
+
+    ![](images/clipboard-3554580156.png){width="325"}![](images/clipboard-438101341.png){width="325"}
+
+    -   The **observed K-function** consistently exceeds the **upper bound** of the CSR envelope across all distances, indicating that the **clustering** is prominent over a wide range of distances (up to 70km). The clustering becomes more pronounced as the distance increases.
+
+3.  **L-function Analysis**:
+
+    ![](images/clipboard-2591147843.png){width="325"}![](images/clipboard-1692546744.png){width="325"}
+
+    -   The **observed L-function** also exceeds the CSR envelope's upper bounds, confirming the presence of clustering at multiple spatial scales. This supports the findings from the K-function.
+
+4.  **Observed Tables**:
+
+    | **Distance** | **K_Obs** | **K_Lo**  | **K_Hi** |
+    |--------------|-----------|-----------|----------|
+    | 9.962643     | 48.22199  | 9.791656  | 10.13363 |
+    | 20.016687    | 58.77544  | 19.845699 | 20.18767 |
+    | 29.979331    | 71.02485  | 29.808343 | 30.15032 |
+    | 40.033374    | 81.98111  | 39.862387 | 40.20436 |
+
+    -   The **observed K-function** and **L-function** tables confirm that the observed values are significantly higher than the expected values under CSR, particularly at distances of 20km, 30km, 40km, and beyond, suggesting clustering at larger spatial scales.
+
+We reject the **null hypothesis** of **Complete Spatial Randomness (CSR)** for **Mandalay civilian-related conflicts**. The Clark-Evans test shows significant clustering, and both the K-function and L-function support this finding by indicating clustering over a broad range of distances. The observed tables further confirm this, as the observed values consistently exceed the CSR bounds. Therefore, the civilian conflict events in **Mandalay** are significantly **clustered** rather than randomly distributed.
+
+## 8.3 Sagaing
+
+For the **Sagaing conflict events**, we'll perform a detailed spatial point pattern analysis using the **Clark-Evans test**, **Ripley’s K-function**, and **L-function**. This will help us understand whether the conflict events are randomly distributed, clustered, or dispersed, and at what scales clustering occurs.
+
+### **Null and Alternative Hypothesis:**
+
+-   **Ho (Null Hypothesis):** The distribution of civilian-related conflicts in **Sagaing** is **randomly distributed** (CSR: Complete Spatial Randomness).
+
+-   **H1 (Alternative Hypothesis):** The distribution of civilian-related conflicts in **Sagaing** is **not randomly distributed** (it is clustered or dispersed).
+
+### 8.3.1 Clarks Evan Test
+
+```{r}
+# Perform the Clark-Evans test for clustering
+Sagaing_ClarksEvan <- clarkevans.test(Sagaing_ACLED_ppp, 
+                              correction = "none", 
+                              clipregion = Sagaing_Owin, 
+                              alternative = c("clustered"),
+                              nsim = 30)
+# Print Clark-Evans p-value and R-statistic
+print(Sagaing_ClarksEvan)
+```
+
+::: panel-tabset
+## K-Function Method
+
+```{r, eval=FALSE}
+K_Sagaing <- Kest(Sagaing_ACLED_ppp, correction = "Ripley")
+```
+
+```{r}
+plot(K_Sagaing, . -r ~ r, ylab = "K(d) - r", xlab = "d(KM)", main = "Ripley's K-Function for Sagaing Civilian Related Conflicts")
+```
+
+## Envelope Test
+
+```{r, eval=FALSE}
+K_Sagaing_CSR <- envelope(Sagaing_ACLED_ppp, Kest, nsim = 30, rank = 1, global = TRUE)
+```
+
+```{r}
+plot(K_Sagaing_CSR, . - r ~ r, xlab = "d(KM)", ylab = "K(d) - r", main = "Envelope for K-Function (CSR) - Sagaing Conflicts")
+
+```
+:::
+
+#### 8.3.2.2 Observed Table (K-Function at Key Distances)
+
+```{r}
+# Step 1: Define key distances (e.g., 20000m, 30000m, 40000m)
+key_distances <- c(20,30,40,50,60,70)
+
+# Step 2: Extract observed K-function values and CSR bounds at distances closest to key distances
+closest_indices <- sapply(key_distances, function(d) which.min(abs(K_Sagaing_CSR$r - d)))
+
+# Step 3: Create a table summarizing observed and CSR envelope bounds at the closest distances
+observed_table <- data.frame(
+  Distance = K_Sagaing_CSR$r[closest_indices],       # Actual distances used in the analysis
+  K_Obs = K_Sagaing_CSR$obs[closest_indices],        # Observed K-function values
+  K_Lo = K_Sagaing_CSR$lo[closest_indices],          # Lower bound of CSR envelope
+  K_Hi = K_Sagaing_CSR$hi[closest_indices]           # Upper bound of CSR envelope
+)
+
+# Display the observed table
+print(observed_table)
+```
+
+### 8.3.3 L-Function Method
+
+::: panel-tabset
+## L Function
+
+```{r, eval=FALSE}
+# Step 1: Calculate the L-function (Ripley's L) for Sagaing conflicts
+L_Sagaing <- Lest(Sagaing_ACLED_ppp, correction = "Ripley")
+```
+
+```{r}
+# Step 2: Plot the L-function, showing L(d) - r
+plot(L_Sagaing, . - r ~ r, ylab = "L(d) - r", xlab = "d(km)", main = "Ripley's L-Function for Sagaing Civilian Related Conflicts")
+```
+
+## Envelope Test
+
+```{r, eval = FALSE}
+L_Sagaing_CSR <- envelope(Sagaing_ACLED_ppp, Lest, nsim = 30, rank = 1, global = TRUE)
+```
+
+```{r}
+plot(L_Sagaing_CSR, . - r ~ r, xlab = "d(KM)", ylab = "K(d) - r", main = "Envelope for L-Function (CSR) - Sagaing Civilian Related Conflicts")
+```
+:::
+
+#### 8.3.3.3 Observed Table (L-Function at Key Distances)
+
+```{r}
+key_distances <- c(20,30,40,50,60,70)
+
+# Step 2: Extract observed K-function values and CSR bounds at distances closest to key distances
+closest_indices <- sapply(key_distances, function(d) which.min(abs(L_Sagaing_CSR$r - d)))
+
+# Step 3: Create a table summarizing observed and CSR envelope bounds at the closest distances
+observed_table <- data.frame(
+  Distance = L_Sagaing_CSR$r[closest_indices],       # Actual distances used in the analysis
+  K_Obs = L_Sagaing_CSR$obs[closest_indices],        # Observed K-function values
+  K_Lo = L_Sagaing_CSR$lo[closest_indices],          # Lower bound of CSR envelope
+  K_Hi = L_Sagaing_CSR$hi[closest_indices]           # Upper bound of CSR envelope
+)
+
+# Display the observed table
+print(observed_table)
+```
+
+### 8.3.4 Sagaing - Analysis and Interpretation
+
+Based on the analysis of the **Clark-Evans test**, **K-function**, and **L-function**, we can draw the following conclusions:
+
+1.  **Clark-Evans Test**:
+
+    -   R = 0.1485, p-value \< 2.2e-16 . The **R-value** is less than 1, and the **p-value** is very small, which means the conflict events in **Sagaing** are **not randomly distributed** and are significantly **clustered**.
+
+2.  **K-function Analysis**:
+
+    ![](images/clipboard-2606833237.png){width="302"}![](images/clipboard-758279124.png){width="338"}
+
+    -   The **observed K-function** consistently exceeds the **upper bound** of the CSR envelope across all distances, indicating that the **clustering** is prominent over a wide range of distances (up to 70km). The clustering becomes more pronounced as the distance increases.
+
+3.  **L-function Analysis**:
+
+    ![](images/clipboard-3107068363.png){width="325"}![](images/clipboard-3963744024.png){width="319"}
+
+    -   The **observed L-function** also exceeds the CSR envelope's upper bounds, confirming the presence of clustering at multiple spatial scales. This supports the findings from the K-function.
+
+4.  **Observed Tables**:
+
+    -   The **observed K-function** and **L-function** tables confirm that the observed values are significantly higher than the expected values under CSR, particularly at distances of 20km, 30km, 40km, and beyond, suggesting clustering at larger spatial scales.
+
+We reject the **null hypothesis** of **Complete Spatial Randomness (CSR)** for **Sagaing civilian-related conflicts**. The Clark-Evans test shows significant clustering, and both the K-function and L-function support this finding by indicating clustering over a broad range of distances. The observed tables further confirm this, as the observed values consistently exceed the CSR bounds. Therefore, the conflict events in Sagaing are significantly **clustered** rather than randomly distributed.
+
+# 9.0 **Derive Quarterly Spatio-Temporal KDE Layers**
+
+In this section, we will generate **Quarterly Spatio-Temporal Kernel Density Estimation (KDE) layers** to analyze how conflict intensity evolves across Yangon, Mandalay, and Sagaing. By applying KDE across different quarters, we aim to capture the spatial distribution and temporal shifts in conflict hotspots. This will help us track changes in the concentration and spread of events, providing insights into regional conflict dynamics over time.
+
+## 9.1 Steps for code Breakdown.
+
+-   **Step 1**: Convert data to **`sf`** object to ensure compatibility for spatial analysis.
+
+-   **Step 2**: Extract **longitude and latitude** from the geometry column for plotting and analysis.
+
+-   **Step 3**: Create **numeric and factor representations** of quarters for time-based KDE and distinct plotting.
+
+-   **Step 4**: Generate a **point pattern object** (`ppp`) for spatial analysis with quarter factors as marks.
+
+-   **Step 5**: Assign **circle sizes** to each quarter for visual differentiation.
+
+-   **Step 6**: Plot the **base map** (Yangon) without data points.
+
+-   **Step 7**: Add **points** with sizes based on quarters to the map for visualization.
+
+-   **Step 8**: Add a **legend** to explain the circle sizes and quarters.
+
+-   **Step 9**: Create a **numeric point pattern** for KDE based on quarter information.
+
+-   **Step 10**: Perform **KDE analysis** on the spatio-temporal point pattern.
+
+-   **Step 11**: Define the **quarters** to be plotted for KDE analysis.
+
+-   **Step 12**: Set up a **4x4 plotting grid** to display multiple KDE plots.
+
+-   **Step 13**: Loop through quarters and plot **KDE layers** for each, visualizing conflict intensity over time.
+
+## 9.2  Yangon Quarter Year Spatio-Temporal KDE
+
+::: panel-tabset
+## Code Preparation
+
+```{r}
+# Step 1: Ensure Yangon_QuarterYear_Sf is an sf object (if not already)
+Yangon_QuarterYear_Sf <- st_as_sf(Yangon_ACLED_Data_Sf)
+
+# Step 2: Extract the coordinates (longitude and latitude) from the geometry column
+coords <- st_coordinates(Yangon_QuarterYear_Sf)
+
+# Step 3: Convert quarter_numeric to factor for distinct quarters (for plotting the circles)
+Yangon_QuarterYear_Sf <- Yangon_QuarterYear_Sf %>%
+  mutate(
+    year = as.numeric(sub(".*-", "", quarter_year)),                  # Extract the year (e.g., 2023)
+    quarter = as.numeric(sub("Q", "", sub("-.*", "", quarter_year))), # Extract the quarter (e.g., Q1 -> 1)
+    
+    # Continuous representation of time (factor for distinct quarters)
+    quarter_numeric_factor = as.factor(year * 10 + quarter),  # Convert to factor for plotting the circles
+    quarter_numeric = year * 10 + quarter  # Keep as numeric for time-based KDE analysis
+  )
+
+# Step 4: Create the point pattern object using ppp() with factor marks (for distinct quarter plotting)
+Yangon_QuarterYear_PPP_Factor <- ppp(
+  x = coords[, 1],  # Longitude (x-coordinates)
+  y = coords[, 2],  # Latitude (y-coordinates)
+  window = Yangon_Owin,  # Spatial window (Yangon_Owin)
+  marks = Yangon_QuarterYear_Sf$quarter_numeric_factor  # Use factor for visualizing distinct quarters
+)
+
+
+# Step 5: Assign 14 unique sizes to the 14 unique quarter_numeric values
+# Create 14 different circle sizes, e.g., from 1 to 3 in size
+unique_quarters <- levels(Yangon_QuarterYear_Sf$quarter_numeric_factor)  # Get the unique quarter levels (14 levels)
+circle_sizes <- seq(1, 3, length.out = length(unique_quarters))  # Generate 14 sizes from 1 to 3
+
+# Map each unique quarter_numeric level to a circle size
+circle_size_map <- setNames(circle_sizes, unique_quarters)  # Create a named vector to map quarter to size
+```
+
+## Yangon Quarter Year Owin
+
+```{r, fig.width=15, fig.height=10}
+# Apply the circle size mapping to each point based on its quarter_numeric_factor
+point_circle_sizes <- circle_size_map[Yangon_QuarterYear_Sf$quarter_numeric_factor]
+
+# Step 6: Plot the base map (Yangon_Owin) without points
+plot(Yangon_Owin, main = "Yangon Quarter-Year Owin with Unique Circle Sizes")
+
+# Step 7: Add the points with the unique circle sizes based on quarter_numeric
+points(coords[, 1], coords[, 2], cex = point_circle_sizes, pch = 16, col = "black")  # Add circles on top of base map
+
+# Step 8: Add a custom legend to show the quarter_numeric values and corresponding circle sizes
+legend("topright", legend = unique_quarters, 
+       pch = 16, 
+       pt.cex = circle_sizes,  # Show unique circle sizes in the legend
+       col = "black", 
+       title = "Quarters (Circle Size)")
+```
+
+## Yangon Quarter Year KDE
+
+```{r, fig.width=15, fig.height=15}
+Yangon_QuarterYear_PPP_Numeric <- ppp(
+  x = coords[, 1],  # Longitude (x-coordinates)
+  y = coords[, 2],  # Latitude (y-coordinates)
+  window = Yangon_Owin,  # Spatial window (Yangon_Owin)
+  marks = Yangon_QuarterYear_Sf$quarter_numeric  # Use numeric for KDE analysis (time-based)
+)
+Yangon_QuarterYear_PPP_Numeric <- rescale(Yangon_QuarterYear_PPP_Numeric, 1000, "km")
+
+
+Yangon_QuarterYear_KDE <- spattemp.density(Yangon_QuarterYear_PPP_Numeric)
+
+multi_color_palette <- colorRampPalette(c("blue", "green", "yellow", "red"))
+
+
+# Define the quarters for which you want to plot the KDE
+tims <- c(20211, 20212, 20213, 20214, 20221, 20222, 20223, 20224, 
+          20231, 20232, 20233, 20234, 20241, 20242)
+
+#Set up the plotting window to display multiple plots in a grid (4 rows, 4 columns)
+par(mfrow=c(4, 4), mar=c(2, 2, 2, 2), oma=c(0, 0, 2, 0))  # Adjust margins and add outer margin for title
+
+# Loop through the 'tims' vector and plot the KDE for each time point (from left to right)
+for(i in tims) { 
+    plot(Yangon_QuarterYear_KDE, i, 
+         override.par=FALSE,  # Keep the graphical parameters unchanged
+         fix.range=TRUE,      # Fix the range of the KDE
+         main=paste("Quarter", i),  # Title for each plot
+         ribside = "right", 
+         col = multi_color_palette(100))  # Use 'inferno' color gradient
+         
+    # Remove the x and y axis labels for a cleaner look
+    axis(1, labels=FALSE)
+    axis(2, labels=FALSE)
+}
+
+#dd a unified title across all plots (e.g., the duration of analysis)
+mtext("Quarterly Spatio-Temporal KDE for Civilian Conflict Intensity in Yangon", 
+      outer=TRUE, cex=1.5, font=2)
+```
+
+## Yangon Quarter Year KDE Animation
+
+```{r, eval = FALSE}
+multi_color_palette <- colorRampPalette(c("blue", "green", "yellow", "red"))
+
+# Save the animation as a GIF
+saveGIF({
+  # Loop over the valid quarter times
+  for(i in tims){ 
+    suppressWarnings({
+      plot(Yangon_QuarterYear_KDE, i, 
+           override.par=FALSE,  # Keep graphical parameters unchanged
+           fix.range=TRUE,      # Fix the range of the KDE
+           main=paste("Mandalay Civilian Related Conflict KDE at Quarter", i),  # Title for each plot
+           ribside = "right",  # Legend on the right
+           col = multi_color_palette(100))  # Apply multi-color gradient
+    })
+  }
+}, movie.name = "yangonkde_animation.gif", interval = 0.5, ani.width = 800, ani.height = 800)
+```
+
+![](yangonkde_animation.gif)
+:::
+
+## 9.3 Mandalay Quarter Year Spatio-Temporal KDE
+
+::: panel-tabset
+## Mandalay Quarter Year Code Preparation
+
+```{r}
+# Step 1: Ensure Mandalay_QuarterYear_Sf is an sf object (if not already)
+Mandalay_QuarterYear_Sf <- st_as_sf(Mandalay_ACLED_Data_Sf)
+
+# Step 2: Extract the coordinates (longitude and latitude) from the geometry column
+coords <- st_coordinates(Mandalay_QuarterYear_Sf)
+
+# Step 3: Convert quarter_numeric to factor for distinct quarters (for plotting the circles)
+Mandalay_QuarterYear_Sf <- Mandalay_QuarterYear_Sf %>%
+  mutate(
+    year = as.numeric(sub(".*-", "", quarter_year)),                  # Extract the year (e.g., 2023)
+    quarter = as.numeric(sub("Q", "", sub("-.*", "", quarter_year))), # Extract the quarter (e.g., Q1 -> 1)
+    
+    # Continuous representation of time (factor for distinct quarters)
+    quarter_numeric_factor = as.factor(year * 10 + quarter),  # Convert to factor for plotting the circles
+    quarter_numeric = year * 10 + quarter  # Keep as numeric for time-based KDE analysis
+  )
+
+# Step 4: Create the point pattern object using ppp() with factor marks (for distinct quarter plotting)
+Mandalay_QuarterYear_PPP_Factor <- ppp(
+  x = coords[, 1],  # Longitude (x-coordinates)
+  y = coords[, 2],  # Latitude (y-coordinates)
+  window = Mandalay_Owin,  # Spatial window (Mandalay_Owin)
+  marks = Mandalay_QuarterYear_Sf$quarter_numeric_factor  # Use factor for visualizing distinct quarters
+)
+
+
+# Step 5: Assign 14 unique sizes to the 14 unique quarter_numeric values
+# Create 14 different circle sizes, e.g., from 1 to 3 in size
+unique_quarters <- levels(Mandalay_QuarterYear_Sf$quarter_numeric_factor)  # Get the unique quarter levels (14 levels)
+circle_sizes <- seq(1, 3, length.out = length(unique_quarters))  # Generate 14 sizes from 1 to 3
+
+# Map each unique quarter_numeric level to a circle size
+circle_size_map <- setNames(circle_sizes, unique_quarters)  # Create a named vector to map quarter to size
+```
+
+## Mandalay Quarter Year Owin
+
+```{r, fig.width=15, fig.height=10}
+# Apply the circle size mapping to each point based on its quarter_numeric_factor
+point_circle_sizes <- circle_size_map[Mandalay_QuarterYear_Sf$quarter_numeric_factor]
+
+# Step 6: Plot the base map (Mandalay_Owin) without points
+plot(Mandalay_Owin, main = "Mandalay Quarter-Year Owin with Unique Circle Sizes")
+
+# Step 7: Add the points with the unique circle sizes based on quarter_numeric
+points(coords[, 1], coords[, 2], cex = point_circle_sizes, pch = 16, col = "black")  # Add circles on top of base map
+
+# Step 8: Add a custom legend to show the quarter_numeric values and corresponding circle sizes
+legend("topright", legend = unique_quarters, 
+       pch = 16, 
+       pt.cex = circle_sizes,  # Show unique circle sizes in the legend
+       col = "black", 
+       title = "Quarters (Circle Size)")
+```
+
+## Mandalay Quarter Year KDE
+
+```{r, fig.width=15, fig.height=15}
+Mandalay_QuarterYear_PPP_Numeric <- ppp(
+  x = coords[, 1],  # Longitude (x-coordinates)
+  y = coords[, 2],  # Latitude (y-coordinates)
+  window = Mandalay_Owin,  # Spatial window (Mandalay_Owin)
+  marks = Mandalay_QuarterYear_Sf$quarter_numeric  # Use numeric for KDE analysis (time-based)
+)
+
+Mandalay_QuarterYear_KDE <- spattemp.density(Mandalay_QuarterYear_PPP_Numeric)
+
+multi_color_palette <- colorRampPalette(c("blue", "green", "yellow", "red"))
+
+
+# Define the quarters for which you want to plot the KDE
+tims <- c(20211, 20212, 20213, 20214, 20221, 20222, 20223, 20224, 
+          20231, 20232, 20233, 20234, 20241, 20242)
+
+#Set up the plotting window to display multiple plots in a grid (4 rows, 4 columns)
+par(mfrow=c(4, 4), mar=c(2, 2, 2, 2), oma=c(0, 0, 2, 0))  # Adjust margins and add outer margin for title
+
+# Loop through the 'tims' vector and plot the KDE for each time point (from left to right)
+for(i in tims) { 
+  plot(Mandalay_QuarterYear_KDE, i, 
+       override.par=FALSE,  # Keep the graphical parameters unchanged
+       fix.range=TRUE,      # Fix the range of the KDE
+       main=paste("Quarter", i),  # Title for each plot
+       ribside = "right", 
+       col = multi_color_palette(100))  # Use 'inferno' color gradient
+  
+  # Remove the x and y axis labels for a cleaner look
+  axis(1, labels=FALSE)
+  axis(2, labels=FALSE)
+}
+
+#dd a unified title across all plots (e.g., the duration of analysis)
+mtext("Quarterly Spatio-Temporal KDE for Civilian Conflict Intensity in Mandalay", 
+      outer=TRUE, cex=1.5, font=2)
+```
+
+## Mandalay Quarter Year KDE Animation
+
+```{r, eval = FALSE}
+multi_color_palette <- colorRampPalette(c("blue", "green", "yellow", "red"))
+
+# Save the animation as a GIF
+saveGIF({
+  # Loop over the valid quarter times
+  for(i in tims){ 
+    suppressWarnings({
+      plot(Mandalay_QuarterYear_KDE, i, 
+           override.par=FALSE,  # Keep graphical parameters unchanged
+           fix.range=TRUE,      # Fix the range of the KDE
+           main=paste("Mandalay Civilian Related Conflict KDE at Quarter", i),  # Title for each plot
+           ribside = "right",  # Legend on the right
+           col = multi_color_palette(100))  # Apply multi-color gradient
+    })
+  }
+}, movie.name = "Mandalaykde_animation.gif", interval = 0.5, ani.width = 800, ani.height = 800)
+```
+
+![](Mandalaykde_animation.gif)
+:::
+
+## 9.4 Sagaing Quarter Year Spatio-Temporal KDE
+
+::: panel-tabset
+## Sagaing Quarter Year Code Preparation
+
+```{r}
+# Step 1: Ensure Sagaing_QuarterYear_Sf is an sf object (if not already)
+Sagaing_QuarterYear_Sf <- st_as_sf(Sagaing_ACLED_Data_Sf)
+
+# Step 2: Extract the coordinates (longitude and latitude) from the geometry column
+coords <- st_coordinates(Sagaing_QuarterYear_Sf)
+
+# Step 3: Convert quarter_numeric to factor for distinct quarters (for plotting the circles)
+Sagaing_QuarterYear_Sf <- Sagaing_QuarterYear_Sf %>%
+  mutate(
+    year = as.numeric(sub(".*-", "", quarter_year)),                  # Extract the year (e.g., 2023)
+    quarter = as.numeric(sub("Q", "", sub("-.*", "", quarter_year))), # Extract the quarter (e.g., Q1 -> 1)
+    
+    # Continuous representation of time (factor for distinct quarters)
+    quarter_numeric_factor = as.factor(year * 10 + quarter),  # Convert to factor for plotting the circles
+    quarter_numeric = year * 10 + quarter  # Keep as numeric for time-based KDE analysis
+  )
+
+# Step 4: Create the point pattern object using ppp() with factor marks (for distinct quarter plotting)
+Sagaing_QuarterYear_PPP_Factor <- ppp(
+  x = coords[, 1],  # Longitude (x-coordinates)
+  y = coords[, 2],  # Latitude (y-coordinates)
+  window = Sagaing_Owin,  # Spatial window (Sagaing_Owin)
+  marks = Sagaing_QuarterYear_Sf$quarter_numeric_factor  # Use factor for visualizing distinct quarters
+)
+
+
+# Step 5: Assign 14 unique sizes to the 14 unique quarter_numeric values
+# Create 14 different circle sizes, e.g., from 1 to 3 in size
+unique_quarters <- levels(Sagaing_QuarterYear_Sf$quarter_numeric_factor)  # Get the unique quarter levels (14 levels)
+circle_sizes <- seq(1, 3, length.out = length(unique_quarters))  # Generate 14 sizes from 1 to 3
+
+# Map each unique quarter_numeric level to a circle size
+circle_size_map <- setNames(circle_sizes, unique_quarters)  # Create a named vector to map quarter to size
+```
+
+## Sagaing Quarter Year Owin
+
+```{r, fig.width=15, fig.height=10}
+# Apply the circle size mapping to each point based on its quarter_numeric_factor
+point_circle_sizes <- circle_size_map[Sagaing_QuarterYear_Sf$quarter_numeric_factor]
+
+# Step 6: Plot the base map (Sagaing_Owin) without points
+plot(Sagaing_Owin, main = "Sagaing Quarter-Year Owin with Unique Circle Sizes")
+
+# Step 7: Add the points with the unique circle sizes based on quarter_numeric
+points(coords[, 1], coords[, 2], cex = point_circle_sizes, pch = 16, col = "black")  # Add circles on top of base map
+
+# Step 8: Add a custom legend to show the quarter_numeric values and corresponding circle sizes
+legend("topright", legend = unique_quarters, 
+       pch = 16, 
+       pt.cex = circle_sizes,  # Show unique circle sizes in the legend
+       col = "black", 
+       title = "Quarters (Circle Size)")
+```
+
+## Sagaing Quarter Year KDE
+
+```{r, fig.width=15, fig.height=15}
+Sagaing_QuarterYear_PPP_Numeric <- ppp(
+  x = coords[, 1],  # Longitude (x-coordinates)
+  y = coords[, 2],  # Latitude (y-coordinates)
+  window = Sagaing_Owin,  # Spatial window (Sagaing_Owin)
+  marks = Sagaing_QuarterYear_Sf$quarter_numeric  # Use numeric for KDE analysis (time-based)
+)
+
+Sagaing_QuarterYear_KDE <- spattemp.density(Sagaing_QuarterYear_PPP_Numeric)
+
+multi_color_palette <- colorRampPalette(c("blue", "green", "yellow", "red"))
+
+
+# Define the quarters for which you want to plot the KDE
+tims <- c(20211, 20212, 20213, 20214, 20221, 20222, 20223, 20224, 
+          20231, 20232, 20233, 20234, 20241, 20242)
+
+#Set up the plotting window to display multiple plots in a grid (4 rows, 4 columns)
+par(mfrow=c(4, 4), mar=c(2, 2, 2, 2), oma=c(0, 0, 2, 0))  # Adjust margins and add outer margin for title
+
+# Loop through the 'tims' vector and plot the KDE for each time point (from left to right)
+for(i in tims) { 
+  plot(Sagaing_QuarterYear_KDE, i, 
+       override.par=FALSE,  # Keep the graphical parameters unchanged
+       fix.range=TRUE,      # Fix the range of the KDE
+       main=paste("Quarter", i),  # Title for each plot
+       ribside = "right", 
+       col = multi_color_palette(100))  # Use 'inferno' color gradient
+  
+  # Remove the x and y axis labels for a cleaner look
+  axis(1, labels=FALSE)
+  axis(2, labels=FALSE)
+}
+
+#dd a unified title across all plots (e.g., the duration of analysis)
+mtext("Quarterly Spatio-Temporal KDE for Civilian Conflict Intensity in Sagaing", 
+      outer=TRUE, cex=1.5, font=2)
+```
+
+## Sagaing Quarter Year KDE Animation
+
+```{r, eval = FALSE}
+multi_color_palette <- colorRampPalette(c("blue", "green", "yellow", "red"))
+
+# Save the animation as a GIF
+saveGIF({
+  # Loop over the valid quarter times
+  for(i in tims){ 
+    suppressWarnings({
+      plot(Sagaing_QuarterYear_KDE, i, 
+           override.par=FALSE,  # Keep graphical parameters unchanged
+           fix.range=TRUE,      # Fix the range of the KDE
+           main=paste("Sagaing Civilian Related Conflict KDE at Quarter", i),  # Title for each plot
+           ribside = "right",  # Legend on the right
+           col = multi_color_palette(100))  # Apply multi-color gradient
+    })
+  }
+}, movie.name = "Sagaingkde_animation.gif", interval = 0.5, ani.width = 800, ani.height = 800)
+```
+
+![](Sagaingkde_animation.gif)
+:::
+
+# 10.0 **Perform 2nd-Order Spatio-Temporal Point Patterns Analysis**:
+
+In this analysis, we aim to determine whether civilian related conflict events in **State** are clustered or randomly distributed in **both space and time**. To achieve this, we use **spatio-temporal point pattern analysis**, which examines the relationships between individual conflict events at varying distances and times. This approach allows us to detect patterns of clustering or dispersion across both spatial and temporal scales.
+
+## 10.1 Yangon
+
+For the conflict events in Yangon, we performed a detailed **spatio-temporal point pattern analysis** using the **Clark-Evans test** for spatial randomness, and the **spatio-temporal K-function** to explore clustering across both space and time. This analysis helps us understand whether the conflict events are randomly distributed, clustered, or dispersed, and at what spatial and temporal scales these patterns emerge.
+
+### Null and Alternative Hypotheses:
+
+-   **Ho (Null Hypothesis)**: The distribution of conflict events in Yangon follows **Complete Spatio-Temporal Randomness (CSTR)**, meaning the events are randomly distributed in both space and time.
+
+-   **H1 (Alternative Hypothesis)**: The distribution of conflict events in Yangon **does not follow CSTR** and instead shows signs of clustering or dispersion in both space and time.
+
+### 10.1.1 Yangon's Clark-Evans Test for Spatial Randomness:
+
+```{r}
+Yangon_ClarksEvan_Temporal <- clarkevans.test(Yangon_QuarterYear_PPP_Numeric, 
+                              correction = "none", 
+                              clipregion = Yangon_Owin, 
+                              alternative = c("clustered"),
+                              nsim = 30)
+print(Yangon_ClarksEvan_Temporal)
+```
+
+10.1.2 Yangon's Spatial temporal Ripley K Function
+
+```{r}
+
+K_Yangon_ST <- Kest(Yangon_QuarterYear_PPP_Numeric, correction = "Ripley")
+
+# Step 2: Plot the L-function, showing L(d) - r
+plot(K_Yangon_ST, . - r ~ r, ylab = "K(d) - r", xlab = "d(km)", main = "Ripley' K-Function for Yangon Civilian Related Conflicts")
+```
+
+```{r}
+# Step 2: Perform the spatio-temporal K-function
+Yangon_K_ST <- Kest.stppp(Yangon_StPP)
+
+# Step 3: Plot the spatio-temporal K-function
+plot(Yangon_K_ST, main = "Spatio-Temporal K-Function for Yangon Conflicts")
+
+```
+
+# 11.0 Results and Interpretation
+
+# 12.0 Conclusion
+
+# 13.0 References
+
+```{r}
+save_dir <- "rds_files/"
+
+if (!dir.exists(save_dir)) {
+  dir.create(save_dir)
+}
+
+vars <- ls()
+
+# Save each variable as an RDS file
+for (var in vars) {
+  saveRDS(get(var), file = paste0(save_dir, var, ".rds"))
+}
+
 
 ```
 
 ```{r}
-any(duplicated(ACLED_ppp_corrected_ppp))
+load_dir <- "rds_files/"
+
+# List all the .rds files in the folder
+rds_files <- list.files(path = load_dir, pattern = "*.rds")
+
+# Load each .rds file and assign to a variable
+for (rds_file in rds_files) {
+  var_name <- gsub(".rds", "", rds_file)  # Remove the .rds extension
+  assign(var_name, readRDS(paste0(load_dir, rds_file)))  # Load the data
+}
 ```
-
-## 3.5 Summary of Data sets
-
-We have created a total of **five datasets**, each serving a distinct purpose in our spatial analysis:
-
-1.  **`ACLEDData_SF`**: This is the **cleaned and formatted ACLED dataset**, stored as an **sf (simple feature)** object. It contains the key event data, including attributes like location, event type, and time period, and will be used for further spatial analysis.
-
-2.  **`M_SF`**: This dataset represents the **Myanmar boundary** as an **sf object**. It will be used as the **base layer** in the analysis, defining the spatial extent and providing a reference map for the region.
-
-3.  **`Aggregated Level`**: This dataset is used for **exploratory analysis** and contains **aggregated data** for different event types, quarters, or other relevant categories. It allows for a broader overview before diving into more detailed spatial point pattern analyses.
-
-4.  **`ACLED_ppp_corrected`**`:` This is the **point pattern dataset** created from the ACLED data. It includes the corrected **coordinates** (with jittering applied) and is stored as a **`ppp` object** (planar point pattern) for use in **spatstat**. This object will be used for more in-depth spatial analyses, such as density estimation or clustering.
-
-5.  **`myanmar_owin`**`:` This is the **spatial window object** representing the boundary of Myanmar. It defines the geographic limits for our spatial point pattern analysis and ensures that all event data is analyzed within this boundary.
-
-# 5.0 Deriving the Quarterly Kernel Density Estimation Layers
-
-## 5.1 Setting up Adaptive vs Fixed Bandwidth
-
-5.1.1 Rescaling KDE Values
-
-```{r}
-conflicts_ppp <- rescale.ppp(conflict_ppp, 1000, "km")
-summary(conflict_ppp)
-plot(conflict_ppp)
-
-```
-
-```{r}
-
-ACLED_Q22022 <- ACLEDData_sf %>% filter(quarter_year == "Q2-2022")
-ACLED_Q22022_coords <- st_coordinates(ACLED_Q22022)
-
-ACLED_Q22022_ppp <- ppp(x = ACLED_Q22022_coords[, 1], y = ACLED_Q22022_coords[, 2], window = myanmar_owin)
-summary(ACLED_Q22022_ppp)
-plot(ACLED_Q22022_ppp)
-```
-
-```{r}
-bw.ppl(ACLED_Q22022_ppp)
-
-```
-
-```{r}
-ACLED_Q22022_ppp_bw <- adaptive.density(ACLED_Q22022_ppp, pilot = "bw.diggle", edge = TRUE)
-plot(ACLED_Q22022_ppp)
-```
-
-```{r}
-# Step 1: Apply adaptive kernel density estimation with pilot bandwidth selection
-ACLED_Q22022_ppp_adaptive <- adaptive.density(ACLED_Q22022_ppp, 
-                                              pilot = "bw.diggle", 
-                                              edge = TRUE)
-
-# Step 2: Plot the adaptive density estimate
-plot(ACLED_Q22022_ppp_adaptive, main = "Adaptive Gaussian-like Kernel Density for ACLED_Q22022")
-
-```
-
-## 5.2 Quarterly Kernel Density
-
-### 5.2.1 Battle
-
-### 5.2.2 Explosions/Remote violence
-
-### 5.2.3 Violence against civilians
-
-### 5.2.4 Strategic Developments
-
-### 5.2.5 Across The Event Types
-
-# 6.0 **Perform 2nd-Order Spatial Point Pattern Analysis**:
-
-# 7.0 **Derive Quarterly Spatio-Temporal KDE Layers**:
-
-# 8.0 **Perform 2nd-Order Spatio-Temporal Point Patterns Analysis**:
-
-# 7.0 Results and Interpretation
-
-# 8.0 Conclusion
-
-# 9.0 References
-
-# 
