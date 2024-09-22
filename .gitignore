@@ -1,9 +1,13 @@
+# R specific ignores
 .Rproj.user
 .Rhistory
 .Rdata
 .httr-oauth
 .DS_Store
-.quarto
 
+# Quarto related ignores
+.quarto
 /.quarto/
-data/
+
+# Ignore all data folders (case insensitive)
+**/[dD]ata/

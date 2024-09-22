@@ -12,6 +12,21 @@ execute:
   execute: false
 ---
 
+```{r, include = FALSE}
+#this section reuses the rds file that was created previously.
+
+load_dir <- "rds_files/"
+
+# List all the .rds files in the folder
+rds_files <- list.files(path = load_dir, pattern = "*.rds")
+
+# Load each .rds file and assign to a variable
+for (rds_file in rds_files) {
+  var_name <- gsub(".rds", "", rds_file)  # Remove the .rds extension
+  assign(var_name, readRDS(paste0(load_dir, rds_file)))  # Load the data
+}
+```
+
 # 1.0 Introduction
 
 The study of armed conflicts in Myanmar has gained critical importance in understanding the geographical distribution and intensity of violence across different regions. Myanmar's complex ethnic composition and ongoing civil strife make it a unique case for geospatial analysis. This project aims to apply **spatial and spatio-temporal point pattern analysis** methods to uncover the patterns of armed conflict between January 2021 and June 2024.
@@ -60,7 +75,7 @@ with particular attention paid to quarterly patterns in conflict occurrence.
 12. `pacman`: is a package management tool in R designed to streamline the process of loading and installing packages.
 
 ```{r, eval = TRUE}
-pacman::p_load(sf, raster, spatstat, sparr, tmap, tidyverse, stpp, skimr, gganimate, ggplot2, plotly, flexdashboard, DT,gridExtra, rlist, grid,future)
+pacman::p_load(sf, raster, spatstat, sparr, tmap, tidyverse, stpp, skimr, gganimate, ggplot2, plotly, flexdashboard, DT,gridExtra, rlist, grid, animation)
 ```
 
 ## 2.2 Data-set involved in this topic
@@ -197,12 +212,6 @@ If you're interested in the data set fields to explore more, here's the full fie
 ### **2.2.2 Myanmar Administrative Boundaries (Shapefiles)**:
 
 Obtained through [Geonode Mimu](https://geonode.themimu.info/layers/geonode%3Ammr_polbnda_adm2_250k_mimu), this shapefile helps us to build the map and set the boundary zone of each district of myanmar. This dataset provides the geographical boundaries of Myanmar's administrative divisions, from the national level down to the township level. It is essential for mapping conflict events to specific regions.
-
-::: callout-note
-***Myanmar has State, District and Township level, why District Level?***
-
-Choosing the **district level** over the **township level** for conflict analysis provides a better balance between detail and clarity. The district level allows us to capture broader regional trends without overwhelming the analysis with too many granular data points, as township-level data can be overly detailed. It also improves **computational efficiency** and makes visualizations clearer, while still offering enough specificity to reveal conflict hotspots. Additionally, population and auxiliary data are more readily available at the district level, making the analysis more consistent and manageable.
-:::
 
 <details>
 
@@ -348,15 +357,19 @@ On the top right, you can toggle between the district level and also the state l
 ::: panel-tabset
 ## State
 
-```{r, eval = TRUE, message = FALSE }
+```{r,  include=FALSE}
 tmap_mode("plot")
+```
+
+```{r, message=FALSE}
 tm_shape(M_State_Sf_Cleansed) +  # Base map (Myanmar boundaries)
+  tm_basemap(server = "OpenStreetMap.HOT") +  # Add OpenStreetMap as the basemap
   tm_polygons("state",  # Color the base map by state
               palette = "Set3",  # Use Set3 color palette for states
               border.col = "gray",  # Border color for the states
               alpha = 0.5,  # Semi-transparent polygons
               title = "State",  # Legend title for states
-              legend.show = TRUE,  # Show legend for state colors
+              legend.show = TRUE  # Show legend for state colors
              ) +
   tm_layout(main.title = "States of Myanmar",  # Main map title
             legend.outside = TRUE)  # Position the legend outside the map
@@ -366,18 +379,22 @@ tm_shape(M_State_Sf_Cleansed) +  # Base map (Myanmar boundaries)
 
 There is more than 80 district here, so it only showcases 30 :)
 
-```{r, eval = TRUE, message = FALSE }
+```{r}
 tm_shape(M_District_Sf_Cleansed) +  # Base map (Myanmar boundaries)
-  tm_polygons("district",  # Color the base map by district
-              palette = "Set3",  # Use Set3 color palette for districts
-              border.col = "gray",  # Border color for the districts
+  tm_basemap(server = "OpenStreetMap.HOT") +  # Add OpenStreetMap as the basemap
+  tm_polygons("district",  # Color the base map by state
+              palette = "Set3",  # Use Set3 color palette for states
+              border.col = "gray",  # Border color for the states
               alpha = 0.5,  # Semi-transparent polygons
-              title = "District",  # Legend title for districts
-              legend.show = TRUE,  # Show legend for district colors
-              ) +
-  tm_layout(main.title = "Districts of Myanmar",  # Main map title
+              title = "District",  # Legend title for states
+              legend.show = TRUE  # Show legend for state colors
+             ) +
+  tm_layout(main.title = "District of Myanmar",  # Main map title
             legend.outside = TRUE)  # Position the legend outside the map
+```
 
+```{r, include=FALSE}
+tmap_mode("plot")
 ```
 :::
 
@@ -395,7 +412,7 @@ Since Myanmar's regional hierarchy follows **State**, **District**, and **Townsh
 
 This is important because different countries use different administrative hierarchies. For example, in Singapore, the hierarchy is organized by **Region** and **Subzones**. Adjusting these names ensures that our dataset aligns with Myanmar’s specific regional structure for accurate analysis.
 
-```{r,  eval = TRUE}
+```{r}
 ACLEDData_Cleanse <- ACLEDData %>%
   select(event_id_cnty, event_date, year, disorder_type, event_type, actor1, inter1, 
          actor2, inter2, interaction, admin1, admin2, admin3, location, latitude, 
@@ -438,7 +455,7 @@ ACLEDData_Cleanse <- ACLEDData_Cleanse %>%
   left_join(ACLEDActorInterCode, by = c("inter2" = "code")) %>%
   rename(inter2_description = Description)
 
-datatable(head(ACLEDData_Cleanse, 5), options = list(pageLength = 5, autoWidth = TRUE))
+head(ACLEDData_Cleanse)
 
 ```
 
@@ -446,7 +463,7 @@ datatable(head(ACLEDData_Cleanse, 5), options = list(pageLength = 5, autoWidth =
 
 For more details about [each interaction code read here.](https://acleddata.com/knowledge-base/codebook/#interaction-codes)
 
-```{r, eval = TRUE}
+```{r}
 ACLEDInteractionCode <- read_csv("data/raw/aspatial/AcledInteractionCodes.csv")
 ACLEDData_Cleanse <- ACLEDData_Cleanse %>%
   left_join(ACLEDInteractionCode, by = c("interaction" = "code")) %>%
@@ -497,12 +514,15 @@ print(ACLEDData_Cleanse_Sf)
 
 ```{r}
 # Set tmap mode to plot for static maps
-tmap_mode("plot")
-bbox <- st_bbox(M_State_Sf_Cleansed)  # Assuming you are using sf object
+tmap_mode("view")
 
 # Create the tmap object with the base map and event markers
-tm_shape(M_State_Sf_Cleansed) + 
-    tm_polygons("state", alpha = 0.3, border.col = "gray") +  # Base map with higher transparency
+tm_basemap(server = "OpenStreetMap") +  # Add OpenStreetMap as the base map
+  
+  # Add Myanmar state boundaries with transparency
+  tm_shape(M_State_Sf_Cleansed) + 
+  tm_polygons("state", alpha = 0.3, border.col = "gray", 
+              title = "State Boundaries", legend.show = TRUE) +  # Add a legend for state boundaries
   
   # Add event markers (bubbles) with size based on fatalities
   tm_shape(ACLEDData_Cleanse_Sf) + 
@@ -512,7 +532,9 @@ tm_shape(M_State_Sf_Cleansed) +
              border.col = "black",  # Border color for bubbles
              border.alpha = 0.5,  # Semi-transparent border
              title.size = "Number of Fatalities",  # Title for bubble size legend
-             title.col = "Event Types") +  # Title for event type legend
+             title.col = "Event Types",  # Title for event type legend
+             legend.size.show = TRUE,  # Show legend for bubble size
+             legend.col.show = TRUE) +  # Show legend for event types
   
   # Layout settings for the map, including title and legend positioning
   tm_layout(main.title = "Myanmar's State Conflicts by Fatalities",  # Main map title
@@ -524,8 +546,7 @@ tm_shape(M_State_Sf_Cleansed) +
             legend.text.size = 1,  # Size of the legend text
             legend.bg.color = "white",  # Background color for the legend
             legend.bg.alpha = 0.5,  # Transparency for the legend background
-            inner.margins = c(0.05, 0.05, 0.05, 0.05)) 
-  
+            inner.margins = c(0.05, 0.05, 0.05, 0.05))  # Inner margins for the map
 ```
 
 # 4.0 Exploratory Data analysis
@@ -687,13 +708,17 @@ For each column that we created earlier, we can now showcase it in a choropleth 
 ::: panel-tabset
 ## Total Civilian Conflicts
 
+```{r, include = FALSE}
+tmap_mode("plot")
+```
+
 ```{r}
 # Create the tmap object for total civilian conflicts
-tm_total_conflicts <- tm_basemap(server = c("Esri.WorldGrayCanvas", "OpenStreetMap", "Esri.WorldTopoMap")) +
+tm_total_conflicts <- 
   # Layer for total civilian conflicts
   tm_shape(finalized_map) +
   tm_polygons("total_conflicts", 
-              title = "Total Civilian Conflicts",
+              title = "Total Civilian Related Conflicts",
               palette = "Reds", 
               border.col = "black", 
               alpha = 0.8,  # Transparency for polygons
@@ -703,7 +728,7 @@ tm_total_conflicts <- tm_basemap(server = c("Esri.WorldGrayCanvas", "OpenStreetM
   # Layout settings matching your style
   tm_layout(
     main.title = "Myanmar's State by Total Civilian Related Conflicts",  # Main map title
-    main.title.size = 1.5,  # Title font size
+    main.title.size = 1.0,  # Title font size
     legend.outside = TRUE,  # Position legend outside the map
     legend.outside.size = 0.5,  # Adjust size of outside legend
     legend.position = c("left", "top"),  # Position for the event type legend
@@ -751,7 +776,7 @@ tm_total_fatalities
 ## Civilian Conflict Density
 
 ```{r}
-tm_conflict_density <- tm_basemap(server = c("Esri.WorldGrayCanvas", "OpenStreetMap", "Esri.WorldTopoMap")) +
+tm_conflict_density <-
   # Layer for total civilian conflicts
   tm_shape(finalized_map) +
   tm_polygons("conflict_density", 
@@ -782,7 +807,7 @@ tm_conflict_density
 ## Fatality Density
 
 ```{r}
-tm_fatalities_conflict <- tm_basemap(server = c("Esri.WorldGrayCanvas", "OpenStreetMap", "Esri.WorldTopoMap")) +
+tm_fatalities_conflict <- 
   # Layer for total civilian conflicts
   tm_shape(finalized_map) +
   tm_polygons("fatality_density", 
@@ -813,7 +838,7 @@ tm_fatalities_conflict
 ## Fatality Per Civilian Conflict
 
 ```{r}
-tm_fatalities_density <- tm_basemap(server = c("Esri.WorldGrayCanvas", "OpenStreetMap", "Esri.WorldTopoMap")) +
+tm_fatalities_density <-
   # Layer for total civilian conflicts
   tm_shape(finalized_map) +
   tm_polygons("fatality_per_conflict", 
@@ -872,9 +897,12 @@ Using the map below, you can interactively explore the Conflict and Fatality Den
 
 You can use the layer toggle to switch between fatalities and conflicts, or click on the map layers to view detailed, aggregated data for each state.
 
+```{r, include = FALSE}
+tmap_mode("view")
+```
+
 ```{r}
 # Step 1: Set tmap mode to view for interactive maps
-tmap_mode("view")
 
 # Step 2: Define popup variables to show all relevant columns when clicking on a state
 popup_variables <- c( 
@@ -891,7 +919,7 @@ popup_variables <- c(
                      )
 
 # Step 3: Create the map with 6 layers for toggling
-tm <- tm_basemap(server = c("Esri.WorldGrayCanvas", "OpenStreetMap", "Esri.WorldTopoMap")) +
+tm <- tm_basemap(server = "OpenStreetMap") +
   tm_shape(finalized_map) +
   tm_polygons("conflict_density", 
               title = "Civilian Conflict Density",
@@ -915,11 +943,16 @@ tm <- tm_basemap(server = c("Esri.WorldGrayCanvas", "OpenStreetMap", "Esri.World
   )
 # Step 5: Display the interactive map
 tm
-tmap_mode("plot")
-
 ```
 
-```{r}
+```{r, include = FALSE}
+tmap_mode("plot")
+```
+
+Here we build the bar chart to view rank the states base on the variables.
+
+```{r, fig.width=10, fig.height=5}
+
 finalized_data_df <- as.data.frame(st_drop_geometry(finalized_map))
 # Sort the data by conflict_density and fatality_density in descending order
 finalized_data_df <- finalized_data_df %>%
@@ -932,7 +965,7 @@ finalized_data_df$fatality_density_label <- paste0(round(finalized_data_df$fatal
 # Create bar chart for Conflict Density (sorted by conflict_density)
 conflict_density_plot <- ggplot(finalized_data_df, aes(x = reorder(state, -conflict_density), y = conflict_density)) +
   geom_bar(stat = "identity", fill = "orange") +
-  geom_text(aes(label = conflict_density_label), vjust = 1.8, size = 1.5, color = "black", position = position_stack(vjust = 0.5)) +  # Place text at bottom of bar
+  geom_text(aes(label = conflict_density_label), vjust = 1.8, size = 2.0, color = "black", position = position_stack(vjust = 0.5)) +  # Place text at bottom of bar
   ggtitle("Top States by Conflict Density (per km²)") +
   xlab("State") +
   ylab("Conflict Density (per km²)") +
@@ -942,7 +975,7 @@ conflict_density_plot <- ggplot(finalized_data_df, aes(x = reorder(state, -confl
 # Create bar chart for Fatality Density (sorted by fatality_density)
 fatality_density_plot <- ggplot(finalized_data_df, aes(x = reorder(state, -fatality_density), y = fatality_density)) +
   geom_bar(stat = "identity", fill = "purple") +
-  geom_text(aes(label = fatality_density_label), vjust = 1.8, size = 1.5, color = "black", position = position_stack(vjust = 0.5)) +  # Place text at bottom of bar
+  geom_text(aes(label = fatality_density_label), vjust = 1.8, size = 2.0, color = "black", position = position_stack(vjust = 0.5)) +  # Place text at bottom of bar
   ggtitle("Top States by Fatality Density (per km²)") +
   xlab("State") +
   ylab("Fatality Density (per km²)") +
@@ -1156,8 +1189,6 @@ Yangon <- as_Spatial(Yangon_Sf)
 Yangon_Owin <- as.owin(Yangon_Sf)
 plot(Yangon_Owin)
 summary(Yangon_Owin)
-st_is_valid(Yangon_Sf)
-
 ```
 
 ## Mandalay
@@ -1193,13 +1224,11 @@ Sagaing <- as_Spatial(Sagaing_Sf)
 
 # Convert the Sagaing spatial dataframe into an owin object for spatial point pattern analysis
 Sagaing_Owin <- as.owin(Sagaing_Sf)
-
 # Plot the owin object to visualize the boundaries of Sagaing
 plot(Sagaing_Owin)
 
 # Provide a summary of the owin object, showing its properties like dimensions and bounding box
 summary(Sagaing_Owin)
-
 ```
 :::
 
@@ -1220,7 +1249,7 @@ This step transforms our dataset into a fully spatially aware format, ready for 
 ::: panel-tabset
 ## Yangon
 
-```{r}
+```{r, warning = FALSE}
 # Extract the coordinates (longitude, latitude) from the Yangon spatial object
 Yangon_ACLED_coords <- st_coordinates(Yangon_ACLED_Data_Sf)
 
@@ -1232,7 +1261,6 @@ Yangon_ACLED_window <- owin(xrange = Yangon_ACLED_bbox[c("xmin", "xmax")], yrang
 
 # Create a ppp (point pattern) object for Yangon using the extracted coordinates and the defined window
 Yangon_ACLED_ppp <- ppp(x = Yangon_ACLED_coords[, 1], y = Yangon_ACLED_coords[, 2], window = Yangon_ACLED_window)
-
 # Check the summary of the ppp object to verify the number of points, window dimensions, and other properties
 summary(Yangon_ACLED_ppp)
 
@@ -1244,7 +1272,7 @@ plot(Yangon_ACLED_ppp)
 
 ## Mandalay
 
-```{r}
+```{r, warning = FALSE}
 # Extract the coordinates (longitude, latitude) from the Mandalay spatial object
 Mandalay_ACLED_coords <- st_coordinates(Mandalay_ACLED_Data_Sf)
 
@@ -1267,7 +1295,7 @@ plot(Mandalay_ACLED_ppp)
 
 ## Sagaing
 
-```{r}
+```{r, warning = FALSE}
 # Extract the coordinates (longitude, latitude) from the Sagaing spatial object
 Sagaing_ACLED_coords <- st_coordinates(Sagaing_ACLED_Data_Sf)
 
@@ -1279,7 +1307,6 @@ Sagaing_ACLED_window <- owin(xrange = Sagaing_ACLED_bbox[c("xmin", "xmax")], yra
 
 # Create a ppp (point pattern) object for Sagaing using the extracted coordinates and the defined window
 Sagaing_ACLED_ppp <- ppp(x = Sagaing_ACLED_coords[, 1], y = Sagaing_ACLED_coords[, 2], window = Sagaing_ACLED_window)
-
 # Check the summary of the ppp object to verify the number of points, window dimensions, and other properties
 summary(Sagaing_ACLED_ppp)
 
@@ -1290,7 +1317,7 @@ plot(Sagaing_ACLED_ppp)
 :::
 
 ::: callout-note
-**Why dont you jitter, delete or mark any conflicts?**
+**Why dont you jitter, delete or mark any conflicts here?**
 
 The reason I did not apply jittering, deletion, or marking of the **conflicts** at this stage is that all the conflicts are **unique** and occurred across different **time zones**. Since there is no overlap in terms of exact location or time, it makes no sense to modify the data at this point. We will consider **jittering** later if we find that events are clustered too closely together in space, but for now, each conflict is distinct, and no adjustments are necessary.
 :::
@@ -1323,8 +1350,8 @@ plot(Mandalay_ACLED_ppp)
 ## Sagaing
 
 ```{r}
-Mandalay_ACLED_ppp = Mandalay_ACLED_ppp[Mandalay_Owin]
-plot(Mandalay_ACLED_ppp)
+Sagaing_ACLED_ppp = Sagaing_ACLED_ppp[Sagaing_Owin]
+plot(Sagaing_ACLED_ppp)
 ```
 :::
 
@@ -1534,9 +1561,7 @@ We will also compute the KDE with different **bandwidths**, which controls the s
 ::: panel-tabset
 ## Diggle
 
-```{r, fig.width=15, fig.height=15}
-#| warning: false
-
+```{r, warning = FALSE ,eval = FALSE}
 Yangon_Results_Diggle_Gaussian <- process_quarter_conflicts(
   region_sf = Yangon_Sf,
   region_window = Yangon_Owin,
@@ -1545,16 +1570,16 @@ Yangon_Results_Diggle_Gaussian <- process_quarter_conflicts(
   sigma_type = "diggle",  # Can change to "scott", "diggle", or "ppl"
   kernel_method = "gaussian"  # Can change to "epanechnikov", "quartic", or others
 )
+```
 
+```{r, fig.width=15, fig.height=15}
 # Step 4: Visualize the results with a main title
 visualizations <- visualize_conflict_results(Yangon_Results_Diggle_Gaussian, "Yangon", "Diggle", "Gaussian")
 ```
 
 ## Scott
 
-```{r, fig.width=15, fig.height=15}
-#| warning: false
-
+```{r, warning = FALSE ,eval = FALSE}
 Yangon_Results_Scott_Gaussian <- process_quarter_conflicts(
   region_sf = Yangon_Sf,
   region_window = Yangon_Owin,
@@ -1563,16 +1588,16 @@ Yangon_Results_Scott_Gaussian <- process_quarter_conflicts(
   sigma_type = "scott",  # Can change to "scott", "diggle", or "ppl"
   kernel_method = "gaussian"  # Can change to "epanechnikov", "quartic", or others
 )
+```
 
+```{r, fig.width=15, fig.height=15}
 # Step 4: Visualize the results with a main title
 Yangon_Results_Scott_Gaussian_Visualisation <- visualize_conflict_results(Yangon_Results_Scott_Gaussian, "Yangon", "Scott", "Gaussian")
 ```
 
 ## CvL
 
-```{r, fig.width=15, fig.height=15}
-#| warning: false
-
+```{r, warning = FALSE ,eval = FALSE}
 Yangon_Results_CvL_Gaussian <- process_quarter_conflicts(
   region_sf = Yangon_Sf,
   region_window = Yangon_Owin,
@@ -1581,16 +1606,16 @@ Yangon_Results_CvL_Gaussian <- process_quarter_conflicts(
   sigma_type = "cvl",  # Can change to "scott", "diggle", or "ppl"
   kernel_method = "gaussian"  # Can change to "epanechnikov", "quartic", or others
 )
+```
 
-# Step 4: Visualize the results with a main title
+```{r, fig.width=15, fig.height=15}
+
 Yangon_Results_CvL_Gaussian_visualizations <- visualize_conflict_results(Yangon_Results_CvL_Gaussian, "Yangon", "CvL", "Gaussian")
 ```
 
 ## PPL
 
-```{r, fig.width=15, fig.height=15}
-#| warning: false
-
+```{r, warning = FALSE ,eval = FALSE}
 Yangon_Results_PPL_Gaussian <- process_quarter_conflicts(
   region_sf = Yangon_Sf,
   region_window = Yangon_Owin,
@@ -1599,7 +1624,9 @@ Yangon_Results_PPL_Gaussian <- process_quarter_conflicts(
   sigma_type = "ppl",  # Can change to "scott", "diggle", or "ppl"
   kernel_method = "gaussian"  # Can change to "epanechnikov", "quartic", or others
 )
+```
 
+```{r, fig.width=15, fig.height=15}
 # Step 4: Visualize the results with a main title
 Yangon_Results_PPL_Gaussian_visualizations <- visualize_conflict_results(Yangon_Results_PPL_Gaussian, "Yangon", "PPL", "Gaussian")
 ```
@@ -1610,9 +1637,7 @@ Yangon_Results_PPL_Gaussian_visualizations <- visualize_conflict_results(Yangon_
 ::: panel-tabset
 ## Diggle
 
-```{r, fig.width=15, fig.height=15}
-#| warning: false
-
+```{r, warning = FALSE ,eval = FALSE}
 Yangon_Results_Diggle_Epanechnikov <- process_quarter_conflicts(
   region_sf = Yangon_Sf,
   region_window = Yangon_Owin,
@@ -1621,16 +1646,16 @@ Yangon_Results_Diggle_Epanechnikov <- process_quarter_conflicts(
   sigma_type = "diggle",  # Can change to "scott", "diggle", or "ppl"
   kernel_method = "epanechnikov"  # Can change to "epanechnikov", "quartic", or others
 )
+```
 
-# Step 4: Visualize the results with a main title
+```{r, fig.width=15, fig.height=15}
+
 Yangon_Results_Diggle_Epanechnikov_visualizations <- visualize_conflict_results(Yangon_Results_Diggle_Epanechnikov, "Yangon", "Diggle", "Epanechnikov")
 ```
 
 ## Scott
 
-```{r, fig.width=15, fig.height=15}
-#| warning: false
-
+```{r, warning = FALSE ,eval = FALSE}
 Yangon_Results_Scott_Epanechnikov <- process_quarter_conflicts(
   region_sf = Yangon_Sf,
   region_window = Yangon_Owin,
@@ -1639,16 +1664,16 @@ Yangon_Results_Scott_Epanechnikov <- process_quarter_conflicts(
   sigma_type = "scott",  # Can change to "scott", "diggle", or "ppl"
   kernel_method = "epanechnikov"  # Can change to "epanechnikov", "quartic", or others
 )
+```
 
-# Step 4: Visualize the results with a main title
+```{r, fig.width=15, fig.height=15}
+#| warning: false
 Yangon_Results_Scot_Epanechnikov_visualizations <- visualize_conflict_results(Yangon_Results_Scott_Epanechnikov, "Yangon", "Scott", "Epanechnikov")
 ```
 
 ## CvL
 
-```{r, fig.width=15, fig.height=15}
-#| warning: false
-
+```{r, warning = FALSE ,eval = FALSE}
 Yangon_Results_CvL_Epanechnikov <- process_quarter_conflicts(
   region_sf = Yangon_Sf,
   region_window = Yangon_Owin,
@@ -1657,16 +1682,15 @@ Yangon_Results_CvL_Epanechnikov <- process_quarter_conflicts(
   sigma_type = "cvl",  # Can change to "scott", "diggle", or "ppl"
   kernel_method = "epanechnikov"  # Can change to "epanechnikov", "quartic", or others
 )
+```
 
-# Step 4: Visualize the results with a main title
+```{r, fig.width=15, fig.height=15}
 Yangon_Results_CvL_Epanechnikov_visualizations <- visualize_conflict_results(Yangon_Results_CvL_Epanechnikov, "Yangon", "CvL", "Epanechnikov")
 ```
 
 ## PPL
 
-```{r, fig.width=15, fig.height=15}
-#| warning: false
-
+```{r, warning = FALSE ,eval = FALSE}
 Yangon_Results_PPL_Epanechnikov <- process_quarter_conflicts(
   region_sf = Yangon_Sf,
   region_window = Yangon_Owin,
@@ -1675,11 +1699,29 @@ Yangon_Results_PPL_Epanechnikov <- process_quarter_conflicts(
   sigma_type = "ppl",  # Can change to "scott", "diggle", or "ppl"
   kernel_method = "epanechnikov"  # Can change to "epanechnikov", "quartic", or others
 )
+```
 
-# Step 4: Visualize the results with a main title
+```{r, fig.width=15, fig.height=15}
+#| warning: false
 Yangon_Results_PPL_Epanechnikov_visualizations <- visualize_conflict_results(Yangon_Results_PPL_Epanechnikov, "Yangon", "PPL", "Epanechnikov")
 ```
 :::
+
+#### 7.3.1.3 Analysis and Interpretation.
+
+![](images/clipboard-3331942560.png)
+
+We used **Scott's bandwidth** and the **Epanechnikov kernel** to model the spatial distribution of civilian conflicts in Yangon from 2021 to 2024. Scott's method provides an optimal balance between bias and variance, ensuring smoother KDE without losing significant details. The **Epanechnikov kernel** minimizes error and focuses on areas with higher density, effectively capturing conflict hotspots while reducing the impact of outliers.
+
+**Key Observations:**
+
+-   **Central Yangon Hotspot**: Conflict density remains consistently high in central Yangon throughout the period.
+
+-   **Temporal Shifts**: Conflict intensity fluctuates across quarters, peaking in certain periods (e.g., Q3-2022 and Q1-2024), with some spread into surrounding areas over time.
+
+-   **Density Spread**: While central areas remain the most affected, the gradual spread suggests an intensification or expansion of conflicts.
+
+In summary, Scott's bandwidth and the Epanechnikov kernel provided a precise view of conflict clustering and temporal changes, revealing critical patterns in civilian-related conflict hotspots in Yangon.
 
 ### 7.3.2 Mandalay
 
@@ -1688,8 +1730,7 @@ Yangon_Results_PPL_Epanechnikov_visualizations <- visualize_conflict_results(Yan
 ::: panel-tabset
 ## Diggle
 
-```{r, fig.width=15, fig.height=15}
-#| warning: false
+```{r, warning = FALSE ,eval = FALSE}
 
 Mandalay_Results_Diggle_Gaussian <- process_quarter_conflicts(
   region_sf = Mandalay_Sf,
@@ -1699,16 +1740,16 @@ Mandalay_Results_Diggle_Gaussian <- process_quarter_conflicts(
   sigma_type = "diggle",  # Can change to "scott", "diggle", or "ppl"
   kernel_method = "gaussian"  # Can change to "epanechnikov", "quartic", or others
 )
+```
 
-# Step 4: Visualize the results with a main title
+```{r, fig.width=15, fig.height=15}
+
 Mandalay_Results_Diggle_Gaussian_visualizations <- visualize_conflict_results(Mandalay_Results_Diggle_Gaussian, "Mandalay", "Diggle", "Gaussian")
 ```
 
 ## Scott
 
-```{r, fig.width=15, fig.height=15}
-#| warning: false
-
+```{r, warning = FALSE ,eval = FALSE}
 Mandalay_Results_Scott_Gaussian <- process_quarter_conflicts(
   region_sf = Mandalay_Sf,
   region_window = Mandalay_Owin,
@@ -1717,16 +1758,15 @@ Mandalay_Results_Scott_Gaussian <- process_quarter_conflicts(
   sigma_type = "scott",  # Can change to "scott", "diggle", or "ppl"
   kernel_method = "gaussian"  # Can change to "epanechnikov", "quartic", or others
 )
+```
 
-# Step 4: Visualize the results with a main title
+```{r, fig.width=15, fig.height=15}
 Mandalay_Results_Scott_Gaussian_visualizations <- visualize_conflict_results(Mandalay_Results_Scott_Gaussian, "Mandalay", "Scott", "Gaussian")
 ```
 
 ## CvL
 
-```{r, fig.width=15, fig.height=15}
-#| warning: false
-
+```{r, warning = FALSE ,eval = FALSE}
 Mandalay_Results_CvL_Gaussian <- process_quarter_conflicts(
   region_sf = Mandalay_Sf,
   region_window = Mandalay_Owin,
@@ -1736,14 +1776,15 @@ Mandalay_Results_CvL_Gaussian <- process_quarter_conflicts(
   kernel_method = "gaussian"  # Can change to "epanechnikov", "quartic", or others
 )
 
-# Step 4: Visualize the results with a main title
+```
+
+```{r, fig.width=15, fig.height=15}
 Mandalay_Results_CvL_Gaussian_visualizations <- visualize_conflict_results(Mandalay_Results_CvL_Gaussian, "Mandalay", "CvL", "Gaussian")
 ```
 
 ## PPL
 
-```{r, fig.width=15, fig.height=15}
-#| warning: false
+```{r, warning = FALSE ,eval = FALSE}
 Mandalay_Results_PPL_Gaussian <- process_quarter_conflicts(
   region_sf = Mandalay_Sf,
   region_window = Mandalay_Owin,
@@ -1752,7 +1793,9 @@ Mandalay_Results_PPL_Gaussian <- process_quarter_conflicts(
   sigma_type = "ppl",  # Can change to "scott", "diggle", or "ppl"
   kernel_method = "gaussian"  # Can change to "epanechnikov", "quartic", or others
 )
-# Step 4: Visualize the results with a main title
+```
+
+```{r, fig.width=15, fig.height=15}
 Mandalay_Results_PPL_Gaussian_visualizations <- visualize_conflict_results(Mandalay_Results_PPL_Gaussian, "Mandalay", "PPL", "Gaussian")
 ```
 :::
@@ -1762,44 +1805,41 @@ Mandalay_Results_PPL_Gaussian_visualizations <- visualize_conflict_results(Manda
 ::: panel-tabset
 ## Diggle
 
-```{r, fig.width=15, fig.height=15}
-#| warning: false
-
+```{r, warning = FALSE ,eval = FALSE}
 Mandalay_Results_Diggle_Epanechnikov <- process_quarter_conflicts(
   region_sf = Mandalay_Sf,
   region_window = Mandalay_Owin,
-  region_name = "Mandalay ",
+  region_name = "Mandalay",
   data_sf = Mandalay_ACLED_Data_Sf,
   sigma_type = "diggle",  # Can change to "scott", "diggle", or "ppl"
   kernel_method = "epanechnikov"  # Can change to "epanechnikov", "quartic", or others
 )
+```
 
-# Step 4: Visualize the results with a main title
+```{r, fig.width=15, fig.height=15}
 Mandalay_Results_Diggle_Epanechnikov_visualizations <- visualize_conflict_results(Mandalay_Results_Diggle_Epanechnikov, "Mandalay ", "Diggle", "Epanechnikov")
 ```
 
 ## Scott
 
-```{r, fig.width=15, fig.height=15}
-#| warning: false
-
+```{r, warning = FALSE ,eval = FALSE}
 Mandalay_Results_Scott_Epanechnikov <- process_quarter_conflicts(
   region_sf = Mandalay_Sf,
   region_window = Mandalay_Owin,
-  region_name = "Mandalay ",
+  region_name = "Mandalay",
   data_sf = Mandalay_ACLED_Data_Sf,
   sigma_type = "scott",  # Can change to "scott", "diggle", or "ppl"
   kernel_method = "epanechnikov"  # Can change to "epanechnikov", "quartic", or others
 )
+```
 
-# Step 4: Visualize the results with a main title
+```{r, fig.width=15, fig.height=15}
 Mandalay_Results_Scott_Epanechnikov_visualizations <- visualize_conflict_results(Mandalay_Results_Scott_Epanechnikov, "Mandalay ", "Scott", "Epanechnikov")
 ```
 
 ## CvL
 
-```{r, fig.width=15, fig.height=15}
-#| warning: false
+```{r, warning = FALSE ,eval = FALSE}
 Mandalay_Results_CvL_Epanechnikov <- process_quarter_conflicts(
   region_sf = Mandalay_Sf,
   region_window = Mandalay_Owin,
@@ -1808,16 +1848,15 @@ Mandalay_Results_CvL_Epanechnikov <- process_quarter_conflicts(
   sigma_type = "cvl",  # Can change to "scott", "diggle", or "ppl"
   kernel_method = "epanechnikov"  # Can change to "epanechnikov", "quartic", or others
 )
+```
 
-# Step 4: Visualize the results with a main title
+```{r, fig.width=15, fig.height=15}
 Mandalay_Results_CvL_Epanechnikov_visualizations <- visualize_conflict_results(Mandalay_Results_CvL_Epanechnikov, "Mandalay ", "CvL", "Epanechnikov")
 ```
 
 ## PPL
 
-```{r, fig.width=15, fig.height=15}
-#| warning: false
-
+```{r, warning = FALSE ,eval = FALSE}
 Mandalay_Results_PPL_Epanechnikov <- process_quarter_conflicts(
   region_sf = Mandalay_Sf,
   region_window = Mandalay_Owin,
@@ -1826,11 +1865,28 @@ Mandalay_Results_PPL_Epanechnikov <- process_quarter_conflicts(
   sigma_type = "ppl",  # Can change to "scott", "diggle", or "ppl"
   kernel_method = "epanechnikov"  # Can change to "epanechnikov", "quartic", or others
 )
+```
 
-# Step 4: Visualize the results with a main title
+```{r, fig.width=15, fig.height=15}
 Mandalay_Results_PPL_Epanechnikov_visualizations <- visualize_conflict_results(Mandalay_Results_PPL_Epanechnikov, "Mandalay ", "PPL", "Epanechnikov")
 ```
 :::
+
+#### 7.3.2.3 Analysis and Interpretation
+
+![](images/clipboard-1104053184.png)
+
+We applied **Scott's bandwidth** and the **Epanechnikov kernel** for the Mandalay civilian conflict KDE, as it provides optimal smoothing and reduces variance. The kernel effectively focuses on dense areas, capturing conflict intensity over time without distortion from outliers.
+
+**Key Observations:**
+
+-   **Central Mandalay Hotspot**: Consistent conflict density is observed in central Mandalay across all quarters, with peaks in Q3-2022 and Q1-2023.
+
+-   **Spatiotemporal Patterns**: Conflict density fluctuates quarter by quarter, with spread toward the north in several periods, indicating shifts in conflict zones.
+
+-   **Stability vs Spread**: While central Mandalay remains a key hotspot, the spread of conflicts over time suggests areas of emerging concern.
+
+This KDE approach reveals both stable hotspots and the evolving nature of conflicts in Mandalay, providing insights into the intensity and movement of conflict zones across different periods.
 
 ### 7.3.3 Sagaing
 
@@ -1839,9 +1895,7 @@ Mandalay_Results_PPL_Epanechnikov_visualizations <- visualize_conflict_results(M
 ::: panel-tabset
 ## Diggle
 
-```{r, fig.width=15, fig.height=15}
-#| warning: false
-
+```{r, warning = FALSE ,eval = FALSE}
 Sagaing_Results_Diggle_Gaussian <- process_quarter_conflicts(
   region_sf = Sagaing_Sf,
   region_window = Sagaing_Owin,
@@ -1850,16 +1904,15 @@ Sagaing_Results_Diggle_Gaussian <- process_quarter_conflicts(
   sigma_type = "diggle",  # Can change to "scott", "diggle", or "ppl"
   kernel_method = "gaussian"  # Can change to "epanechnikov", "quartic", or others
 )
+```
 
-# Step 4: Visualize the results with a main title
+```{r, fig.width=15, fig.height=15}
 Sagaing_Results_Diggle_Gaussian_visualizations <- visualize_conflict_results(Sagaing_Results_Diggle_Gaussian, "Sagaing", "Diggle", "Gaussian")
 ```
 
 ## Scott
 
-```{r, fig.width=15, fig.height=15}
-#| warning: false
-
+```{r, warning = FALSE ,eval = FALSE}
 Sagaing_Results_Scott_Gaussian <- process_quarter_conflicts(
   region_sf = Sagaing_Sf,
   region_window = Sagaing_Owin,
@@ -1868,16 +1921,16 @@ Sagaing_Results_Scott_Gaussian <- process_quarter_conflicts(
   sigma_type = "scott",  # Can change to "scott", "diggle", or "ppl"
   kernel_method = "gaussian"  # Can change to "epanechnikov", "quartic", or others
 )
+```
 
-# Step 4: Visualize the results with a main title
+```{r, fig.width=15, fig.height=15}
+
 Sagaing_Results_Scott_Gaussian_visualizations <- visualize_conflict_results(Sagaing_Results_Scott_Gaussian, "Sagaing", "Scott", "Gaussian")
 ```
 
 ## CvL
 
-```{r, fig.width=15, fig.height=15}
-#| warning: false
-
+```{r, warning = FALSE ,eval = FALSE}
 Sagaing_Results_CVL_Gaussian <- process_quarter_conflicts(
   region_sf = Sagaing_Sf,
   region_window = Sagaing_Owin,
@@ -1886,16 +1939,15 @@ Sagaing_Results_CVL_Gaussian <- process_quarter_conflicts(
   sigma_type = "cvl",  # Can change to "scott", "diggle", or "ppl"
   kernel_method = "gaussian"  # Can change to "epanechnikov", "quartic", or others
 )
+```
 
-# Step 4: Visualize the results with a main title
+```{r, fig.width=15, fig.height=15}
 Sagaing_Results_CVL_Gaussian_visualizations <- visualize_conflict_results(Sagaing_Results_CVL_Gaussian, "Sagaing", "CVL", "Gaussian")
 ```
 
 ## PPL
 
-```{r, fig.width=15, fig.height=15}
-#| warning: false
-
+```{r, warning = FALSE ,eval = FALSE}
 Sagaing_Results_PPL_Gaussian <- process_quarter_conflicts(
   region_sf = Sagaing_Sf,
   region_window = Sagaing_Owin,
@@ -1904,8 +1956,9 @@ Sagaing_Results_PPL_Gaussian <- process_quarter_conflicts(
   sigma_type = "ppl",  # Can change to "scott", "diggle", or "ppl"
   kernel_method = "gaussian"  # Can change to "epanechnikov", "quartic", or others
 )
+```
 
-# Step 4: Visualize the results with a main title
+```{r, fig.width=15, fig.height=15}
 Sagaing_Results_PPL_Gaussian_visualizations <- visualize_conflict_results(Sagaing_Results_PPL_Gaussian, "Sagaing", "PPL", "Gaussian")
 ```
 :::
@@ -1915,9 +1968,7 @@ Sagaing_Results_PPL_Gaussian_visualizations <- visualize_conflict_results(Sagain
 ::: panel-tabset
 ## Diggle
 
-```{r, fig.width=15, fig.height=15}
-#| warning: false
-
+```{r, warning = FALSE ,eval = FALSE}
 Sagaing_Results_Diggle_Epanechnikov <- process_quarter_conflicts(
   region_sf = Sagaing_Sf,
   region_window = Sagaing_Owin,
@@ -1926,16 +1977,15 @@ Sagaing_Results_Diggle_Epanechnikov <- process_quarter_conflicts(
   sigma_type = "diggle",  # Can change to "scott", "diggle", or "ppl"
   kernel_method = "epanechnikov"  # Can change to "epanechnikov", "quartic", or others
 )
+```
 
-# Step 4: Visualize the results with a main title
+```{r, fig.width=15, fig.height=15}
 Sagaing_Results_Diggle_Epanechnikov_visualizations <- visualize_conflict_results(Sagaing_Results_Diggle_Epanechnikov, "Sagaing", "Diggle", "Epanechnikov")
 ```
 
 ## Scott
 
-```{r, fig.width=15, fig.height=15}
-#| warning: false
-
+```{r, warning = FALSE ,eval = FALSE}
 Sagaing_Results_Scott_Epanechnikov <- process_quarter_conflicts(
   region_sf = Sagaing_Sf,
   region_window = Sagaing_Owin,
@@ -1944,16 +1994,16 @@ Sagaing_Results_Scott_Epanechnikov <- process_quarter_conflicts(
   sigma_type = "scott",  # Can change to "scott", "diggle", or "ppl"
   kernel_method = "epanechnikov"  # Can change to "epanechnikov", "quartic", or others
 )
+```
 
-# Step 4: Visualize the results with a main title
+```{r, fig.width=15, fig.height=15}
+
 Sagaing_Results_Scott_Epanechnikov_visualizations <- visualize_conflict_results(Sagaing_Results_Scott_Epanechnikov, "Sagaing", "Scott", "Epanechnikov")
 ```
 
 ## CvL
 
-```{r, fig.width=15, fig.height=15}
-#| warning: false
-
+```{r, warning = FALSE ,eval = FALSE}
 Sagaing_Results_Cvl_Epanechnikov <- process_quarter_conflicts(
   region_sf = Sagaing_Sf,
   region_window = Sagaing_Owin,
@@ -1962,16 +2012,15 @@ Sagaing_Results_Cvl_Epanechnikov <- process_quarter_conflicts(
   sigma_type = "cvl",  # Can change to "scott", "diggle", or "ppl"
   kernel_method = "epanechnikov"  # Can change to "epanechnikov", "quartic", or others
 )
+```
 
-# Step 4: Visualize the results with a main title
+```{r, fig.width=15, fig.height=15}
 Sagaing_Results_CvL_Epanechnikov_visualizations <- visualize_conflict_results(Sagaing_Results_Cvl_Epanechnikov, "Sagaing", "CvL", "Epanechnikov")
 ```
 
 ## PPL
 
-```{r, fig.width=15, fig.height=15}
-#| warning: false
-
+```{r, warning = FALSE ,eval = FALSE}
 Sagaing_Results_PPL_Epanechnikov <- process_quarter_conflicts(
   region_sf = Sagaing_Sf,
   region_window = Sagaing_Owin,
@@ -1980,19 +2029,42 @@ Sagaing_Results_PPL_Epanechnikov <- process_quarter_conflicts(
   sigma_type = "ppl",  # Can change to "scott", "diggle", or "ppl"
   kernel_method = "epanechnikov"  # Can change to "epanechnikov", "quartic", or others
 )
+```
 
-# Step 4: Visualize the results with a main title
+```{r, fig.width=15, fig.height=15}
 Sagaing_Results_PPL_Epanechnikov_visualizations <- visualize_conflict_results(Sagaing_Results_PPL_Epanechnikov, "Sagaing", "PPL", "Epanechnikov")
 ```
 :::
 
+#### 7.3.3.3 Analysis and Interpretation
+
+![](images/clipboard-90130595.png)
+
+In **Sagaing**, we again utilized **Scott's bandwidth** and the **Epanechnikov kernel** for KDE to assess the spatiotemporal distribution of civilian conflict events. This method ensures that key dense areas are well-represented while minimizing the impact of noise from less significant areas.
+
+**Key Observations:**
+
+-   **Consistent Hotspot**: The southern region of Sagaing consistently shows high-density conflict areas throughout the quarters, especially peaking during Q3-2022 and Q1-2023.
+
+-   **Emerging Zones**: Some quarters, such as Q1-2022 and Q3-2023, show increased conflict spread to the north, indicating a potential shift in conflict locations.
+
+-   **Stability and Peaks**: The core conflict areas maintain their intensity, while certain periods experience an expansion of conflict areas, with a notable rise in density during the mid-2022 period.
+
+These patterns highlight that conflict zones in Sagaing are relatively stable with periods of increased intensity, particularly in southern areas. This provides critical insights into when and where civilian conflict events have intensified.
+
+------------------------------------------------------------------------
+
 # 8.0 **Perform 2nd-Order Spatial Point Pattern Analysis**
+
+------------------------------------------------------------------------
 
 In this analysis, we aim to determine whether conflicts are **clustered** or **randomly distributed** within the study area. To achieve this, we use **2nd-order spatial point pattern analysis**, which examines the relationships between individual conflict events at varying distances. This helps us detect patterns of clustering or dispersion across the state.
 
 ### **Why Use Only K and L Functions**
 
 We focus on the **K Function** and **L Function** because they provide the most straightforward and effective means of identifying clustering or dispersion. The **K Function** measures clustering at multiple scales, while the **L Function** simplifies interpretation by stabilizing variance, making it easier to identify spatial patterns in conflict events. These methods are ideal for capturing the **spatial structure** of conflicts across varying distances.
+
+------------------------------------------------------------------------
 
 ## 8.1 Yangon
 
@@ -2097,9 +2169,9 @@ closest_indices <- sapply(key_distances, function(d) which.min(abs(L_Yangon_CSR$
 # Step 3: Create a table summarizing observed and CSR envelope bounds at the closest distances
 observed_table <- data.frame(
   Distance = L_Yangon_CSR$r[closest_indices],       # Actual distances used in the analysis
-  K_Obs = L_Yangon_CSR$obs[closest_indices],        # Observed K-function values
-  K_Lo = L_Yangon_CSR$lo[closest_indices],          # Lower bound of CSR envelope
-  K_Hi = L_Yangon_CSR$hi[closest_indices]           # Upper bound of CSR envelope
+  L_Obs = L_Yangon_CSR$obs[closest_indices],        # Observed K-function values
+  L_Lo = L_Yangon_CSR$lo[closest_indices],          # Lower bound of CSR envelope
+  L_Hi = L_Yangon_CSR$hi[closest_indices]           # Upper bound of CSR envelope
 )
 # Display the observed table
 print(observed_table)
@@ -2127,13 +2199,19 @@ Based on the analysis of the **Clark-Evans test**, **K-function**, and **L-funct
 
     1.  **Observed Tables**:
 
-        | Distance | K_Obs    | K_Lo      | K_Hi      |
-        |----------|----------|-----------|-----------|
-        | 4.99309  | 24.08843 | 4.778285  | 5.207894  |
-        | 9.98618  | 40.78681 | 9.771375  | 10.200984 |
-        | 14.97927 | 50.83615 | 14.764465 | 15.194074 |
-        | 20.02663 | 55.51990 | 19.811827 | 20.241437 |
-        | 25.01972 | 58.32548 | 24.804917 | 25.234526 |
+        +----------+-----------+------------+-----------+----------+----------+----------+
+        | Distance | K_Obs     | K_Lo       | K_Hi      | L_OBV    | L_Lo     | L_Hi     |
+        +==========+===========+============+===========+==========+==========+==========+
+        | 4.99309  | 1822.917  | 35.71503   | 120.9307  | 24.0883  | 4.836161 | 5.150019 |
+        +----------+-----------+------------+-----------+----------+----------+----------+
+        | 9.98618  | 5226.240  | 270.68366  | 355.8994  | 40.78681 | 9.829251 | 10.14311 |
+        +----------+-----------+------------+-----------+----------+----------+----------+
+        | 14.97927 | 8118.682  | 662.29806  | 747.5137  | 50.83615 | 14.82234 | 15.1362  |
+        +----------+-----------+------------+-----------+----------+----------+----------+
+        | 20.02663 | 9683.831  | 1217.37812 | 1302.5938 | 55.5199  | 19.8697  | 20.18356 |
+        +----------+-----------+------------+-----------+----------+----------+----------+
+        | 25.01972 | 10687.263 | 1923.98668 | 2009.202  | 53.32548 | 24.86279 | 25.17665 |
+        +----------+-----------+------------+-----------+----------+----------+----------+
 
         -   The **observed K-function** and **L-function** tables confirm that the observed values are significantly higher than the expected values under CSR, particularly at distances of 5km, 10km, 15km, and beyond, suggesting clustering at larger spatial scales.
 
@@ -2242,9 +2320,9 @@ closest_indices <- sapply(key_distances, function(d) which.min(abs(L_Mandalay_CS
 # Step 3: Create a table summarizing observed and CSR envelope bounds at the closest distances
 observed_table <- data.frame(
   Distance = L_Mandalay_CSR$r[closest_indices],       # Actual distances used in the analysis
-  K_Obs = L_Mandalay_CSR$obs[closest_indices],        # Observed K-function values
-  K_Lo = L_Mandalay_CSR$lo[closest_indices],          # Lower bound of CSR envelope
-  K_Hi = L_Mandalay_CSR$hi[closest_indices]           # Upper bound of CSR envelope
+  L_Obs = L_Mandalay_CSR$obs[closest_indices],        # Observed K-function values
+  L_Lo = L_Mandalay_CSR$lo[closest_indices],          # Lower bound of CSR envelope
+  L_Hi = L_Mandalay_CSR$hi[closest_indices]           # Upper bound of CSR envelope
 )
 
 # Display the observed table
@@ -2273,14 +2351,14 @@ Based on the analysis of the **Clark-Evans test**, **K-function**, and **L-funct
 
 4.  **Observed Tables**:
 
-    | **Distance** | **K_Obs** | **K_Lo**  | **K_Hi** |
-    |--------------|-----------|-----------|----------|
-    | 9.962643     | 48.22199  | 9.791656  | 10.13363 |
-    | 20.016687    | 58.77544  | 19.845699 | 20.18767 |
-    | 29.979331    | 71.02485  | 29.808343 | 30.15032 |
-    | 40.033374    | 81.98111  | 39.862387 | 40.20436 |
+| **Distance** | **K_Obs** | **K_Lo**  | **K_Hi**  | L_Obs    | L_Lo      | L_Hi     |
+|--------------|-----------|-----------|-----------|----------|-----------|----------|
+| 9.962643     | 7305.334  | 260.9636  | 362.6693  | 48.22199 | 9.689332  | 10.23595 |
+| 20.016687    | 10852.795 | 1207.8820 | 1309.5878 | 58.77544 | 19.743376 | 20.2900  |
+| 29.979331    | 15847.857 | 2772.6858 | 2874.3915 | 71.02485 | 29.706020 | 30.25264 |
+| 40.033374    | 21114.336 | 4984.0867 | 5085.7925 | 81.9811  | 39.760063 | 40.30    |
 
-    -   The **observed K-function** and **L-function** tables confirm that the observed values are significantly higher than the expected values under CSR, particularly at distances of 20km, 30km, 40km, and beyond, suggesting clustering at larger spatial scales.
+-   The **observed K-function** and **L-function** tables confirm that the observed values are significantly higher than the expected values under CSR, particularly at distances of 20km, 30km, 40km, and beyond, suggesting clustering at larger spatial scales.
 
 We reject the **null hypothesis** of **Complete Spatial Randomness (CSR)** for **Mandalay civilian-related conflicts**. The Clark-Evans test shows significant clustering, and both the K-function and L-function support this finding by indicating clustering over a broad range of distances. The observed tables further confirm this, as the observed values consistently exceed the CSR bounds. Therefore, the civilian conflict events in **Mandalay** are significantly **clustered** rather than randomly distributed.
 
@@ -2388,9 +2466,9 @@ closest_indices <- sapply(key_distances, function(d) which.min(abs(L_Sagaing_CSR
 # Step 3: Create a table summarizing observed and CSR envelope bounds at the closest distances
 observed_table <- data.frame(
   Distance = L_Sagaing_CSR$r[closest_indices],       # Actual distances used in the analysis
-  K_Obs = L_Sagaing_CSR$obs[closest_indices],        # Observed K-function values
-  K_Lo = L_Sagaing_CSR$lo[closest_indices],          # Lower bound of CSR envelope
-  K_Hi = L_Sagaing_CSR$hi[closest_indices]           # Upper bound of CSR envelope
+  L_Obs = L_Sagaing_CSR$obs[closest_indices],        # Observed K-function values
+  L_Lo = L_Sagaing_CSR$lo[closest_indices],          # Lower bound of CSR envelope
+  L_Hi = L_Sagaing_CSR$hi[closest_indices]           # Upper bound of CSR envelope
 )
 
 # Display the observed table
@@ -2419,7 +2497,23 @@ Based on the analysis of the **Clark-Evans test**, **K-function**, and **L-funct
 
 4.  **Observed Tables**:
 
-    -   The **observed K-function** and **L-function** tables confirm that the observed values are significantly higher than the expected values under CSR, particularly at distances of 20km, 30km, 40km, and beyond, suggesting clustering at larger spatial scales.
++-------------+-----------+-----------+-----------+-----------+----------+-----------+
+| Distance    | K_Obs     | K_Lo      | K_Hi      | L_Obs     | L_Lo     | L_Hi      |
++=============+===========+===========+===========+===========+==========+===========+
+| 19.99394    | 7021.421  | 1186.336  | 1325.415  | 19.81300  | 20.17488 | 20.17488  |
++-------------+-----------+-----------+-----------+-----------+----------+-----------+
+| 29.99091    | 12903.634 | 2756.181  | 2895.260  | 64.08864  | 29.80997 | 30.17185  |
++-------------+-----------+-----------+-----------+-----------+----------+-----------+
+| 39.98788    | 19530.590 | 4963.964  | 5093.043  | 78.84656  | 39.80694 | 40.16882  |
++-------------+-----------+-----------+-----------+-----------+----------+-----------+
+| 49.98485    | 26873.240 | 7797.685  | 7916.764  | 92.48793  | 49.80391 | 50.16579  |
++-------------+-----------+-----------+-----------+-----------+----------+-----------+
+| 59.98182    | 34286.168 | 11233.343 | 11372.422 | 104.46830 | 59.80088 | 60.16277  |
++-------------+-----------+-----------+-----------+-----------+----------+-----------+
+| 68.24599    | 40939.246 | 1456,475  | 14701.554 | 114.15501 | 68.06505 | 68.4269   |
++-------------+-----------+-----------+-----------+-----------+----------+-----------+
+
+-   The **observed K-function** and **L-function** tables confirm that the observed values are significantly higher than the expected values under CSR, particularly at distances of 20km, 30km, 40km, and beyond, suggesting clustering at larger spatial scales.
 
 We reject the **null hypothesis** of **Complete Spatial Randomness (CSR)** for **Sagaing civilian-related conflicts**. The Clark-Evans test shows significant clustering, and both the K-function and L-function support this finding by indicating clustering over a broad range of distances. The observed tables further confirm this, as the observed values consistently exceed the CSR bounds. Therefore, the conflict events in Sagaing are significantly **clustered** rather than randomly distributed.
 
@@ -2455,12 +2549,12 @@ In this section, we will generate **Quarterly Spatio-Temporal Kernel Density Est
 
 -   **Step 13**: Loop through quarters and plot **KDE layers** for each, visualizing conflict intensity over time.
 
-## 9.2  Yangon Quarter Year Spatio-Temporal KDE
+## 9.2 Yangon Quarter Year Spatio-Temporal KDE
 
 ::: panel-tabset
 ## Code Preparation
 
-```{r}
+```{r, warning = FALSE}
 # Step 1: Ensure Yangon_QuarterYear_Sf is an sf object (if not already)
 Yangon_QuarterYear_Sf <- st_as_sf(Yangon_ACLED_Data_Sf)
 
@@ -2518,7 +2612,7 @@ legend("topright", legend = unique_quarters,
 
 ## Yangon Quarter Year KDE
 
-```{r, fig.width=15, fig.height=15}
+```{r, fig.width=15, fig.height=15, warning = FALSE}
 Yangon_QuarterYear_PPP_Numeric <- ppp(
   x = coords[, 1],  # Longitude (x-coordinates)
   y = coords[, 2],  # Latitude (y-coordinates)
@@ -2559,7 +2653,7 @@ mtext("Quarterly Spatio-Temporal KDE for Civilian Conflict Intensity in Yangon",
       outer=TRUE, cex=1.5, font=2)
 ```
 
-## Yangon Quarter Year KDE Animation
+## Yangon Quarter Year KDE Animation And Analysis
 
 ```{r, eval = FALSE}
 multi_color_palette <- colorRampPalette(c("blue", "green", "yellow", "red"))
@@ -2581,6 +2675,16 @@ saveGIF({
 ```
 
 ![](yangonkde_animation.gif)
+
+In **Yangon**, the spatio-temporal KDE analysis shows a reduction in overall conflict intensity from 2021 to 2024. However, it is important to note that while the intensity has decreased, **clustering is still evident within the same few areas**.
+
+### Key Observations:
+
+-   **2021 to 2022**: Widespread high-intensity conflict areas in central Yangon are prominent in 2021 and early 2022, indicated by the larger red and orange zones.
+
+-   **2023 to 2024**: Although the intensity diminishes over time, the clustering remains persistent in specific areas. The high-intensity zones shrink, but they consistently appear in similar locations, suggesting that while the scale of conflict has reduced, these areas remain focal points for civilian conflict.
+
+The persistent clustering, even as intensity diminishes, indicates that certain regions continue to experience conflicts, requiring targeted interventions in those zones.
 :::
 
 ## 9.3 Mandalay Quarter Year Spatio-Temporal KDE
@@ -2588,7 +2692,7 @@ saveGIF({
 ::: panel-tabset
 ## Mandalay Quarter Year Code Preparation
 
-```{r}
+```{r, warning = FALSE}
 # Step 1: Ensure Mandalay_QuarterYear_Sf is an sf object (if not already)
 Mandalay_QuarterYear_Sf <- st_as_sf(Mandalay_ACLED_Data_Sf)
 
@@ -2646,7 +2750,7 @@ legend("topright", legend = unique_quarters,
 
 ## Mandalay Quarter Year KDE
 
-```{r, fig.width=15, fig.height=15}
+```{r, warning = FALSE , fig.width=15, fig.height=15}
 Mandalay_QuarterYear_PPP_Numeric <- ppp(
   x = coords[, 1],  # Longitude (x-coordinates)
   y = coords[, 2],  # Latitude (y-coordinates)
@@ -2685,7 +2789,7 @@ mtext("Quarterly Spatio-Temporal KDE for Civilian Conflict Intensity in Mandalay
       outer=TRUE, cex=1.5, font=2)
 ```
 
-## Mandalay Quarter Year KDE Animation
+## Mandalay Quarter Year KDE Animation And Analysis
 
 ```{r, eval = FALSE}
 multi_color_palette <- colorRampPalette(c("blue", "green", "yellow", "red"))
@@ -2707,6 +2811,16 @@ saveGIF({
 ```
 
 ![](Mandalaykde_animation.gif)
+
+In **Mandalay**, the spatio-temporal KDE analysis similarly shows a general reduction in conflict intensity over time, from 2021 to 2024. However, like in Yangon, **clustering remains within the same key areas** across the quarters.
+
+### Key Observations:
+
+-   **2021 to 2022**: High-intensity conflicts are concentrated in central and northern Mandalay, as shown by the red and orange clusters, particularly in early 2021 and 2022.
+
+-   **2023 to 2024**: The intensity of the conflicts decreases over time, but these clusters persist in similar regions, particularly in central Mandalay. This indicates that although conflict intensity is declining, these areas continue to be hotspots for civilian conflict.
+
+Thus, the persistence of clustering in the same areas despite decreasing conflict intensity highlights the need for focused intervention strategies in these conflict-prone regions.
 :::
 
 ## 9.4 Sagaing Quarter Year Spatio-Temporal KDE
@@ -2714,7 +2828,7 @@ saveGIF({
 ::: panel-tabset
 ## Sagaing Quarter Year Code Preparation
 
-```{r}
+```{r, warning = FALSE}
 # Step 1: Ensure Sagaing_QuarterYear_Sf is an sf object (if not already)
 Sagaing_QuarterYear_Sf <- st_as_sf(Sagaing_ACLED_Data_Sf)
 
@@ -2772,7 +2886,7 @@ legend("topright", legend = unique_quarters,
 
 ## Sagaing Quarter Year KDE
 
-```{r, fig.width=15, fig.height=15}
+```{r, warning = FALSE, fig.width=15, fig.height=15}
 Sagaing_QuarterYear_PPP_Numeric <- ppp(
   x = coords[, 1],  # Longitude (x-coordinates)
   y = coords[, 2],  # Latitude (y-coordinates)
@@ -2833,15 +2947,43 @@ saveGIF({
 ```
 
 ![](Sagaingkde_animation.gif)
+
+**Spatio-Temporal KDE analysis for Sagaing** across multiple quarters, we observe significant spatial clustering of civilian-related conflicts over time. The conflict intensity remains localized in specific regions, with fluctuations in density between quarters.
+
+### Key Observations:
+
+-   **Consistent Clustering**: Conflict events are consistently clustered in the central and southern regions of Sagaing, as indicated by the green to red areas over time. These regions show recurring intensity, highlighting persistent conflict zones.
+
+-   **Temporal Fluctuations**: Some quarters, such as **20212**, **20213**, and **20222**, exhibit relatively lower conflict intensity, while **20224** shows a resurgence in intensity.
+
+-   **Localized Hotspots**: The southern region shows a spike in density during **20241**, followed by a steady reduction in the later quarters.
+
+### Conclusion:
+
+There is ongoing clustering in the same geographic regions of Sagaing, with peaks of conflict intensity in specific quarters. This indicates that while the overall distribution of conflicts remains stable, certain periods witness heightened violence.
 :::
 
 # 10.0 **Perform 2nd-Order Spatio-Temporal Point Patterns Analysis**:
 
-In this analysis, we aim to determine whether civilian related conflict events in **State** are clustered or randomly distributed in **both space and time**. To achieve this, we use **spatio-temporal point pattern analysis**, which examines the relationships between individual conflict events at varying distances and times. This approach allows us to detect patterns of clustering or dispersion across both spatial and temporal scales.
+In this analysis, we aim to determine whether civilian-related conflict events in **States** are clustered or randomly distributed across both space and time. To achieve this, we use spatial point pattern analysis, specifically the **K-function**, to explore clustering between conflict events over different years. This approach helps detect patterns of clustering or dispersion across varying spatial scales, comparing conflict events year by year.
+
+The following steps were taken:
+
+1.  **Creation of the Point Pattern Object**:
+
+    -   The spatial point pattern object (**`Sagaing_ppp_years`**) was created using the conflict event data for **Sagaing**, where the coordinates (longitude and latitude) were included along with the quarter-year information as marks to differentiate between events from different years.
+
+2.  **Rescaling**:
+
+    -   The point pattern object was rescaled to **kilometers** to ensure that the distance measurements in the analysis were meaningful and consistent with spatial interpretation.
+
+3.  **Cross-K Function Computation**:
+
+    -   For each pair of years (2021 vs. 2022, 2021 vs. 2023, 2022 vs. 2023, etc.), the **cross-K function** was computed. This function measures how events in one year are spatially related to events in another year. The results from each comparison were stored in the **`{state}_k_results`** list for further interpretation.
 
 ## 10.1 Yangon
 
-For the conflict events in Yangon, we performed a detailed **spatio-temporal point pattern analysis** using the **Clark-Evans test** for spatial randomness, and the **spatio-temporal K-function** to explore clustering across both space and time. This analysis helps us understand whether the conflict events are randomly distributed, clustered, or dispersed, and at what spatial and temporal scales these patterns emerge.
+For the conflict events in **Sagaing**, we performed a detailed spatial point pattern analysis by computing the **cross-K function** for each pair of years (e.g., 2021 vs. 2022, 2021 vs. 2023, etc.). The **cross-K function** allows us to investigate how conflict events in one year relate to conflict events in another year, revealing whether the events are clustered, dispersed, or randomly distributed across space between different time periods.
 
 ### Null and Alternative Hypotheses:
 
@@ -2849,45 +2991,451 @@ For the conflict events in Yangon, we performed a detailed **spatio-temporal poi
 
 -   **H1 (Alternative Hypothesis)**: The distribution of conflict events in Yangon **does not follow CSTR** and instead shows signs of clustering or dispersion in both space and time.
 
-### 10.1.1 Yangon's Clark-Evans Test for Spatial Randomness:
+### 10.1.1 Yangon's Cross K Calculation
 
-```{r}
-Yangon_ClarksEvan_Temporal <- clarkevans.test(Yangon_QuarterYear_PPP_Numeric, 
-                              correction = "none", 
-                              clipregion = Yangon_Owin, 
-                              alternative = c("clustered"),
-                              nsim = 30)
-print(Yangon_ClarksEvan_Temporal)
+::: panel-tabset
+## Code
+
+```{r, warning = FALSE, eval = FALSE }
+# Create the spatial point pattern (ppp) object for Yangon
+Yangon_ppp_years <- ppp(
+  x = Yangon_ACLED_co[, 1],  # Longitude
+  y = Yangon_ACLED_co[, 2],  # Latitude
+  window = Yangon_Owin  # Spatial observation window (owin object)
+)
+
+# Add a mark that groups quarters by year (e.g., 2021, 2022, 2023, 2024)
+Yangon_ppp_years$marks <- as.factor(substr(Yangon_QuarterYear_Sf$quarter_numeric, 1, 4))
+Yangon_ppp_years <- rescale(Yangon_ppp_years, 1000, "km")
+# Store the unique years in the data
+unique_years <- levels(Yangon_ppp_years$marks)
+
+# Function to compute cross-K function between two years
+cross_k_function_by_year <- function(ppp_object, year1, year2) {
+  # Compute the cross-K function for the two selected years within the same ppp object
+  K_cross <- Kcross(ppp_object, i = year1, j = year2)
+  return(K_cross)
+}
+
+# Initialize an empty list to store each year's comparison
+Yangon_k_results <- list()
+
+# Loop through pairs of years to compute and store cross-K functions
+for (i in 1:(length(unique_years) - 1)) {
+  for (j in (i + 1):length(unique_years)) {
+    year1 <- unique_years[i]
+    year2 <- unique_years[j]
+    
+    # Print progress
+    cat("Computing K-Function for", year1, "and", year2, "\n")
+    
+    # Compute the cross-K function for these two years and store it in a named variable
+    result_name <- paste0("Yangon_k_", year1, "_vs_", year2)
+    Yangon_k_results[[result_name]] <- cross_k_function_by_year(Yangon_ppp_years, year1, year2)
+  }
+}
+
+# Save individual year comparison results as variables
+Yangon_k_2021_vs_2022 <- Yangon_k_results[["Yangon_k_2021_vs_2022"]]
+Yangon_k_2021_vs_2023 <- Yangon_k_results[["Yangon_k_2021_vs_2023"]]
+Yangon_k_2021_vs_2024 <- Yangon_k_results[["Yangon_k_2021_vs_2024"]]
+Yangon_k_2022_vs_2023 <- Yangon_k_results[["Yangon_k_2022_vs_2023"]]
+Yangon_k_2022_vs_2024 <- Yangon_k_results[["Yangon_k_2022_vs_2024"]]
+Yangon_k_2023_vs_2024 <- Yangon_k_results[["Yangon_k_2023_vs_2024"]]
+
+# Set up the layout for multiple plots (2 rows, 3 columns for all year comparisons)
+
 ```
 
-10.1.2 Yangon's Spatial temporal Ripley K Function
+## Output and Charts
 
-```{r}
+```{r, fig.width=10, fig.height=10}
+par(mfrow = c(2, 1))
+# Plotting each comparison
+plot(Yangon_k_2021_vs_2022, main = "K-Function: Yangon Civilian Related Conflict KDE 2021 vs 2022")
+plot(Yangon_k_2021_vs_2023, main = "K-Function: Yangon Civilian Related Conflict KDE 2021 vs 2023")
+plot(Yangon_k_2021_vs_2024, main = "K-Function: Yangon Civilian Related Conflict KDE 2021 vs 2024")
+plot(Yangon_k_2022_vs_2023, main = "K-Function: Yangon Civilian Related Conflict KDE 2022 vs 2023")
+plot(Yangon_k_2022_vs_2024, main = "K-Function: Yangon Civilian Related Conflict KDE 2022 vs 2024")
+plot(Yangon_k_2023_vs_2024, main = "K-Function: Yangon Civilian Related Conflict KDE 2023 vs 2024")
+```
+:::
 
-K_Yangon_ST <- Kest(Yangon_QuarterYear_PPP_Numeric, correction = "Ripley")
+### 10.1.2 Yangon's Cross K Analysis
 
-# Step 2: Plot the L-function, showing L(d) - r
-plot(K_Yangon_ST, . - r ~ r, ylab = "K(d) - r", xlab = "d(km)", main = "Ripley' K-Function for Yangon Civilian Related Conflicts")
+#### 10.1.2.1 Yangon's Individual Years Comparision
+
+##### 10.1.2.1.1 **2021 vs 2022**
+
+![](images/clipboard-1996747489.png)
+
+-   The **observed K-function** lies consistently **above the CSR envelope**, indicating **significant clustering** between events from 2021 and 2022 at distances up to approximately **25 km**.
+
+-   The clustering effect becomes more prominent at larger distances, suggesting that events from 2021 tend to cluster with events from 2022 across larger spatial scales.
+
+##### 10.1.2.1.2 **2021 vs 2023**
+
+![](images/clipboard-3495316475.png)
+
+-   The **K-function for 2021 vs 2023** is also above the CSR envelope, indicating clustering between these two years.
+
+-   However, the clustering is slightly less prominent compared to 2021 vs 2022, suggesting that while clustering persists, the relationship between events from 2021 and 2023 is somewhat weaker than between 2021 and 2022.
+
+##### 10.1.2.1.3 **2021 vs 2024**
+
+![](images/clipboard-3794187054.png)
+
+-   The clustering is still evident between **2021 and 2024**, but the clustering intensity appears to be weaker at larger distances. The observed K-function shows less deviation from the CSR envelope, indicating that the spatial clustering effect is declining as we compare events separated by more time.
+
+##### 10.1.2.1.4 **2022 vs 2023**
+
+![](images/clipboard-3757659906.png)
+
+-   The **K-function** here indicates **significant clustering** at smaller distances, but the intensity decreases more rapidly beyond **15 km**.
+
+-   The spatial clustering between 2022 and 2023 is still present but somewhat weaker compared to other year-pair comparisons.
+
+##### 10.1.2.1.5 **2022 vs 2024**
+
+![](images/clipboard-76628695.png)
+
+-   The **2022 vs 2024 K-function** shows clustering, though it is less pronounced than in the previous year comparisons.
+
+-   The clustering effect diminishes as the events from these two years become more spatially dispersed, particularly beyond **15 km**.
+
+##### 10.1.2.1.6 **2023 vs 2024**
+
+![](images/clipboard-1009017288.png)
+
+-   The **K-function for 2023 vs 2024** shows the least clustering effect of all the comparisons.
+
+-   There is minimal deviation from the CSR line, indicating that the events from these two years are closer to being **randomly distributed**, with only mild clustering observed at smaller distances.
+
+#### 10.1.2.1 Overall Years Comparison
+
+-   **Clustering is strongest** between events that are closer in time (e.g., 2021 vs 2022), with the strength of clustering generally **decreasing** as the time difference between events increases (e.g., 2021 vs 2024).
+
+-   This suggests that civilian conflict events in Yangon have a **spatial-temporal dependence**, where events in one year are more likely to occur near events from the following year, but this effect diminishes over time.
+
+## 10.2 Mandalay
+
+For the conflict events in **Mandalay**, we performed a detailed spatial point pattern analysis by computing the **cross-K function** for each pair of years (e.g., 2021 vs. 2022, 2021 vs. 2023, etc.). The **cross-K function** allows us to investigate how conflict events in one year relate to conflict events in another year, revealing whether the events are clustered, dispersed, or randomly distributed across space between different time periods.
+
+### Null and Alternative Hypotheses:
+
+-   **Ho (Null Hypothesis)**: The distribution of conflict events in Mandalay follows **Complete Spatio-Temporal Randomness (CSTR)**, meaning the events are randomly distributed in both space and time.
+
+-   **H1 (Alternative Hypothesis)**: The distribution of conflict events in Mandalay **does not follow CSTR** and instead shows signs of clustering or dispersion in both space and time.
+
+### 10.2.1 Mandalay's Cross K Calculation
+
+::: panel-tabset
+## Code
+
+```{r, warning = FALSE, eval = FALSE }
+# Create the spatial point pattern (ppp) object for Mandalay
+Mandalay_ppp_years <- ppp(
+  x = Mandalay_ACLED_co[, 1],  # Longitude
+  y = Mandalay_ACLED_co[, 2],  # Latitude
+  window = Mandalay_Owin  # Spatial observation window (owin object)
+)
+
+# Add a mark that groups quarters by year (e.g., 2021, 2022, 2023, 2024)
+Mandalay_ppp_years$marks <- as.factor(substr(Mandalay_QuarterYear_Sf$quarter_numeric, 1, 4))
+# Store the unique years in the data
+unique_years <- levels(Mandalay_ppp_years$marks)
+Mandalay_ppp_years <- rescale(Mandalay_ppp_years, 1000, "km")
+
+# Function to compute cross-K function between two years
+cross_k_function_by_year <- function(ppp_object, year1, year2) {
+  # Compute the cross-K function for the two selected years within the same ppp object
+  K_cross <- Kcross(ppp_object, i = year1, j = year2)
+  return(K_cross)
+}
+
+# Initialize an empty list to store each year's comparison
+Mandalay_k_results <- list()
+
+# Loop through pairs of years to compute and store cross-K functions
+for (i in 1:(length(unique_years) - 1)) {
+  for (j in (i + 1):length(unique_years)) {
+    year1 <- unique_years[i]
+    year2 <- unique_years[j]
+    
+    # Print progress
+    cat("Computing K-Function for", year1, "and", year2, "\n")
+    
+    # Compute the cross-K function for these two years and store it in a named variable
+    result_name <- paste0("Mandalay_k_", year1, "_vs_", year2)
+    Mandalay_k_results[[result_name]] <- cross_k_function_by_year(Mandalay_ppp_years, year1, year2)
+  }
+}
+
+# Save individual year comparison results as variables
+Mandalay_k_2021_vs_2022 <- Mandalay_k_results[["Mandalay_k_2021_vs_2022"]]
+Mandalay_k_2021_vs_2023 <- Mandalay_k_results[["Mandalay_k_2021_vs_2023"]]
+Mandalay_k_2021_vs_2024 <- Mandalay_k_results[["Mandalay_k_2021_vs_2024"]]
+Mandalay_k_2022_vs_2023 <- Mandalay_k_results[["Mandalay_k_2022_vs_2023"]]
+Mandalay_k_2022_vs_2024 <- Mandalay_k_results[["Mandalay_k_2022_vs_2024"]]
+Mandalay_k_2023_vs_2024 <- Mandalay_k_results[["Mandalay_k_2023_vs_2024"]]
+
 ```
 
-```{r}
-# Step 2: Perform the spatio-temporal K-function
-Yangon_K_ST <- Kest.stppp(Yangon_StPP)
+## Output and Charts
 
-# Step 3: Plot the spatio-temporal K-function
-plot(Yangon_K_ST, main = "Spatio-Temporal K-Function for Yangon Conflicts")
+```{r, fig.width=10, fig.height=10}
+# Set up the layout for multiple plots (2 rows, 3 columns for all year comparisons)
+par(mfrow = c(2, 1))
+
+# Plotting each comparison
+plot(Sagaing_k_2021_vs_2022, main = "K-Function: Sagaing Civilian Related Conflict KDE 2021 vs 2022")
+plot(Sagaing_k_2021_vs_2023, main = "K-Function: Sagaing Civilian Related Conflict KDE 2021 vs 2023")
+plot(Sagaing_k_2021_vs_2024, main = "K-Function: Sagaing Civilian Related Conflict KDE 2021 vs 2024")
+plot(Sagaing_k_2022_vs_2023, main = "K-Function: Sagaing Civilian Related Conflict KDE 2022 vs 2023")
+plot(Sagaing_k_2022_vs_2024, main = "K-Function: Sagaing Civilian Related Conflict KDE 2022 vs 2024")
+plot(Sagaing_k_2023_vs_2024, main = "K-Function: Sagaing Civilian Related Conflict KDE 2023 vs 2024")
+
+```
+:::
+
+### 10.2.2 Mandalay's Cross K Analysis
+
+#### 10.2.2.1 Mandalay's Individual Years Comparison
+
+##### 10.1.2.1.1 **2021 vs 2022**
+
+![](images/clipboard-2223181259.png)
+
+-   The **K-function for 2021 vs 2022** shows **significant clustering** at all distances. The observed K-function is consistently above the CSR envelope, indicating that conflict events from 2021 tend to cluster near those from 2022.
+-   The clustering effect appears to intensify as the distance increases, suggesting a broad spatial clustering pattern for conflicts in 2021 and 2022.
+
+##### 10.2.2.1.2 **2021 vs 2023**
+
+![](images/clipboard-4280140255.png)
+
+-   the **K-function for 2021 vs 2023** also shows clustering, but it is slightly less pronounced than in the 2021 vs 2022 comparison.
+-   The clustering becomes more noticeable at distances beyond **10 km**, implying that conflict events from these two years tend to cluster over medium to larger distances.
+-   However, the clustering effect weakens somewhat compared to the previous year comparison.
+
+##### 10.2.2.1.3 **2021 vs 2024**
+
+![](images/clipboard-516815785.png)
+
+-   Clustering between **2021 and 2024** is still present, but the intensity is weaker compared to the previous year pairs.
+-   The observed K-function does show some clustering above the CSR line, but the deviation from randomness is smaller, suggesting that events from 2021 and 2024 are less spatially related than the closer years (2021 vs 2022).
+
+##### 10.2.2.1.4 **2022 vs 2023**
+
+![](images/clipboard-4133187679.png)
+
+-   The clustering between **2022 and 2023** remains significant, especially at larger distances, with the observed K-function clearly above the CSR envelope.
+-   Similar to earlier comparisons, this suggests that conflict events from these two years cluster over wider distances, continuing the spatial clustering trend seen in other comparisons.
+
+##### 10.2.2.5 **2022 vs 2024**
+
+![](images/clipboard-2749584339.png)
+
+-   The **2022 vs 2024 K-function** shows clustering, although the intensity is weaker, particularly at smaller distances.
+-   There is a slight increase in clustering at larger distances, but the deviation from the CSR envelope is less pronounced compared to the earlier year comparisons.
+
+##### 10.2.2.6 **2023 vs 2024**
+
+![](images/clipboard-300844765.png)
+
+-   The **K-function for 2023 vs 2024** shows clustering, though this is the weakest of all the comparisons.
+
+-   The clustering effect becomes more noticeable at distances greater than **10 km**, but overall, the spatial relationship between events from 2023 and 2024 is closer to random compared to earlier year comparisons.
+
+#### 10.2.2.1 Mandalay Overall Years Comparison
+
+-   Similar to the Yangon analysis, the **spatial clustering is strongest** between conflict events that are **closer in time**, such as 2021 vs 2022 and 2022 vs 2023.
+
+```{=html}
+<!-- -->
+```
+-   As the time gap between years increases, the clustering effect becomes weaker, with the least clustering observed between 2023 and 2024.
+
+These results suggest that conflicts in **Mandalay** show **spatio-temporal clustering**, with events from one year often clustering near those from the next, but this effect diminishes as the time gap between years grows.
+
+## 10.3 Sagaing
+
+For the conflict events in **Sagaing**, we performed a detailed spatial point pattern analysis by computing the **cross-K function** for each pair of years (e.g., 2021 vs. 2022, 2021 vs. 2023, etc.). The **cross-K function** allows us to investigate how conflict events in one year relate to conflict events in another year, revealing whether the events are clustered, dispersed, or randomly distributed across space between different time periods.
+
+**Null and Alternative Hypotheses:**
+
+-   **Ho (Null Hypothesis)**: The distribution of conflict events in Sagaing follows **Complete Spatio-Temporal Randomness (CSTR)**, meaning the events are randomly distributed in both space and time.
+
+-   **H1 (Alternative Hypothesis)**: The distribution of conflict events in Sagaing **does not follow CSTR** and instead shows signs of clustering or dispersion in both space and time.
+
+### 10.3.1 Sagaing's Cross K Calculation
+
+::: panel-tabset
+## Code
+
+```{r, warning = FALSE, eval = FALSE }
+Sagaing_ppp_years <- ppp(
+  x = Sagaing_ACLED_co[, 1],  # Longitude
+  y = Sagaing_ACLED_co[, 2],  # Latitude
+  window = Sagaing_Owin  # Spatial observation window (owin object)
+)
+
+# Add a mark that groups quarters by year (e.g., 2021, 2022, 2023, 2024)
+Sagaing_ppp_years$marks <- as.factor(substr(Sagaing_QuarterYear_Sf$quarter_numeric, 1, 4))
+Sagaing_ppp_years <- rescale(Sagaing_ppp_years, 1000, "km")
+# Store the unique years in the data
+unique_years <- levels(Sagaing_ppp_years$marks)
+
+# Function to compute cross-K function between two years
+cross_k_function_by_year <- function(ppp_object, year1, year2) {
+  # Compute the cross-K function for the two selected years within the same ppp object
+  K_cross <- Kcross(ppp_object, i = year1, j = year2)
+  return(K_cross)
+}
+
+# Initialize an empty list to store each year's comparison
+Sagaing_k_results <- list()
+
+# Loop through pairs of years to compute and store cross-K functions
+for (i in 1:(length(unique_years) - 1)) {
+  for (j in (i + 1):length(unique_years)) {
+    year1 <- unique_years[i]
+    year2 <- unique_years[j]
+    
+    # Print progress
+    cat("Computing K-Function for", year1, "and", year2, "\n")
+    
+    # Compute the cross-K function for these two years and store it in a named variable
+    result_name <- paste0("Sagaing_k_", year1, "_vs_", year2)
+    Sagaing_k_results[[result_name]] <- cross_k_function_by_year(Sagaing_ppp_years, year1, year2)
+  }
+}
+
+# Save individual year comparison results as variables
+Sagaing_k_2021_vs_2022 <- Sagaing_k_results[["Sagaing_k_2021_vs_2022"]]
+Sagaing_k_2021_vs_2023 <- Sagaing_k_results[["Sagaing_k_2021_vs_2023"]]
+Sagaing_k_2021_vs_2024 <- Sagaing_k_results[["Sagaing_k_2021_vs_2024"]]
+Sagaing_k_2022_vs_2023 <- Sagaing_k_results[["Sagaing_k_2022_vs_2023"]]
+Sagaing_k_2022_vs_2024 <- Sagaing_k_results[["Sagaing_k_2022_vs_2024"]]
+Sagaing_k_2023_vs_2024 <- Sagaing_k_results[["Sagaing_k_2023_vs_2024"]]
+
+# Save individual year comparison results as variables
+Sagaing_k_2021_vs_2022 <- Sagaing_k_results[["Sagaing_k_2021_vs_2022"]]
+Sagaing_k_2021_vs_2023 <- Sagaing_k_results[["Sagaing_k_2021_vs_2023"]]
+Sagaing_k_2021_vs_2024 <- Sagaing_k_results[["Sagaing_k_2021_vs_2024"]]
+Sagaing_k_2022_vs_2023 <- Sagaing_k_results[["Sagaing_k_2022_vs_2023"]]
+Sagaing_k_2022_vs_2024 <- Sagaing_k_results[["Sagaing_k_2022_vs_2024"]]
+Sagaing_k_2023_vs_2024 <- Sagaing_k_results[["Sagaing_k_2023_vs_2024"]]
 
 ```
 
-# 11.0 Results and Interpretation
+## Output and Charts
 
-# 12.0 Conclusion
+```{r, fig.width=10, fig.height=10}
+par(mfrow = c(2, 1))
+# Plotting each comparison
+plot(Sagaing_k_2021_vs_2022, main = "K-Function: Sagaing Civilian Related Conflict KDE 2021 vs 2022")
+plot(Sagaing_k_2021_vs_2023, main = "K-Function: Sagaing Civilian Related Conflict KDE 2021 vs 2023")
+plot(Sagaing_k_2021_vs_2024, main = "K-Function: Sagaing Civilian Related Conflict KDE 2021 vs 2024")
+plot(Sagaing_k_2022_vs_2023, main = "K-Function: Sagaing Civilian Related Conflict KDE 2022 vs 2023")
+plot(Sagaing_k_2022_vs_2024, main = "K-Function: Sagaing Civilian Related Conflict KDE 2022 vs 2024")
+plot(Sagaing_k_2023_vs_2024, main = "K-Function: Sagaing Civilian Related Conflict KDE 2023 vs 2024")
 
-# 13.0 References
+```
+:::
+
+### 10.3.2 Sagaing's Cross K Analysis
+
+#### 10.3.2.1 Sagaing's Individual Years Comparison
+
+##### 10.3.2.1.1 **2021 vs 2022**
+
+![](images/clipboard-1470908631.png)
+
+-   The observed K-function r is consistently higher than the CSR (Complete Spatial Randomness) envelope across almost all distances. This indicates that the conflict events in 2021 and 2022 are significantly clustered in space. The clustering effect becomes more pronounced at larger distances, especially after 20 km.
+
+-   The trans K-function also follows a similar pattern, showing clustering beyond the expected CSR pattern.
+
+-   The Kbord function demonstrates that boundary corrections had minimal impact on the general clustering trends observed.
+
+##### 10.3.2.1.2 **2021 vs 2023**
+
+![](images/clipboard-1965931813.png)
+
+-   Similar to the comparison between 2021 and 2022, the K-function in 2021 vs 2023 also shows a high degree of clustering, with obs(r) being higher than CSR across nearly all distances.
+
+-   There is a slightly more pronounced clustering effect around 30 to 40 km, where the gap between the observed K and CSR becomes wider. This suggests an increase in conflict density over time.
+
+##### 10.3.2.1.3 **2021 vs 2024**
+
+![](images/clipboard-1596750452.png)
+
+-   the K-function for 2021 vs 2024 shows a consistent pattern of clustering across distances, although the observed values tend to rise more sharply after 40 km, indicating that conflicts in 2024 were more dispersed initially but clustered significantly at larger spatial scales.
+
+-   The results suggest that the spatial distribution of conflicts in 2024 is slightly different, possibly influenced by external factors that caused conflicts to be more spread out in space.
+
+##### 10.3.2.1.4 **2022 vs 2023**
+
+![](images/clipboard-2019999038.png)
+
+-   The comparison between 2022 and 2024 reveals strong clustering over a wide range of distances, with significant increases after 30 km.
+-   This suggests that conflicts in 2024 are more spatially concentrated at larger distances compared to 2022.
+
+##### 10.3.2.1.5 **2022 vs 2024**
+
+![](images/clipboard-3832763879.png)
+
+-   The comparison between 2022 and 2024 reveals strong clustering over a wide range of distances, with significant increases after 30 km.
+
+-   This suggests that conflicts in 2024 are more spatially concentrated at larger distances compared to 2022.
+
+##### 10.3.2.1.6 **2023 vs 2024**
+
+![](images/clipboard-496606222.png)
+
+-   The clustering trend continues between 2023 and 2024, with notable increases in clustering beyond 40 km. The gap between the observed K and CSR remains large, indicating that the conflict events in 2023 and 2024 were not randomly distributed but exhibited significant spatial clustering.
+
+#### 10.3.2.1 Sagaing Overall Years Comparison
+
+-   Across all years (2021-2024), the K-functions suggest that civilian-related conflict events in Sagaing are significantly clustered rather than randomly distributed. The degree of clustering varies slightly across the years, with some years (such as 2024) showing stronger clustering at larger distances (over 40 km). This indicates that the conflict dynamics in Sagaing are evolving over time, possibly due to changes in political, social, or environmental factors.
+
+# 11.0 Conclusion
+
+This spatio-temporal analysis of civilian-related conflicts in Yangon, Sagaing, and Mandalay from 2021 to 2024 shows consistent clustering of conflict events, suggesting that conflicts are not randomly distributed but rather concentrated in specific hotspots across all three states. The K-function comparisons between years indicate that conflicts in these regions are becoming increasingly clustered, especially as distances between events grow larger. This analysis highlights the persistent and expanding nature of conflict zones in Myanmar.
+
+However, this analysis only focuses on the number of conflicts and fatalities within civilian-related conflict events. A more comprehensive understanding could be achieved by introducing categorical analysis, examining each conflict's specific causes, involved groups, and other characteristics to uncover deeper insights into the dynamics driving these conflict patterns.
+
+#### Areas to Avoid:
+
+1.  **Yangon**: Conflict events in Yangon are significantly clustered, particularly in the city center and the outskirts towards the east and south. These areas have shown increasing conflict over time, with 2023 and 2024 seeing higher concentrations of incidents.
+
+2.  **Sagaing**: The northern regions of Sagaing, particularly towards the Sagaing Hills and nearby rural settlements, exhibit high clustering of conflicts. Avoid traveling near these conflict hotspots, especially as the spatial extent of clustering has grown between 2022 and 2024.
+
+3.  **Mandalay**: In Mandalay, the central urban areas and southern outskirts demonstrate increased clustering of conflict events. The comparison between 2021 and 2024 reveals that conflict events are more widespread in these areas, indicating a need for caution in the central and southern parts of the state.
+
+By addressing both spatial and temporal patterns, authorities and humanitarian organizations can better strategize responses and interventions in these conflict-prone areas.
+
+# 12.0 References
+
+-   Jonatan A. González, et. al. (2016) [“Spatio-temporal point process statistics: A review”](https://www.sciencedirect.com/science/article/abs/pii/S2211675316301130), *Spatial Statistics*, Volume 18, Part B, November 2016, Pages 505-544.
+
+-   Alexander Hohl et. al.[“Spatiotemporal Point Pattern Analysis Using Ripley’s K”](https://www.google.com/url?sa=t&source=web&rct=j&opi=89978449&url=https://pages.charlotte.edu/eric-delmelle/wp-content/uploads/sites/150/2019/09/Spatiotemporal-Point-Pattern-Analysis-Using-Ripleys-K-Function.pdf&ved=2ahUKEwiL24W_8qyIAxXzXGwGHe2RL8wQFnoECDAQAQ&usg=AOvVaw18Au9kh6LfNH_RJpPglq2J) in **Geospatial Data Science Techniques and Applications**.
+
+-   [Chapter 7 Spatial Point Pattern Analysis](https://link-springer-com.libproxy.smu.edu.sg/chapter/10.1007/978-1-4614-7618-4_7) of Roger S. Bivand, Edzer Pebesma and Virgilio Gómez-Rubio (2013) **Applied Spatial Data Analysis with R** (2nd Edition), Springer.
+
+-   Yuan, Y., Qiang, Y., Bin Asad, K., and Chow, T. E. (2020). [Point Pattern Analysis](https://gistbok.ucgis.org/bok-topics/point-pattern-analysis). The Geographic Information Science & Technology Body of Knowledge (1st Quarter 2020 Edition), John P. Wilson (ed.). DOI: 10.22224/gistbok/2020.1.13.
+
+-   Yin, P. (2020). [Kernels and Density Estimation](https://gistbok.ucgis.org/bok-topics/kernels-and-density-estimation). The Geographic Information Science & Technology Body of Knowledge (1st Quarter 2020 Edition), John P. Wilson (ed.). DOI: 10.22224/gistbok/2020.1.12
+
+-    ACLED. (2024). <https://acleddata.com/> ACLED \| Armed Conflict Location & Event Data Retrieved September 22, 2024
+
+-   geonode. (2023). [Myanmar State and Region Boundaries](https://geonode.themimu.info/layers/geonode%3Ammr_polbnda2_adm1_250k_mimu_1) **Myanmar State and Region Boundaries with Sub-regions MIMU v9.4** Retrieved September 22, 2024
+
+# 13.0 Miscellaneous for Usability
+
+In this section, we ensure that all the critical data, variables, and results generated throughout the analysis are exported and saved for subsequent usage. By saving everything in `.rds` format, we create an easy-to-load, reusable dataset and environment that allows future analysis without the need to re-run the entire process. This step enhances reproducibility and usability for further research or adjustments.
 
 ```{r}
 save_dir <- "rds_files/"
-
 if (!dir.exists(save_dir)) {
   dir.create(save_dir)
 }
@@ -2897,20 +3445,5 @@ vars <- ls()
 # Save each variable as an RDS file
 for (var in vars) {
   saveRDS(get(var), file = paste0(save_dir, var, ".rds"))
-}
-
-
-```
-
-```{r}
-load_dir <- "rds_files/"
-
-# List all the .rds files in the folder
-rds_files <- list.files(path = load_dir, pattern = "*.rds")
-
-# Load each .rds file and assign to a variable
-for (rds_file in rds_files) {
-  var_name <- gsub(".rds", "", rds_file)  # Remove the .rds extension
-  assign(var_name, readRDS(paste0(load_dir, rds_file)))  # Load the data
 }
 ```

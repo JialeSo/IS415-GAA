@@ -597,7 +597,7 @@ quadrant[DV >0 & LM_I>0] <- 4
 
 Lastly, places non-significant Moran in the category 0.
 
-```{r}
+```{r, eval= FALSE}
 quadrant[localMI[,5]>signif] <- 0
 ```
 

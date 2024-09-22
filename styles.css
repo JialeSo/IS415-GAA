@@ -51,7 +51,13 @@ h1, h2, h3, h4, h5, h6 {
     width: fit-content;
     max-width: 100%;
   }
-  
+  .sourceCode r {
+    overflow: auto; /* Allow horizontal scroll if needed */
+    white-space: pre-wrap; /* Allow line breaks within code */
+    word-wrap: break-word; /* Break long words */
+    width: 100%; /* Set to full width */
+    max-width: 100%; /* Ensure it doesn't overflow */
+  }
    .leaflet-control .leaflet-legend {
     max-height: 150px;  /* Adjust the height */
     overflow-y: scroll; /* Enable vertical scrolling */
