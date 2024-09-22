@@ -4,10 +4,7 @@ author: "Jiale SO"
 date: "August 22, 2024"
 date-modified: "last-modified"
 execute: 
-  eval: true
-  echo: true #not seeing the code chunka
   freeze: true
-  warning: false
   preview: false
   execute: false
 ---
@@ -2351,12 +2348,17 @@ Based on the analysis of the **Clark-Evans test**, **K-function**, and **L-funct
 
 4.  **Observed Tables**:
 
++--------------+-----------+-----------+-----------+----------+-----------+----------+
 | **Distance** | **K_Obs** | **K_Lo**  | **K_Hi**  | L_Obs    | L_Lo      | L_Hi     |
-|--------------|-----------|-----------|-----------|----------|-----------|----------|
++==============+===========+===========+===========+==========+===========+==========+
 | 9.962643     | 7305.334  | 260.9636  | 362.6693  | 48.22199 | 9.689332  | 10.23595 |
++--------------+-----------+-----------+-----------+----------+-----------+----------+
 | 20.016687    | 10852.795 | 1207.8820 | 1309.5878 | 58.77544 | 19.743376 | 20.2900  |
++--------------+-----------+-----------+-----------+----------+-----------+----------+
 | 29.979331    | 15847.857 | 2772.6858 | 2874.3915 | 71.02485 | 29.706020 | 30.25264 |
++--------------+-----------+-----------+-----------+----------+-----------+----------+
 | 40.033374    | 21114.336 | 4984.0867 | 5085.7925 | 81.9811  | 39.760063 | 40.30    |
++--------------+-----------+-----------+-----------+----------+-----------+----------+
 
 -   The **observed K-function** and **L-function** tables confirm that the observed values are significantly higher than the expected values under CSR, particularly at distances of 20km, 30km, 40km, and beyond, suggesting clustering at larger spatial scales.
 
@@ -2497,21 +2499,21 @@ Based on the analysis of the **Clark-Evans test**, **K-function**, and **L-funct
 
 4.  **Observed Tables**:
 
-+-------------+-----------+-----------+-----------+-----------+----------+-----------+
-| Distance    | K_Obs     | K_Lo      | K_Hi      | L_Obs     | L_Lo     | L_Hi      |
-+=============+===========+===========+===========+===========+==========+===========+
-| 19.99394    | 7021.421  | 1186.336  | 1325.415  | 19.81300  | 20.17488 | 20.17488  |
-+-------------+-----------+-----------+-----------+-----------+----------+-----------+
-| 29.99091    | 12903.634 | 2756.181  | 2895.260  | 64.08864  | 29.80997 | 30.17185  |
-+-------------+-----------+-----------+-----------+-----------+----------+-----------+
-| 39.98788    | 19530.590 | 4963.964  | 5093.043  | 78.84656  | 39.80694 | 40.16882  |
-+-------------+-----------+-----------+-----------+-----------+----------+-----------+
-| 49.98485    | 26873.240 | 7797.685  | 7916.764  | 92.48793  | 49.80391 | 50.16579  |
-+-------------+-----------+-----------+-----------+-----------+----------+-----------+
-| 59.98182    | 34286.168 | 11233.343 | 11372.422 | 104.46830 | 59.80088 | 60.16277  |
-+-------------+-----------+-----------+-----------+-----------+----------+-----------+
-| 68.24599    | 40939.246 | 1456,475  | 14701.554 | 114.15501 | 68.06505 | 68.4269   |
-+-------------+-----------+-----------+-----------+-----------+----------+-----------+
++----------+-----------+-----------+-----------+-----------+----------+----------+
+| Distance | K_Obs     | K_Lo      | K_Hi      | L_Obs     | L_Lo     | L_Hi     |
++==========+===========+===========+===========+===========+==========+==========+
+| 19.99394 | 7021.421  | 1186.336  | 1325.415  | 19.81300  | 20.17488 | 20.17488 |
++----------+-----------+-----------+-----------+-----------+----------+----------+
+| 29.99091 | 12903.634 | 2756.181  | 2895.260  | 64.08864  | 29.80997 | 30.17185 |
++----------+-----------+-----------+-----------+-----------+----------+----------+
+| 39.98788 | 19530.590 | 4963.964  | 5093.043  | 78.84656  | 39.80694 | 40.16882 |
++----------+-----------+-----------+-----------+-----------+----------+----------+
+| 49.98485 | 26873.240 | 7797.685  | 7916.764  | 92.48793  | 49.80391 | 50.16579 |
++----------+-----------+-----------+-----------+-----------+----------+----------+
+| 59.98182 | 34286.168 | 11233.343 | 11372.422 | 104.46830 | 59.80088 | 60.16277 |
++----------+-----------+-----------+-----------+-----------+----------+----------+
+| 68.24599 | 40939.246 | 1456,475  | 14701.554 | 114.15501 | 68.06505 | 68.4269  |
++----------+-----------+-----------+-----------+-----------+----------+----------+
 
 -   The **observed K-function** and **L-function** tables confirm that the observed values are significantly higher than the expected values under CSR, particularly at distances of 20km, 30km, 40km, and beyond, suggesting clustering at larger spatial scales.
 
@@ -2996,7 +2998,7 @@ For the conflict events in **Sagaing**, we performed a detailed spatial point pa
 ::: panel-tabset
 ## Code
 
-```{r, warning = FALSE, eval = FALSE }
+```{r, eval = FALSE, warning = FALSE, }
 # Create the spatial point pattern (ppp) object for Yangon
 Yangon_ppp_years <- ppp(
   x = Yangon_ACLED_co[, 1],  # Longitude
@@ -3249,10 +3251,6 @@ plot(Sagaing_k_2023_vs_2024, main = "K-Function: Sagaing Civilian Related Confli
 #### 10.2.2.1 Mandalay Overall Years Comparison
 
 -   Similar to the Yangon analysis, the **spatial clustering is strongest** between conflict events that are **closer in time**, such as 2021 vs 2022 and 2022 vs 2023.
-
-```{=html}
-<!-- -->
-```
 -   As the time gap between years increases, the clustering effect becomes weaker, with the least clustering observed between 2023 and 2024.
 
 These results suggest that conflicts in **Mandalay** show **spatio-temporal clustering**, with events from one year often clustering near those from the next, but this effect diminishes as the time gap between years grows.
@@ -3426,7 +3424,7 @@ By addressing both spatial and temporal patterns, authorities and humanitarian o
 
 -   Yin, P. (2020). [Kernels and Density Estimation](https://gistbok.ucgis.org/bok-topics/kernels-and-density-estimation). The Geographic Information Science & Technology Body of Knowledge (1st Quarter 2020 Edition), John P. Wilson (ed.). DOI: 10.22224/gistbok/2020.1.12
 
--    ACLED. (2024). <https://acleddata.com/> ACLED \| Armed Conflict Location & Event Data Retrieved September 22, 2024
+-   ACLED. (2024). <https://acleddata.com/> ACLED \| Armed Conflict Location & Event Data Retrieved September 22, 2024
 
 -   geonode. (2023). [Myanmar State and Region Boundaries](https://geonode.themimu.info/layers/geonode%3Ammr_polbnda2_adm1_250k_mimu_1) **Myanmar State and Region Boundaries with Sub-regions MIMU v9.4** Retrieved September 22, 2024
 

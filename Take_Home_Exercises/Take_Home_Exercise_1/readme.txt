@@ -8,6 +8,10 @@ The QMD file can be found if you'd like to see the entire workflow, but please n
 Directory path to the HTML file:
 site -> take_home_exercises -> take_home_exercise_1 -> Take_Home_Exercise1.html
 
+alternatively, you may view it on netlify
+
+https://is415-jiale-ay2024-2025t1.netlify.app/take_home_exercises/take_home_exercise_1/take_home_exercise1
+
 Thank you for your understanding.
 
 Best regards,
