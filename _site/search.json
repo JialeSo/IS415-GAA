@@ -187,5 +187,68 @@
     "title": "In Class Exercise1: Geospatial Data Science",
     "section": "",
     "text": "There’s no In Class Exercise 1, so here’s a picture of a cat."
+  },
+  {
+    "objectID": "In_Class_Exercises/In_Class_Exercise_6/In_Class_Exercise6.html",
+    "href": "In_Class_Exercises/In_Class_Exercise_6/In_Class_Exercise6.html",
+    "title": "In Class Exercise 6 : Geospatial Data Science",
+    "section": "",
+    "text": "pacman::p_load(sf, spdep, tmap, tidyverse, sfdep)"
+  },
+  {
+    "objectID": "In_Class_Exercises/In_Class_Exercise_6/In_Class_Exercise6.html#step-1-deriving-queens-contiguity-weights-sfdep-methods",
+    "href": "In_Class_Exercises/In_Class_Exercise_6/In_Class_Exercise6.html#step-1-deriving-queens-contiguity-weights-sfdep-methods",
+    "title": "In Class Exercise 6 : Geospatial Data Science",
+    "section": "3.1 Step 1: Deriving Queen’s Contiguity Weights: SFDep Methods",
+    "text": "3.1 Step 1: Deriving Queen’s Contiguity Weights: SFDep Methods\n\nwm_q &lt;- hunan_GDPPC %&gt;%\n  mutate(\n        nb = st_contiguity(geometry),\n        wt = st_weights(nb, style = \"W\"),\n        .before = 1\n  )"
+  },
+  {
+    "objectID": "In_Class_Exercises/In_Class_Exercise_6/In_Class_Exercise6.html#step-2-computing-global-moran-i",
+    "href": "In_Class_Exercises/In_Class_Exercise_6/In_Class_Exercise6.html#step-2-computing-global-moran-i",
+    "title": "In Class Exercise 6 : Geospatial Data Science",
+    "section": "3.2 Step 2: Computing Global Moran’ I",
+    "text": "3.2 Step 2: Computing Global Moran’ I\n\nmoranI &lt;- global_moran(wm_q$GDPPC, \n                       wm_q$nb,\n                       wm_q$wt\n                       )\n\nglimpse(moranI)\n\nList of 2\n $ I: num 0.301\n $ K: num 7.64\n\n\nK is the average number that they found"
+  },
+  {
+    "objectID": "In_Class_Exercises/In_Class_Exercise_6/In_Class_Exercise6.html#step-3-performing-global-morans-i-test",
+    "href": "In_Class_Exercises/In_Class_Exercise_6/In_Class_Exercise6.html#step-3-performing-global-morans-i-test",
+    "title": "In Class Exercise 6 : Geospatial Data Science",
+    "section": "3.3 Step 3: performing Global Moran’s I Test",
+    "text": "3.3 Step 3: performing Global Moran’s I Test\n\nglobal_moran_test(wm_q$GDPPC,\n                  wm_q$nb,\n                  wm_q$wt\n                  )\n\n\n    Moran I test under randomisation\n\ndata:  x  \nweights: listw    \n\nMoran I statistic standard deviate = 4.7351, p-value = 1.095e-06\nalternative hypothesis: greater\nsample estimates:\nMoran I statistic       Expectation          Variance \n      0.300749970      -0.011494253       0.004348351 \n\n\nThis is basically the idea that MORAN I shows there’s clustering but not a strong one and since the P value is low, we do it.\nLook at the p-value first, then we do not have the statistical analysis."
+  },
+  {
+    "objectID": "In_Class_Exercises/In_Class_Exercise_6/In_Class_Exercise6.html#step-4-performing-global-morans-i-permutation-test-use-this-for-take-home--2",
+    "href": "In_Class_Exercises/In_Class_Exercise_6/In_Class_Exercise6.html#step-4-performing-global-morans-i-permutation-test-use-this-for-take-home--2",
+    "title": "In Class Exercise 6 : Geospatial Data Science",
+    "section": "3.4 Step 4: Performing Global Moran’s I Permutation Test (Use this for Take Home -2)",
+    "text": "3.4 Step 4: Performing Global Moran’s I Permutation Test (Use this for Take Home -2)\nDo this for statistical test, to ensure it’s reproducible, set seed.\n\nset.seed(1234)\nglobal_moran_perm(wm_q$GDPPC,\n                  wm_q$nb,\n                  wm_q$wt,\n                  nsim = 99\n                  )\n\n\n    Monte-Carlo simulation of Moran I\n\ndata:  x \nweights: listw  \nnumber of simulations + 1: 100 \n\nstatistic = 0.30075, observed rank = 100, p-value &lt; 2.2e-16\nalternative hypothesis: two.sided\n\n\nThis simulates and permutates the the test permutation test. So basically we do 100 test and see if the p-value to reject or not."
+  },
+  {
+    "objectID": "In_Class_Exercises/In_Class_Exercise_6/In_Class_Exercise6.html#visualising-the-local-morans-i",
+    "href": "In_Class_Exercises/In_Class_Exercise_6/In_Class_Exercise6.html#visualising-the-local-morans-i",
+    "title": "In Class Exercise 6 : Geospatial Data Science",
+    "section": "4.1 Visualising the Local Moran’s I",
+    "text": "4.1 Visualising the Local Moran’s I\n\ntmap_mode(\"plot\")\n\ntmap mode set to plotting\n\ntm_shape(lisa) +\n  tm_fill(\"ii\") +\n  tm_borders(alpha = 0.5) +\n  tm_view(set.zoom.limits = c(6,8)) +\n  tm_layout(main.title = \"local Moran's I of GDPPC\",\n            main.title.size = 2)\n\nVariable(s) \"ii\" contains positive and negative values, so midpoint is set to 0. Set midpoint = NA to show the full spectrum of the color palette."
+  },
+  {
+    "objectID": "In_Class_Exercises/In_Class_Exercise_6/In_Class_Exercise6.html#section",
+    "href": "In_Class_Exercises/In_Class_Exercise_6/In_Class_Exercise6.html#section",
+    "title": "In Class Exercise 6 : Geospatial Data Science",
+    "section": " ",
+    "text": "tmap_mode(\"plot\")\n\ntmap mode set to plotting\n\ntm_shape(lisa) +\n  tm_fill(\"p_ii\") +\n  tm_borders(alpha = 0.5) +\n  tm_view(set.zoom.limits = c(6,8)) +\n  tm_layout(main.title = \"local Moran's I of GDPPC\",\n            main.title.size = 2)"
+  },
+  {
+    "objectID": "In_Class_Exercises/In_Class_Exercise_6/In_Class_Exercise6.html#visualising-the-local-morans-i-p-value-and-ii",
+    "href": "In_Class_Exercises/In_Class_Exercise_6/In_Class_Exercise6.html#visualising-the-local-morans-i-p-value-and-ii",
+    "title": "In Class Exercise 6 : Geospatial Data Science",
+    "section": "4.3 Visualising the Local Moran’s I P value and II",
+    "text": "4.3 Visualising the Local Moran’s I P value and II\n\nmap1 &lt;-\ntm_shape(lisa) +\n  tm_fill(\"ii\") +\n  tm_borders(alpha = 0.5) +\n  tm_view(set.zoom.limits = c(6,8)) +\n  tm_layout(main.title = \"local Moran's I of GDPPC\",\n            main.title.size = 2) \n\nmap2 &lt;- tm_shape(lisa) +\n  tm_fill(\"p_ii\") +\n  # breaks=c(-Inf, 0.001, 0.01, 0.05, 0.1, Inf) \n  tm_borders(alpha = 0.5) +\n  tm_view(set.zoom.limits = c(6,8)) +\n  tm_layout(main.title = \"local Moran's I of GDPPC\",\n            main.title.size = 2)\n\ntmap_arrange(map1, map2, ncol =2)\n\nVariable(s) \"ii\" contains positive and negative values, so midpoint is set to 0. Set midpoint = NA to show the full spectrum of the color palette."
+  },
+  {
+    "objectID": "In_Class_Exercises/In_Class_Exercise_6/In_Class_Exercise6.html#visualising-hotspot-and-cold-spot-areas.-with-signifcant-values",
+    "href": "In_Class_Exercises/In_Class_Exercise_6/In_Class_Exercise6.html#visualising-hotspot-and-cold-spot-areas.-with-signifcant-values",
+    "title": "In Class Exercise 6 : Geospatial Data Science",
+    "section": "Visualising hotspot and cold spot areas. with signifcant values",
+    "text": "Visualising hotspot and cold spot areas. with signifcant values\n\nHCSA_sig &lt;- HCSA %&gt;%\n  filter(p_sim &lt;0.05)\n\ntmap_mode(\"plot\")\n\ntmap mode set to plotting\n\ntm_shape(HCSA) +\n  tm_polygons() +\n  tm_borders(alpha = 0.5) +\ntm_shape(HCSA_sig) +\n  tm_fill(\"gi_star\") +\n  tm_borders(alpha = 0.4)\n\nWarning: One tm layer group has duplicated layer types, which are omitted. To\ndraw multiple layers of the same type, use multiple layer groups (i.e. specify\ntm_shape prior to each of them).\n\n\nVariable(s) \"gi_star\" contains positive and negative values, so midpoint is set to 0. Set midpoint = NA to show the full spectrum of the color palette."
   }
 ]
