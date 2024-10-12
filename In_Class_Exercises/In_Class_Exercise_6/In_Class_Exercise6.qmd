@@ -55,7 +55,7 @@ wm_q <- hunan_GDPPC %>%
   )
 ```
 
-## 3.2 Step 2:  Computing Global Moran' I
+## 3.2 Step 2: Computing Global Moran' I
 
 ```{r}
 moranI <- global_moran(wm_q$GDPPC, 
@@ -207,7 +207,7 @@ tm_shape(lisa_sig) +
   tm_borders(alpha = 0.4)
 ```
 
-# 6.0 Computing Local Gi\* statssitics 
+# 6.0 Computing Local Gi\* statssitics
 
 spatial weight matrix
 
@@ -236,7 +236,7 @@ HCSA <- wm_idw %>%
 HCSA
 ```
 
-# 7.0 visualisating Gi\* 
+# 7.0 visualisating Gi\*
 
 Be clear on the hotspot and clustering. terminology . LISA keep it to cluster, and HSCA hot/cold
 

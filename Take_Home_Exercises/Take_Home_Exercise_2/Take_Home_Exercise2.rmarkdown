@@ -1,0 +1,2209 @@
+---
+title: "Take Home Exercise 2:  Application of Geospatial Analysis Methods to Discover Thailand Drug Abuse at the Province Level"
+author: "Jiale SO"
+date: "September 26, 2024"
+date-modified: "last-modified"
+execute: 
+  eval: true
+  echo: true
+  freeze: true
+---
+
+```{r, include = FALSE}
+#this section reuses the rds file that was created previously.
+
+ load_dir <- "data/rds/"
+
+# List all the .rds files in the folder
+rds_files <- list.files(path = load_dir, pattern = "*.rds")
+
+# Load each .rds file and assign to a variable
+for (rds_file in rds_files) {
+  var_name <- gsub(".rds", "", rds_file)  # Remove the .rds extension
+  assign(var_name, readRDS(paste0(load_dir, rds_file)))  # Load the data
+ }
+```
+
+
+# 1.0 Introduction - Thailand Drug Abuse Concerns
+
+![](images/clipboard-198999552.png)
+
+Drug abuse remains a global concern, with its impact ranging from deteriorating public health to increasing crime rates and economic instability. According to global reports, in 2021, 1 in 17 people aged 15–64 used drugs within the past year. Despite concerted efforts to combat drug trafficking and abuse, the numbers continue to rise, with drug consumption growing from 240 million users in 2011 to 296 million in 2021.
+
+Thailand, geographically located near the infamous Golden Triangle—one of the largest illicit drug production regions in the world—faces its own drug crisis. This region’s proximity to Thailand, coupled with well-developed transportation networks, makes the country not only a prime target for drug trafficking but also a transit hub for drugs en route to third countries. As a result, drug abuse within Thailand has become a pressing issue, especially among youth populations. It is estimated that there are 2.7 million youths in Thailand involved with drugs, with vocational students representing a significant portion of these users.
+
+The objective of this analysis is to investigate the spatial and temporal patterns of drug abuse across Thailand at the province level. By utilizing geospatial analysis methods, this report aims to answer three key questions:
+
+1.  **Are the indicators of drug abuse in Thailand spatially independent or spatially dependent?**
+
+2.  **Where are the clusters, outliers, and hotspots of drug abuse across Thailand’s provinces?**
+
+3.  **How do these patterns evolve over time, and what correlations exist between drug abuse and socio-economic factors such as education levels and unemployment rates?**
+
+Understanding these patterns will provide key insights into where resources and interventions should be targeted to combat drug abuse effectively.
+
+# **2.0 Setting Up the Environment**
+
+To conduct the geospatial analysis of drug abuse in Thailand, a robust computing environment needs to be established. This section outlines the tools and libraries necessary for spatial analysis and visualizations.
+
+## **2.1 Libraries and Packages**
+
+-   **`sf`**: Handles **spatial data** (geometries like points, lines, and polygons) and integrates well with other data manipulation tools.
+
+-   **`tidyverse`**: A collection of packages like `dplyr` and `ggplot2` for **data manipulation** and **visualization**.
+
+-   **`lubridate`**: Simplifies **date and time manipulation**, making it easier to work with time-based data.
+
+-   **`sfdep`**: Provides tools for **spatial dependency analysis**, crucial for exploring spatial relationships and clustering.
+
+-   **`tmap`**: A package for creating beautiful **thematic maps** and interactive visualizations.
+
+-   **`ggplot2`**: Part of `tidyverse`, used for creating **static visualizations** using a consistent grammar of graphics.
+
+-   **`knitr`**: Facilitates **dynamic report generation**, allowing for seamless integration of R code and outputs into documents.
+
+-   **`Kendall`**: Provides statistical tools for **Kendall’s rank correlation**, useful for trend analysis in time series data.
+
+-   **`shiny`**: Builds **interactive web applications** directly from R, which is great for dashboards and data exploration.
+
+-   **`leaflet`**: Creates **interactive maps**, letting users visualize spatial data in a dynamic and user-friendly way.
+
+-   **`purrr`**: Part of `tidyverse`, it simplifies **functional programming** tasks, making it easier to work with lists and nested data.
+
+-   **`broom`**: Helps in **tidying up model outputs**, converting complex statistical analysis into clean, interpretable data frames.
+
+-   **`gridExtra`**: Combines multiple plots into a single page, perfect for **arranging complex visual layouts**.
+
+-   **`rlang`**: Provides tools for **metaprogramming** in R, allowing us to write more flexible and efficient code.
+
+
+```{r}
+pacman::p_load(sf, st, tidyverse, lubridate, sfdep, tmap, ggplot2, knitr, Kendall, shiny, leaflet, dplyr,purrr, broom, gridExtra,rlang, gganimate, grid, patchwork)
+```
+
+
+## 2.2 Reproducibility
+
+For this analysis to be reproducible, we will set a seed to ensure that any random processes yield the same result each time the analysis is run:
+
+
+```{r}
+set.seed(1227)
+```
+
+
+In summary, the environment setup will be a combination of spatial analysis tools and general-purpose data manipulation libraries to ensure we can efficiently process and analyze spatial data.
+
+# 3.0 Datasets
+
+This analysis requires multiple datasets, with the primary focus on aggregated province-level drug abuse data for Thailand, as well as socio-economic indicators. The spatial data (provinces) will be used to map these indicators and conduct spatial dependency analysis.
+
+## 3.1 **Drug Abuse Data [(Kaggle Dataset)](The%20Link%20to%20the%20data%20set%20can%20be%20found%20here:%20https://www.kaggle.com/datasets/thaweewatboy/thailand-drug-offenses-2017-2022)**:
+
+-   This dataset contains provincial-level information on drug abuse rates across multiple years.
+
+
+```{r}
+thai_drug_data <- read_csv("data/raw/aspatial/thai_drug_offenses_2017_2022.csv") 
+```
+
+
+<details>
+
+<summary>Drug Abuse Data Columns and Values</summary>
+
+-   **`Fiscal Year`** The year in which the drug-related offenses were recorded, corresponding to the fiscal period of the data collection (e.g., 2017, 2018, 2019, 2020, 2021, 2022).
+
+-   **`Type Of Drug Offenses`** The classification or type of drug offense committed (e.g., possession, trafficking, manufacturing), detailing the specific nature of the drug-related crime.
+
+    -   Type Includes
+
+        -   drug_use_cases
+
+        -   suspects_in_drug_use_cases
+
+        -   possession_cases
+
+        -   suspects_in_possession_cases
+
+        -   possession_with_intent_to_distribute_cases
+
+        -   suspects_in_possession_with_intent_to_distribute_cases
+
+        -   trafficking_cases
+
+        -   suspects_in_trafficking_cases
+
+        -   production_cases
+
+        -   suspects_in_production_cases
+
+        -   import_cases
+
+        -   suspects_in_import_cases
+
+        -   export_cases
+
+        -   suspects_in_export_cases
+
+        -   conspiracy_cases
+
+        -   suspects_in_conspiracy_cases
+
+-   **`No Of Case`** The total number of drug-related cases reported for a given province and fiscal year, representing the count of offenses recorded.
+
+-   **`Province_th`** The name of the province in Thai, used to identify the location of the reported drug offenses.
+
+-   **`Province_en`** The name of the province in English, providing a translated version of the province for non-Thai speakers or international reference.
+
+</details>
+
+## 3.2 Thailand Province **Spatial Data [(HDX Link)](https://data.humdata.org/dataset/cod-ab-tha?)**[:](https://data.humdata.org/dataset/cod-ab-tha?)
+
+The shapefile dataset contains the geographical boundaries of Thailand’s provinces, including Bangkok. Each polygon represents a province, allowing us to visualize the spatial distribution of drug abuse and analyze spatial patterns effectively.
+
+
+```{r}
+thailand_province <- st_read(dsn = "data/raw/geospatial", layer = "tha_admbnda_adm1_rtsd_20220121")
+
+```
+
+
+<details>
+
+<summary>HDX Thai Shape file data</summary>
+
+These are the columns within the Shape File:
+
+-   **`Shape_Leng:`** The length of the boundary (perimeter) of the province's polygon in the shapefile, typically measured in meters or kilometers.
+
+-   **`Shape_Area`**: The area of the province's polygon in the shapefile, usually measured in square meters or square kilometers.
+
+-   **`ADMIN1_EN`**`:` The name of the province in English. This is a key identifier used to reference each province in the dataset.
+
+-   **`ADM1_TH`**: The name of the province in Thai. This is the local language representation of the province name.
+
+-   **`ADM1_PCODE`** The administrative code (or postal code) for the province. This is a standardized reference code for the administrative region.
+
+    **`ADM1_REF:`** A reference code or ID specific to the administrative level (province), typically used internally for referencing within GIS systems.
+
+-   **`ADM1ALT1EN`**: An alternative English name for the province, if available. This might represent an old or variant name for the province in English.
+
+-   **`ADM1ALT2EN:`** A second alternative English name for the province, if applicable. This could reflect historical or other variant names.
+
+-   **`ADM1ALT1TH:`** An alternative Thai name for the province. This could reflect a regional or historical name in the local language.
+
+-   **`ADM1ALT2TH`** A second alternative Thai name for the province, used if there are additional variants in the local language.
+
+-   **`ADM0_EN:`** The name of the country (Thailand) in English. This is a reference to the country level of administration.
+
+-   **`ADM0_TH`** The name of the country (Thailand) in Thai. This is the local language representation of the country name.
+
+-   **`ADM0_PCODE`** The administrative code for the country (Thailand). This is a standardized reference code at the national level.
+
+-   **`date`** The date when the data was collected or last updated. This indicates when the shapefile's data was created or validated.
+
+-   **`validOn`** The date when the data became valid or effective. It’s typically used to track the validity of administrative boundaries.
+
+-   **`validTo`** The date when the data is no longer valid. This is useful for tracking changes in administrative boundaries over time (e.g., if a province’s borders were changed or merged with another).
+
+-   **`geometry`** The spatial geometry of the province, represented as polygons in the shapefile. This field stores the geographical coordinates that define the boundaries of each province.
+
+</details>
+
+# 4.0 Data Wrangling
+
+In this section, we focus on preparing the data for spatial analysis, including both the aspatial and geospatial transformations necessary to conduct spatial autocorrelation and further analysis.
+
+## 4.1 Steps for Data Wrangling Exploration
+
+Before we begin the spatial analysis, it is essential to explore and prepare the datasets to ensure they are ready for analysis. This includes checking for missing values, merging datasets, and creating visualizations to understand the general patterns of drug abuse across provinces.
+
+-   **Previewing the Spatial Data**: We start by loading the shapefile to confirm that all provinces are represented and the boundaries are correct. This spatial dataset will form the backbone of the analysis, providing the geographical context for our study.
+
+-   **Cleaning and Aggregating**: Any missing or erroneous data is cleaned, and the data is aggregated at the province level if needed. This ensures that the dataset is consistent and ready for analysis.
+
+-   **Summary Statistics**: We generate summary statistics for key variables, such as the average drug abuse rate across provinces, the distribution of education levels, and unemployment rates. This gives us a preliminary understanding of the data distribution before we move into more detailed spatial analysis.
+
+## 4.2 Thai Province Data (SF)
+
+**Step 1: Change CRS to UTM Zone 47N (EPSG: 32647)**: - Transform the spatial data to the correct coordinate reference system.
+
+
+```{r}
+thailand_province <- st_transform(thailand_province, crs = 32647)
+thailand_province
+```
+
+
+**Step 2: Check if Geometries are Valid** - Ensure the geometries are valid after the transformation.
+
+
+```{r}
+thailand_province <- st_make_valid(thailand_province)
+```
+
+
+**Step 3: Remove Useless Columns**: - Drop irrelevant columns for a cleaner dataset.
+
+
+```{r}
+thailand_province <- thailand_province %>% select(ADM1_EN, geometry)
+```
+
+
+**Step 4: Rename Columns**: - Rename The columns and ensure naming Conventions
+
+
+```{r}
+thailand_province <- thailand_province %>%
+  rename(
+    Province = ADM1_EN,
+    geometry = geometry
+  ) %>%
+  mutate(Province = toupper(Province))
+```
+
+
+**Step 5: Create a Reference DataFrame for Province Usage** - Create a non-spatial DataFrame to use for referencing provinces.
+
+
+```{r}
+thailand_province_df <- thailand_province %>%
+  st_drop_geometry() %>%
+  distinct(Province)
+```
+
+
+## 4.3 Thai Drug Data (DF)
+
+**Step 1: Filter Out Data that is Not Type "drug_use_cases"**: - Keep only the relevant records for drug use cases
+
+
+```{r}
+thai_drug_data <- thai_drug_data %>%
+  filter(types_of_drug_offenses == "drug_use_cases")
+```
+
+
+**Step 3: Remove Useless Columns**: Drop irrelevant columns for the analysis.
+
+
+```{r}
+thai_drug_data <- thai_drug_data %>%
+  select(province_en, no_cases, fiscal_year) %>%
+  mutate(province_en = toupper(province_en))
+```
+
+
+**Step 4: Ensuring Data Check between against provinces from two data set,**
+
+
+```{r}
+# Find provinces in thai_drug_data that are not in thailand_province
+provinces_not_in_sf <- thai_drug_data %>%
+  anti_join(thailand_province, by = c("province_en" = "Province")) %>%
+  distinct(province_en)  # Only keep the distinct province names
+
+# Find provinces in thailand_province (sf) that are not in thai_drug_data
+provinces_not_in_drug_data <- thailand_province %>%
+  anti_join(thai_drug_data, by = c("Province" = "province_en")) %>%
+  distinct(Province)  # Only keep the distinct province names
+
+```
+
+
+**Provinces in Thailand SF but not in Kaggle Drug Data:**
+
+
+```{r}
+print(provinces_not_in_drug_data$Province)
+```
+
+
+Provinces Not in Thailand SF but in Kaggle Drug Data:
+
+
+```{r}
+print(provinces_not_in_sf$province_en)
+```
+
+
+**Replace "LOBURI" to "LOP BURI" and "BUOGKAN" as "BUENG KAN" to match the province data.**
+
+
+```{r}
+# Replace specific values in the province_en column
+thai_drug_data <- thai_drug_data %>%
+  mutate(province_en = ifelse(province_en == "LOBURI", "LOP BURI", province_en),
+         province_en = ifelse(province_en == "BUOGKAN", "BUENG KAN", province_en))
+
+```
+
+
+**Rename Columns for Consistency**: - Rename `province_name` to `Province`, ensure it is in uppercase, and rename other columns.
+
+
+```{r}
+thai_drug_data <- thai_drug_data %>%
+  rename(
+    Province = province_en,
+    Year = fiscal_year,
+    Cases = no_cases
+  ) %>%
+  mutate(Province = toupper(Province))
+```
+
+
+**View the Results**
+
+
+```{r}
+head(thai_drug_data)
+```
+
+
+## 4.4 Creating Exploratory Data Analysis Aggregated Data
+
+In this section, we prepare the aggregated data for our **Exploratory Data Analysis (EDA)** by combining non-spatial drug case data with spatial province data in Thailand. The aim is to create a data frame that includes key variables such as total drug cases, yearly drug cases, province areas, and drug density (cases per square kilometer). Additionally, we will rank provinces based on these metrics for further analysis.
+
+**Step 1: Calculate Province Area**
+
+We start by calculating the **area of each province** in square kilometers using the spatial geometry data. The areas are then stored as numeric values, and the geometry column is dropped from the data frame to focus on non-spatial attributes.
+
+
+```{r}
+thailand_province_df <- thailand_province %>%
+  mutate(Area_km2 = as.numeric(st_area(.) / 1e6)) %>%
+  st_drop_geometry()
+```
+
+
+This gives us the area of each province, which is necessary for calculating **drug case density** (cases per square kilometer).
+
+**Step 2: Aggregate Total Drug Cases per Province**
+
+Next, we calculate the **total number of drug cases** for each province by grouping the data. The total cases are then merged with the province area data to prepare for further analysis.
+
+
+```{r}
+thailand_province_df <- thai_drug_data %>%
+  group_by(Province) %>%
+  summarise(TotalCases = sum(Cases), .groups = 'drop') %>%
+  left_join(thailand_province_df, by = "Province")  # Join with the spatial data (Area_km2)
+
+```
+
+
+**Step 3: Pivot Yearly Data into Wide Format**
+
+We pivot the yearly drug case data to create a column for each year, allowing us to store yearly drug case information in a **wide format**. This is useful for calculating yearly density and rankings.
+
+
+```{r}
+drug_cases_by_year <- thai_drug_data %>%
+  group_by(Province, Year) %>%
+  summarise(YearlyCases = sum(Cases), .groups = 'drop') %>%
+  pivot_wider(names_from = Year, values_from = YearlyCases, names_prefix = "Cases_")
+```
+
+
+**Step 4: Merge Yearly Cases with Province Data**
+
+We merge the yearly drug case data with the existing province-level data to include both **total cases** and **yearly cases** in the same data frame.
+
+
+```{r}
+thailand_province_df <- thailand_province_df %>%
+  left_join(drug_cases_by_year, by = "Province")
+```
+
+
+**Step 5: Ensure Yearly Data Columns are Numeric**
+
+To facilitate further calculations, we ensure that all the **yearly case columns** are numeric, as they will be used in density calculations and rankings.
+
+
+```{r}
+thailand_province_df <- thailand_province_df %>%
+  mutate(across(starts_with("Cases_"), as.numeric))
+```
+
+
+**Step 6: Calculate Total and Yearly Drug Density**
+
+We calculate the **total drug case density** (cases per square kilometer) by dividing the total number of drug cases by the area of each province. Similarly, we calculate **yearly drug density** for each year.
+
+
+```{r}
+thailand_province_df <- thailand_province_df %>%
+  mutate(TotalDensity = TotalCases / Area_km2)
+
+# Yearly drug density calculation (create new columns for each year)
+thailand_province_df <- thailand_province_df %>%
+  mutate(across(starts_with("Cases_"), 
+                ~ .x / Area_km2, 
+                .names = "Density_{.col}"))
+```
+
+
+**Step 7: Rank Provinces by Total Cases, Density, and Yearly Cases**
+
+We generate rankings for provinces based on **total drug cases**, **total drug density**, and **yearly drug cases** and their respective densities. We use the `dense_rank` function, which assigns ranks while skipping gaps.
+
+
+```{r}
+years <- c("Cases_2017", "Cases_2018", "Cases_2019", "Cases_2020", "Cases_2021", "Cases_2022")
+
+# Rank TotalCases and TotalDensity using dense_rank
+thailand_province_df <- thailand_province_df %>%
+  mutate(Rank_TotalCases = dense_rank(-TotalCases),  # Rank descending by TotalCases
+         Rank_TotalDensity = dense_rank(-TotalDensity))  # Rank descending by TotalDensity
+
+# Rank for each year's cases and density using dense_rank
+for (year in years) {
+  thailand_province_df <- thailand_province_df %>%
+    mutate(!!paste0("Rank_", year) := dense_rank(-get(year))) %>%  # Rank yearly cases with dense_rank
+    mutate(!!paste0("Rank_Density_", year) := dense_rank(-get(paste0("Density_", year))))  # Rank yearly density with dense_rank
+}
+```
+
+
+**Step 8: Rename Columns for Consistency**
+
+We rename the columns for better readability and consistency, making sure all relevant metrics (cases, density, and ranks) are properly labeled.
+
+
+```{r}
+thailand_province_df <- thailand_province_df %>%
+  rename_with(~ gsub("^Cases_", "Drugs_Cases_", .x), starts_with("Cases_")) %>%
+  rename_with(~ gsub("^Density_Cases_", "Drugs_Cases_Per_Km2_", .x), starts_with("Density_Cases_")) %>%
+  rename_with(~ gsub("^Rank_Cases_", "Rank_No_Drug_Cases_", .x), starts_with("Rank_Cases_")) %>%
+  rename_with(~ gsub("^Rank_Density_Cases_", "Rank_No_Drug_Cases_Per_Km2_", .x), starts_with("Rank_Density_Cases_"))
+```
+
+
+**Step 9: Final Data Overview**
+
+We now have a comprehensive data frame that includes:
+
+-   **Total and yearly drug cases**
+
+-   **Province area**
+
+-   **Drug case density (total and yearly)**
+
+-   **Rankings for cases and density**
+
+This data frame will serve as the foundation for further analysis, visualizations, and insights related to drug-related incidents across Thailand.
+
+
+```{r}
+head(thailand_province_df)
+```
+
+
+**Step 10: Merge Data Back with Geometry for Mapping**
+
+Now that we have all the calculated data (cases, densities, and ranks), we merge this modified data frame back with the **spatial geometry** so that it can be used in mapping and further spatial analysis.
+
+
+```{r}
+# Merge the modified data (thailand_province_df) back with the geometry
+thailand_province_final <- thailand_province %>%
+  left_join(thailand_province_df, by = "Province")  # Merge on the 'Province' column
+```
+
+```{r}
+thailand_province_final <- thailand_province_final %>%
+  st_simplify(dTolerance = 1000.0)  # Increase the tolerance value
+```
+
+
+# 5.0 Exploratory Data Analysis (EDA) - Drug Abuse in Thailand
+
+In this section, we will conduct an **Exploratory Data Analysis (EDA)** to uncover spatial and temporal trends in drug abuse across Thailand’s provinces. The EDA will involve summarizing total cases and case density, visualizing trends across years, and creating an interactive map to explore the spatial distribution of drug-related incidents.
+
+## 5.1 Overview of Drug Abuse at the Provincial Level
+
+### 5.1.1 Boxplot to view the Total Drug Cases across years across province in Thailand
+
+In this first step, we will create descriptive statistics and summaries to get a sense of the **total number of drug-related cases** and the **density** of cases (cases per square kilometer) at the provincial level.
+
+
+```{r, fig.width=10, fig.height=5, warning = FALSE}
+# Create boxplot for Total Cases with data labels
+# Create boxplot for Total Cases with data labels for quartiles and outliers
+boxplot_total_cases <- ggplot(thailand_province_df, aes(x = "", y = TotalCases)) +
+  geom_boxplot(fill = "lightblue", color = "darkblue", outlier.color = "red") +
+  stat_summary(fun.min = min, geom = "text", aes(label = paste("Min:", round(..y.., 2))), vjust = 1.5, color = "black") +  # Label the minimum
+  stat_summary(fun.max = max, geom = "text", aes(label = paste("Max:", round(..y.., 2))), vjust = -1.5, color = "black") +  # Label the maximum
+  stat_summary(fun = function(y) quantile(y, 0.25), geom = "text", aes(label = paste("1st Q:", round(..y.., 2))), vjust = -0.5, hjust = 1.2, color = "black") +  # Label the 1st quartile
+  stat_summary(fun = function(y) quantile(y, 0.75), geom = "text", aes(label = paste("3rd Q:", round(..y.., 2))), vjust = 1.5, hjust = -1.2, color = "black") +  # Label the 3rd quartile
+  labs(title = "Boxplot of Total Drug Cases by Province", y = "Total Cases", x = "") +
+  theme_minimal() +
+  coord_flip()  # Flip the boxplot to horizontal
+
+
+# Create boxplot for Total Density with data labels for quartiles and outliers
+boxplot_total_density <- ggplot(thailand_province_df, aes(x = "", y = TotalDensity)) +
+  geom_boxplot(fill = "lightgreen", color = "darkgreen", outlier.color = "red") +
+  stat_summary(fun.min = min, geom = "text", aes(label = paste("Min:", round(..y.., 2))), vjust = 1.5, color = "black") +  # Label the minimum
+  stat_summary(fun.max = max, geom = "text", aes(label = paste("Max:", round(..y.., 2))), vjust = -1.5, color = "black") +  # Label the maximum
+  stat_summary(fun = function(y) quantile(y, 0.25), geom = "text", aes(label = paste("1st Q:", round(..y.., 2))), vjust = -0.5, hjust = 1.2, color = "black") +  # Label the 1st quartile
+  stat_summary(fun = function(y) quantile(y, 0.75), geom = "text", aes(label = paste("3rd Q:", round(..y.., 2))), vjust = 1.5, hjust = -1.2, color = "black") +  # Label the 3rd quartile
+  labs(title = "Boxplot of Drug Case Density by Province", y = "Total Density (Cases per km²)", x = "") +
+  theme_minimal() +
+  coord_flip()  # Flip the boxplot to horizontal
+
+# Arrange the boxplots horizontally (side by side)
+grid.arrange(boxplot_total_cases, boxplot_total_density, nrow = 2)
+
+```
+
+
+The boxplots show significant disparities in drug cases across Thailand's provinces.
+
+-   **Total cases**: Most provinces have fewer than 13,651 cases, but a few outliers have much higher numbers, indicating concentrated drug problems.
+
+-   **Case density**: When adjusted for area, some provinces show high drug case densities, with outliers reaching over 40 cases per km², highlighting localized severity.
+
+These findings suggest that while most provinces have moderate cases, specific regions face much higher drug activity, warranting focused interventions.
+
+### 5.1.2 Barchart to view the Total Drug Cases In Thailand by province
+
+
+```{r, fig.width=15, fig.height=15, warning = FALSE}
+
+# Create the first bar chart for Total Cases
+total_cases_plot <- ggplot(thailand_province_df, aes(x = reorder(Province, -TotalCases), y = TotalCases)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  geom_hline(aes(yintercept = mean(TotalCases)), color = "red", linetype = "dashed", size = 1) +
+  geom_hline(aes(yintercept = quantile(TotalCases, 0.25)), color = "green", linetype = "dotted", size = 1) +
+  geom_hline(aes(yintercept = quantile(TotalCases, 0.75)), color = "green", linetype = "dotted", size = 1) +
+  coord_flip() +
+  labs(title = "Total Cases by Province with Quartiles", x = "Province", y = "Total Cases") +
+  theme_minimal() +
+  theme(axis.text.y = element_text(size = 7))  # Adjust the y-axis text size to fit
+
+# Create the second bar chart for Total Density
+total_density_plot <- ggplot(thailand_province_df, aes(x = reorder(Province, -TotalDensity), y = TotalDensity)) +
+  geom_bar(stat = "identity", fill = "darkorange") +
+  geom_hline(aes(yintercept = mean(TotalDensity)), color = "red", linetype = "dashed", size = 1) +
+  geom_hline(aes(yintercept = quantile(TotalDensity, 0.25)), color = "green", linetype = "dotted", size = 1) +
+  geom_hline(aes(yintercept = quantile(TotalDensity, 0.75)), color = "green", linetype = "dotted", size = 1) +
+  coord_flip() +
+  labs(title = "Total Density by Province with Quartiles", x = "Province", y = "Total Density (Cases per km²)") +
+  theme_minimal() +
+  theme(axis.text.y = element_text(size = 7))  # Adjust the y-axis text size to fit
+
+# Arrange the two plots side by side
+grid.arrange(total_cases_plot, total_density_plot, ncol = 2)
+```
+
+
+The charts provide a visual comparison of **total drug cases** and **drug case density** across Thailand's provinces:
+
+1.  **Total Drug Cases** (left chart):
+
+    -   Bangkok and Chon Buri have the highest number of drug cases, with Bangkok surpassing 60,000.
+
+    -   Most provinces fall well below 20,000 cases, indicating that the drug issue is concentrated in a few key regions.
+
+    -   The provinces with fewer cases still reflect a significant variation, with many clustered around the median.
+
+2.  **Drug Case Density (Cases per km²)** (right chart):
+
+    -   Bangkok shows the highest case density by a wide margin, highlighting its severe drug problem relative to its geographical size.
+
+    -   Other provinces like Phuket, Samut Prakan, and Nonthaburi also show elevated case densities, though far less than Bangkok.
+
+    -   Most provinces have densities below 10 cases per km², suggesting that while drug cases exist, their impact per area is much smaller compared to these key regions.
+
+These insights indicate a heavy concentration of drug-related issues in Bangkok, both in total numbers and density, requiring focused attention on these urban hotspots.
+
+## 5.2 Visualizing Trends in Drug Abuse On Year Level By Province
+
+Visualizing drug abuse trends across years at the provincial level provides crucial insights into the spatial and temporal dynamics of the issue. By examining how drug abuse varies from year to year within specific provinces, we can identify patterns, emerging hotspots, and areas that require immediate intervention. This analysis helps policymakers, law enforcement, and public health officials prioritize resource allocation, implement targeted prevention strategies, and assess the effectiveness of ongoing programs. Moreover, this approach can highlight regions where drug abuse is decreasing, serving as models for successful interventions.
+
+### **5.2.1 Total Drug Abuse across Years By Province**
+
+
+```{r, fig.width=15, fig.height=20}
+# Define the years
+years <- 2017:2022
+year_columns <- paste0("Drugs_Cases_", years)
+
+# Create a list to store individual plots for each year
+case_plots <- list()
+
+# Loop through each year and create a bar plot for total cases (province on y-axis)
+for (i in 1:length(years)) {
+  # Dynamically reference the column name using !!sym()
+  plot <- ggplot(thailand_province_df, aes(y = reorder(Province, -!!sym(year_columns[i])), x = !!sym(year_columns[i]))) +
+    geom_bar(stat = "identity", fill = "steelblue") +
+    labs(title = paste("Total Drug Cases -", years[i]), y = "Province", x = "Total Cases") +
+    theme_minimal() +
+    theme(axis.text.y = element_text(size = 7))
+  
+  case_plots[[i]] <- plot
+}
+
+# Arrange the plots in a 3x2 grid
+grid.arrange(grobs = case_plots, ncol = 3, nrow = 2)
+
+```
+
+```{r, include = FALSE}
+tmap_mode("plot")
+```
+
+
+#### 5.2.1.1 Visualizing it across years on a map level
+
+
+```{r, warning = FALSE, fig.width=15, fig.height=10}
+
+# Define the years and corresponding column names
+years <- 2017:2022
+year_columns <- paste0("Drugs_Cases_", years)
+
+# Create a list to store individual maps
+map_list <- list()
+
+# Loop through each year to create individual maps using tmap
+for (i in 1:length(years)) {
+  map <- tm_shape(thailand_province_final) +
+    tm_polygons(col = year_columns[i], 
+                palette = "Blues",  # Use a blue color scale
+                style = "quantile", 
+                title = paste("Drug Cases in", years[i])) +
+    tm_borders() +
+    tm_layout(main.title = paste("Drug Cases in", years[i]),  # Title outside and above each map
+              main.title.position = c("center", "top"),  # Ensures the title is centered at the top
+              title.size = 1.5,  # Adjust title size if necessary
+              outer.margins = 0.05,  # Minimize margins
+              legend.position = c("right", "bottom"))
+  
+  # Store each map in the list as a tmap object
+  map_list[[i]] <- map
+}
+
+# Combine the maps into a 3x2 grid
+final_map <- tmap_arrange(
+  map_list[[1]], map_list[[2]], map_list[[3]], 
+  map_list[[4]], map_list[[5]], map_list[[6]], 
+  ncol = 3, nrow = 2
+)
+
+# Display the map grid
+final_map
+
+```
+
+
+#### 5.2.1.2 Seeing it on an animation
+
+
+```{r, warning = FALSE, eval = FALSE }
+years <- 2017:2022
+year_columns <- paste0("Drugs_Cases_", years)
+
+# Create a list to store individual maps for each year
+map_list <- list()
+# Loop through each year and create a map for total cases by year
+for (i in 1:length(years)) {
+  map <- tm_shape(thailand_province_final) +
+    tm_polygons(col = year_columns[i], 
+                palette = "Blues",  # Use a blue color scale
+                style = "quantile", 
+                title = paste("Drug Cases in", years[i])) +
+    tm_borders() +
+    tm_layout(main.title = paste("Drug Cases in", years[i]),  # Title outside and above each map
+              main.title.position = c("center", "top"),  # Ensures the title is centered at the top
+              title.size = 1.5,  # Adjust title size if necessary
+              outer.margins = 0.05,  # Minimize margins
+              legend.position = c("right", "bottom"))
+  
+  # Store each map in the list
+  map_list[[i]] <- map
+}
+
+# Render the animated map by passing the list of maps
+tmap_animation(map_list, filename = "thailand_drug_cases.gif", delay = 100, width = 500, height = 500)
+```
+
+
+![](thailand_drug_cases.gif)
+
+#### 5.2.2.3 Analysis found on total drug cases in Thailand across years by province.
+
+These charts represent the total drug cases across Thailand’s provinces from 2017 to 2022.
+
+-   **Consistent trends**: Bangkok consistently shows the highest number of drug cases across all years, indicating a persistent and significant drug problem in the capital. Chon Buri, Ubon Ratchathani, and Nakhon Si Thammarat also consistently rank high, suggesting these areas are heavily impacted.
+
+-   **Yearly fluctuations**: While the rankings remain relatively stable, the total number of cases varies each year, with notable peaks in provinces like Bangkok and Chon Buri during certain years.
+
+-   **Provincial concentration**: A small number of provinces consistently account for the majority of drug cases, while most provinces report significantly fewer cases, reinforcing the idea that drug problems are concentrated in specific regions.
+
+This trend indicates a need for focused intervention in the high-case provinces while monitoring fluctuations over time.
+
+### **5.2.2 Total Drug Abuse Density across Years By Province**
+
+
+```{r, fig.width=15, fig.height=15, warning = FALSE}
+
+# Define the years
+years <- 2017:2022
+density_columns <- paste0("Drugs_Cases_Per_Km2_", years)
+
+# Create a list to store individual plots for each year (Density)
+density_plots <- list()
+
+# Loop through each year and create a bar plot for density (province on y-axis)
+for (i in 1:length(years)) {
+  plot <- ggplot(thailand_province_df, aes(y = reorder(Province, -!!sym(density_columns[i])), x = !!sym(density_columns[i]))) +
+    geom_bar(stat = "identity", fill = "darkorange") +
+    labs(title = paste("Drug Case Density -", years[i]), y = "Province", x = "Density (Cases per km²)") +
+    theme_minimal() +
+    theme(axis.text.y = element_text(size = 7))
+  
+  density_plots[[i]] <- plot
+}
+
+# Arrange the plots in a 3x2 grid
+grid.arrange(grobs = density_plots, ncol = 3, nrow = 2)
+
+
+```
+
+
+#### 5.2.2.1 Visualizing it across years on a map level
+
+
+```{r, warning = FALSE, fig.width=15, fig.height=10}
+
+# Define the years and corresponding column names
+years <- 2017:2022
+year_columns <- paste0("Drugs_Cases_Per_Km2_", years)
+
+# Create a list to store individual maps
+map_list <- list()
+
+# Loop through each year to create individual maps using tmap
+for (i in 1:length(years)) {
+  map <- tm_shape(thailand_province_final) +
+    tm_polygons(col = year_columns[i], 
+                palette = "Oranges",
+                style = "quantile", 
+                title = paste("Drug Cases Density Km^2 in", years[i])) +
+    tm_borders() +
+    tm_layout(main.title = paste("Drug Cases Density Km^2 in", years[i]),  # Title outside and above each map
+              main.title.position = c("center", "top"),  # Ensures the title is centered at the top
+              title.size = 1.5,  # Adjust title size if necessary
+              outer.margins = 0.05,  # Minimize margins
+              legend.position = c("right", "bottom"))
+  
+  # Store each map in the list as a tmap object
+  map_list[[i]] <- map
+}
+
+# Combine the maps into a 3x2 grid
+final_map <- tmap_arrange(
+  map_list[[1]], map_list[[2]], map_list[[3]], 
+  map_list[[4]], map_list[[5]], map_list[[6]], 
+  ncol = 3, nrow = 2
+)
+
+# Display the map grid
+final_map
+```
+
+
+#### 5.2.1.2 Animation Across Years
+
+
+```{r, warning = FALSE, eval = FALSE }
+years <- 2017:2022
+year_columns <- paste0("Drugs_Cases_Per_Km2_", years)
+
+# Create a list to store individual maps for each year
+map_list <- list()
+# Loop through each year and create a map for total cases by year
+for (i in 1:length(years)) {
+  map <- tm_shape(thailand_province_final) +
+    tm_polygons(col = year_columns[i], 
+                palette = "Oranges",  # Use a blue color scale
+                style = "quantile", 
+                title = paste("Drug Cases Density Km^2 in", years[i])) +
+    tm_borders() +
+    tm_layout(main.title = paste("Drug Cases Density Km^2 in", years[i]),  # Title outside and above each map
+              main.title.position = c("center", "top"),  # Ensures the title is centered at the top
+              main.title.size = 0.8,  # Adjust title size if necessary
+              outer.margins = 0.05,  # Minimize margins
+              legend.position = c("right", "bottom"))
+  
+  # Store each map in the list
+  map_list[[i]] <- map
+}
+
+# Render the animated map by passing the list of maps
+tmap_animation(map_list, filename = "thailand_drug_cases_density.gif", delay = 100, width = 500, height = 500)
+```
+
+
+![](thailand_drug_cases_density.gif)
+
+#### 5.2.2.3 Analysis found on Density across Thailand provinces
+
+These charts visualize the **drug case density (cases per km²)** across Thailand’s provinces from 2017 to 2022.
+
+-   **Bangkok consistently has the highest density**, with drug case density far exceeding other provinces each year, indicating that despite its smaller area, the capital remains a hotbed of drug-related issues.
+
+-   **Samut Prakan, Nonthaburi, and Phuket** frequently follow, with relatively high densities compared to other provinces, although still much lower than Bangkok.
+
+-   **Most provinces have very low case density** values, clustering near zero, which highlights that drug cases are more spread out and less concentrated geographically in those regions.
+
+This pattern of concentration in a few urban provinces suggests that densely populated areas are facing more significant drug issues relative to their size, demanding focused urban interventions.
+
+### 5.2.3 Rank Chart for Total Drug Cases and Density Across years. 
+
+A **rank chart** is used to display the relative positions of provinces based on their total number of drug cases or the density of drug abuse over time. It helps to visualize how provinces compare to one another and how their ranks shift across different years.
+
+#### 5.2.3.1 Rank Chart for Total Drug Cases Across Years
+
+
+```{r, fig.width=15, fig.height=15}
+# Reshape data to long format for plotting rankings over time (Total Cases)
+rank_data_cases <- thailand_province_df %>%
+  select(Province, starts_with("Rank_No_Drug_Cases_")) %>%
+  pivot_longer(cols = matches("^Rank_No_Drug_Cases_\\d{4}$"),  # Ensure only total cases rank columns are selected
+               names_to = "Year", 
+               values_to = "Rank") %>%
+  mutate(Year = gsub("Rank_No_Drug_Cases_", "", Year))  # Clean Year values to keep only the year number
+
+# Function to add labels only at the start and end of the lines
+ggplot(rank_data_cases, aes(x = Year, y = Rank, group = Province, color = Province)) +
+  geom_line(size = 1.2) +                                # Line to show rank movement
+  geom_point(size = 3) +                                 # Points for each rank
+  geom_text(data = rank_data_cases %>% filter(Year == "2017"),  # Labels for the start (2017)
+            aes(label = Province), hjust = 1.1, size = 3) +
+  geom_text(data = rank_data_cases %>% filter(Year == "2022"),  # Labels for the end (2022)
+            aes(label = Province), hjust = -0.1, size = 3) +
+  scale_y_reverse() +  # Reverse the y-axis to show better ranks at the top
+  labs(title = "Ranking of Provinces by Total Drug Cases (2017-2022)", 
+       x = "Year", y = "Rank (Lower is Better)", color = "Province") +  
+  theme_minimal() +
+  theme(axis.text.y = element_text(size = 10), legend.position = "none")  # Remove legend for clarity
+
+
+```
+
+
+This chart shows the ranking of Thailand’s provinces by total drug cases from 2017 to 2022. Key insights:
+
+-   **Bangkok consistently ranks at the top**, indicating a persistent drug problem.
+
+-   **Ubon Ratchathani and Chon Buri** also maintain high ranks throughout the years, showing consistent drug-related challenges.
+
+-   Other provinces like **Chiang Mai, Rayong, and Nakhon Si Thammarat** frequently move up and down in the rankings, indicating fluctuating drug case trends.
+
+-   There is a lot of movement in the middle and lower rankings, suggesting changing dynamics in drug cases across the provinces over time.
+
+Overall, while certain provinces consistently face high drug case numbers, others experience more variability, reflecting shifting trends in drug enforcement or drug activity.
+
+#### 5.2.3.2 Rank Chart for Drug Cases Density Across Years
+
+
+```{r, fig.width=15, fig.height=15}
+# Reshape data to long format for plotting rankings over time (Density)
+rank_data_density <- thailand_province_df %>%
+  select(Province, starts_with("Rank_No_Drug_Cases_Per_Km2_")) %>%
+  pivot_longer(cols = matches("^Rank_No_Drug_Cases_Per_Km2_\\d{4}$"),  # Ensure only density rank columns are selected
+               names_to = "Year", 
+               values_to = "Rank") %>%
+  mutate(Year = gsub("Rank_No_Drug_Cases_Per_Km2_", "", Year))  # Clean Year values to keep only the year number
+
+# Function to add labels only at the start and end of the lines (for density)
+ggplot(rank_data_density, aes(x = Year, y = Rank, group = Province, color = Province)) +
+  geom_line(size = 1.2) +                                # Line to show rank movement
+  geom_point(size = 3) +                                 # Points for each rank
+  geom_text(data = rank_data_density %>% filter(Year == "2017"),  # Labels for the start (2017)
+            aes(label = Province), hjust = 1.1, size = 3) +
+  geom_text(data = rank_data_density %>% filter(Year == "2022"),  # Labels for the end (2022)
+            aes(label = Province), hjust = -0.1, size = 3) +
+  scale_y_reverse() +  # Reverse the y-axis to show better ranks at the top
+  labs(title = "Ranking of Provinces by Drug Case Density (2017-2022)", 
+       x = "Year", y = "Rank (Lower is Better)", color = "Province") +  
+  theme_minimal() +
+  theme(axis.text.y = element_text(size = 10), legend.position = "none")  # Remove legend for clarity
+```
+
+
+This chart illustrates the ranking of Thailand’s provinces by **drug case density (cases per km²)** from 2017 to 2022. Key takeaways:
+
+-   **Bangkok consistently ranks at the top** for drug case density, reflecting its severe drug problem relative to its small geographic size.
+
+-   **Rayong, Chon Buri, and Nonthaburi** maintain high density rankings, indicating that these areas have concentrated drug cases despite their sizes.
+
+-   Other provinces, such as **Samut Prakan, Samut Songkhram, and Nakhon Pathom**, frequently appear near the top, signaling persistent issues with drug case density.
+
+-   There is considerable variation in rankings for many mid-ranked provinces, suggesting fluctuating drug activity or law enforcement effectiveness over time.
+
+This suggests that while certain urban areas maintain consistently high drug case density, other regions see more variability in the concentration of drug-related incidents.
+
+## 5.3 Interactive Choropleth Map
+
+
+```{r, include = FALSE}
+# Set tmap mode to 'view' for interactive maps (like leaflet)
+tmap_mode("view")
+```
+
+```{r}
+# Filter out unsupported columns (e.g., geometry columns)
+popup_vars <- setdiff(colnames(thailand_province_final), attr(thailand_province_final, "sf_column"))
+
+# Remove underscores from the column names for the popups
+popup_vars_clean <- gsub("_", " ", popup_vars)
+
+# Create a named list for popup.vars where the original columns are displayed with clean names
+popup_named_list <- setNames(popup_vars, popup_vars_clean)
+
+# Create the Total Cases map layer
+tm_total_cases <- tm_shape(thailand_province_final, name = "Total Cases") +  # Adding name for layer toggle
+  tm_polygons("TotalCases", 
+              style = "cont", 
+              palette = "YlOrRd", 
+              title = "Total Cases",
+              popup.vars = popup_named_list,  # Filtered columns as popup variables
+              id = "Province")
+
+# Create the Total Density map layer
+tm_total_density <- tm_shape(thailand_province_final, name = "Drug Case Density") +  # Adding name for layer toggle
+  tm_polygons("TotalDensity", 
+              style = "cont", 
+              palette = "Blues", 
+              title = "Drug Case Density",
+              popup.vars = popup_named_list, 
+              id = "Province")
+
+# Combine the two layers into one map with zoom limits
+tm_combined <- tm_total_cases + tm_total_density +
+  tm_view(set.zoom.limits = c(6, 8)) + 
+  tm_layout(title="Total Drug Cases and Density By Thailand Province") 
+
+# Show the combined map with two layers
+tm_combined
+```
+
+```{r, include = FALSE}
+tmap_mode("plot")
+```
+
+
+# **6.0 Global Spatial Autocorrelation**
+
+Global spatial autocorrelation evaluates the extent to which drug-related cases are similarly distributed across Thailand's provinces. Specifically, it examines whether high or low values of drug cases cluster together in certain areas or if they are randomly dispersed. Tracking spatial autocorrelation over time provides valuable insights into how drug-related patterns evolve, revealing trends such as increasing clustering in certain regions or a more dispersed distribution of cases. Moran's I is a commonly used statistic to measure global spatial autocorrelation, and calculating it across multiple time periods helps to detect dynamic shifts in the spatial arrangement of drug-related incidents.
+
+## 6.1 Global Moran’s I for Aggregated Data Total
+
+In this section, we calculate Global Moran’s I for the aggregated data on drug cases, which combines data from 2017 to 2022. By aggregating drug cases over these years, we aim to uncover whether provinces with high or low drug case numbers are spatially clustered over the entire study period. This analysis provides an overview of whether there is a persistent spatial pattern in the clustering of drug cases, allowing us to determine whether certain provinces consistently experience higher or lower concentrations of drug activity over time.
+
+### 6.1.1 Setting Queen Contiguity and Setting Neighbors
+
+To compute Moran’s I, it is crucial to establish the spatial relationships between Thailand’s provinces. For this analysis, we use Queen’s contiguity, where two provinces are considered neighbors if they share either a boundary or a corner point. The next step involves calculating the neighbors for each province, which will define their spatial relationship with surrounding regions.
+
+
+```{r}
+# Ensure geometries are valid
+invalid_geometries <- !st_is_valid(thailand_province_final)
+cat("Invalid geometries: ", sum(invalid_geometries), "\n")
+
+# Fix invalid geometries (if any)
+thailand_province_final <- st_make_valid(thailand_province_final)
+
+# Generate Queen's contiguity neighbors using sfdep
+nb_queen <- st_contiguity(thailand_province_final, queen = TRUE)
+
+# Check if there are any provinces where the neighbor list contains only the value 0
+empty_neighbors <- which(sapply(nb_queen, function(x) length(x) == 1 && x[[1]] == 0))
+
+# Print the indices of the provinces with no neighbors
+cat("Indices of provinces with no valid neighbors: ", empty_neighbors, "\n")
+
+# If there are any provinces with no valid neighbors, print their names using the correct index
+if (length(empty_neighbors) > 0) {
+    cat("Provinces with no valid neighbors: ", thailand_province_final$Province[empty_neighbors], "\n")
+} else {
+    cat("All provinces have valid neighbors.\n")
+}
+```
+
+
+Some provinces, such as Phuket (an island), do not have natural neighbors, so we manually assign neighboring provinces (e.g., Krabi and Phangnga) to ensure that each province is represented in the analysis. This step is essential to accurately compute spatial weights, which are required to calculate the Moran’s I statistic and identify potential clustering of drug cases across Thailand’s provinces.
+
+
+```{r}
+# Manually assign neighbors for Phuket (index 67), Krabi (index 65), and Phangnga (index 66)
+# Ensure the indices are integers
+nb_queen[[67]] <- as.integer(c(65, 66))  # Convert to integers
+
+# Create weight matrix based on the neighbors
+wt_queen <- st_weights(nb_queen, style = "W")
+
+# Add neighbors and weight matrix back to the thailand_province_final_sf object
+thailand_province_final_sf <- thailand_province_final %>%
+  mutate(nb = nb_queen, wt = wt_queen)
+
+# Check if there are any provinces where the neighbor list contains only the value 0
+empty_neighbors <- which(sapply(nb_queen, function(x) length(x) == 1 && x[[1]] == 0))
+
+# Print the indices of the provinces with no neighbors
+cat("Indices of provinces with no valid neighbors: ", empty_neighbors, "\n")
+
+# If there are any provinces with no valid neighbors, print their names using the correct index
+if (length(empty_neighbors) > 0) {
+  cat("Provinces with no valid neighbors: ", thailand_province_final$Province[empty_neighbors], "\n")
+} else {
+  cat("All provinces have valid neighbors.\n")
+}
+```
+
+
+### 6.1.2 Getting Global's Moran I
+
+In this section, we are calculating the Global Moran's I statistic to measure the degree of spatial autocorrelation in the aggregated drug case data across Thailand’s provinces. This statistic helps us understand whether provinces with similar numbers of drug cases are clustered together or dispersed across the region. To conduct this analysis, we rely on spatial weights based on Queen’s contiguity, which captures the spatial relationships between provinces.
+
+The steps include:
+
+-   **Global Moran’s I calculation:** We calculate Global Moran's I using the total number of drug cases across all provinces. The spatial relationships (neighbors) and spatial weights are used to determine the level of autocorrelation.
+
+-   **Permutation test:** To validate the significance of the Moran’s I statistic, we perform a permutation test with 1000 simulations. This tests whether the observed Moran’s I value is statistically significant or if the observed spatial clustering could have occurred by chance.
+
+The code below performs the calculation and checks the structure of the results.
+
+::: callout-note
+**Why Use Density Instead of Total Cases?**
+
+Using density normalizes drug cases by population or area, allowing for fairer comparisons between regions. Total cases alone can mislead, as larger provinces naturally have more cases due to size. Density highlights areas with higher concentrations of drug cases, providing a clearer, more accurate analysis of hotspots, regardless of region size.
+:::
+
+
+```{r}
+# Global Moran's I for TotalCases
+global_moranI_total <- global_moran(thailand_province_final_sf$TotalDensity, thailand_province_final_sf$nb, thailand_province_final_sf$wt)
+# Perform Permutation test for TotalCases
+global_moranI_total_perm_test <- global_moran_perm(thailand_province_final_sf$TotalDensity, thailand_province_final_sf$nb, thailand_province_final_sf$wt, nsim = 999)
+
+# Check the structure of the result
+print(global_moranI_total)
+print(global_moranI_total_perm_test)
+```
+
+
+-   The **`global_moran()`** function calculates the Moran’s I statistic for the total drug cases based on the defined spatial relationships and weights.
+
+-   The **`global_moran_perm()`** function performs a permutation test with 1000 random simulations to determine whether the observed Moran’s I value is significant.
+
+-   Finally, we **print** the results to review the Moran’s I value and assess its significance based on the permutation test output.
+
+### 6.1.3 Analysis and Interpretation
+
+The histogram helps visualize the distribution of simulated Moran's I values from the permutation test. By comparing the observed Moran's I (red line) to this distribution, we can quickly assess how unusual or significant the observed spatial autocorrelation is.
+
+
+```{r}
+hist(global_moranI_total_perm_test$res, breaks = 20, main = "Permutation Distribution of Moran's I", 
+     xlab = "Simulated Moran's I Values", col = "lightblue")
+abline(v = global_moranI_total_perm_test$statistic, col = "red", lwd = 2)
+legend("topright", legend = c("Observed Moran's I"), col = c("red"), lwd = 2)
+
+```
+
+
+The results of the Global Moran’s I statistic and the Monte Carlo permutation test provide insight into the spatial autocorrelation of drug cases across Thailand’s provinces. Let’s break down the results and further analyze the implications.
+
+-   **Interpretation of the Moran's I Value:** The Moran’s I value is **0.315**, which indicates moderate positive spatial autocorrelation. This means provinces with similar numbers of drug cases (whether high or low) tend to cluster together, showing a stronger spatial pattern than random distribution.
+
+-   **Significance of the Results (Permutation Test):** The Monte Carlo simulation, with 1000 random permutations, gives a p-value of **\< 2.2e-16**, indicating the Moran's I value is highly significant. The observed rank of 1,000 confirms that none of the random permutations produced a higher Moran’s I value. This strongly supports the presence of spatial clustering in drug cases.
+
+-   The histogram shows that the observed Moran's I value (in red) is far to the right of the distribution of simulated values, indicating strong spatial autocorrelation. The significant difference between the observed value and the simulated values confirms that the clustering of drug cases is not random, but statistically significant, with a p-value \< 2.2e-16.
+
+-   **Implications and Next Steps:** The significant and moderate Moran’s I value suggests that drug cases are not randomly distributed but are spatially clustered across provinces. This finding points to specific areas that may require targeted interventions. Further analysis using local spatial statistics could help identify precise clusters for more effective policy measures.
+
+## 6.2 Global Moran’s I Over Multiple Years
+
+This analysis examines the Global Moran's I and p-values from 2017 to 2022 to understand the spatial autocorrelation of drug cases in Thailand across several years. By analyzing these metrics over time, we gain insights into how drug-related incidents are distributed across provinces and whether their clustering is statistically significant.
+
+**First get the results for each year and store it in a table**
+
+
+```{r}
+years <- 2017:2022
+moran_results <- data.frame(Year = years, Moran_I = numeric(length(years)), P_Value = numeric(length(years)))
+
+# Loop through each year to calculate Moran's I and perform permutation tests
+for (i in 1:length(years)) {
+  year_column <- paste0("Drugs_Cases_Per_Km2_", years[i])
+  
+  # Calculate Global Moran's I
+  moran_result <- global_moran(thailand_province_final_sf[[year_column]], thailand_province_final_sf$nb, thailand_province_final_sf$wt)
+  
+  # Perform permutation test
+  perm_test_result <- global_moran_perm(thailand_province_final_sf[[year_column]], thailand_province_final_sf$nb, thailand_province_final_sf$wt, nsim = 999)
+  
+  # Store results in the data frame
+  moran_results$Moran_I[i] <- moran_result$I
+  moran_results$P_Value[i] <- perm_test_result$p.value
+}
+
+# Print the results table
+print(moran_results)
+```
+
+
+**We can plot the results with a line chart to compare across years**
+
+
+```{r}
+moran_plot_data <- moran_results %>%
+  pivot_longer(cols = c(Moran_I, P_Value), 
+               names_to = "Statistic", 
+               values_to = "Value")
+
+# Create the line chart
+ggplot(moran_plot_data, aes(x = Year, y = Value, color = Statistic, group = Statistic)) +
+  geom_line(size = 1) +
+  geom_point(size = 3) +
+  scale_y_continuous(sec.axis = sec_axis(~ ., name = "P-Value")) +  # Secondary axis for p-values
+  labs(title = "Global Moran's I and P-Values (2017-2022)",
+       x = "Year",
+       y = "Moran's I",
+       color = "Statistic") +
+  theme_minimal() +
+  theme(legend.position = "top") +
+  scale_color_manual(values = c("Moran_I" = "blue", "P_Value" = "red"))
+```
+
+
+Analysis Overview
+
+1.  **Moran's I Values:**
+
+    -   The line chart displays **Moran's I** (in blue), which measures the degree of spatial autocorrelation. Higher values indicate a stronger clustering of drug cases.
+
+    -   From the chart, we observe that **Moran's I** values fluctuated, peaking in 2022, suggesting that spatial clustering of drug cases increased in recent years.
+
+2.  **P-Values:**
+
+    -   The **p-values** (in red) indicate the statistical significance of the observed Moran's I values. A low p-value (\< 0.05) suggests that the observed clustering is unlikely to have occurred by random chance.
+
+    -   The p-values remained low and stable throughout the period, indicating that the spatial clustering of drug cases is statistically significant across all years analyzed.
+
+3.  **Trends and Insights:**
+
+    -   The upward trend in Moran's I values over the years highlights increasing clustering of drug cases, particularly in 2022. This suggests that certain provinces may be experiencing more significant drug-related issues than others.
+
+    -   The stable low p-values reinforce the reliability of the findings, indicating consistent spatial autocorrelation throughout the study period.
+
+## 6.3 Conclusion
+
+Analyzing the Global Moran's I and p-values over the years reveals clear trends in the spatial distribution of drug cases. The consistent significance of clustering indicates that certain provinces are experiencing concentrated drug-related incidents. This insight is valuable for policymakers and public health officials, as it highlights the need to focus interventions on these hotspot areas. The persistent significance underscores the importance of continuous monitoring and strategic allocation of resources to combat drug-related issues in these regions effectively.
+
+# **7.0 Local Spatial Autocorrelation**
+
+## 7.1 Local Moran’s I for Aggregated Data Total Cases Across Years
+
+To further investigate the spatial distribution of drug cases in Thailand, we now shift our focus from global to local spatial autocorrelation. Local Moran’s I helps identify clusters of high or low drug-related incidents at a more granular level, revealing hotspots and cold spots that might be masked in the aggregated data.
+
+In this step, we calculate Local Moran’s I for the total density of drug cases across provinces, enabling us to detect local clusters of drug activity. This local analysis allows policymakers to focus resources more efficiently on regions that require immediate attention.
+
+### 7.1.1 Preparing the Data
+
+
+```{r}
+LISA_TotalDensity <- thailand_province_final_sf %>%
+  mutate(local_moran = local_moran(
+    TotalDensity, 
+    nb, 
+    wt, 
+    nsim = 999
+  )) %>%
+  unnest(local_moran)
+LISA_TotalDensity
+```
+
+
+In our analysis, we rely on the **P_ii_sim** (simulated p-values) because they provide a robust measure of the statistical significance of local clusters. These simulated p-values help us determine whether observed clusters are significant or could have occurred by random chance. This is especially important when running multiple simulations (in this case, 1000) to ensure the reliability of our results.
+
+::: callout-note
+**When to use median and mean?**
+
+In our analysis, we rely on the **P_ii_sim** (simulated p-values) because they provide a robust measure of the statistical significance of local clusters. These simulated p-values help us determine whether observed clusters are significant or could have occurred by random chance. This is especially important when running multiple simulations (in this case, 1000) to ensure the reliability of our results. Hence we check for the skewness and use median.
+:::
+
+
+```{r}
+# Assuming LISA_TotalDensity contains a column named 'skewness'
+# Create a histogram of the skewness values
+ggplot(LISA_TotalDensity, aes(x = skewness)) +
+  geom_histogram(bins = 30, fill = "blue", alpha = 0.7) +
+  labs(title = "Histogram of Skewness Values", x = "Skewness", y = "Frequency") +
+  theme_minimal()
+```
+
+```{r}
+# Calculate mean and median of the skewness values
+mean_skewness <- mean(LISA_TotalDensity$skewness, na.rm = TRUE)
+median_skewness <- median(LISA_TotalDensity$skewness, na.rm = TRUE)
+
+# Display the mean and median skewness
+cat("Mean Skewness: ", mean_skewness, "\n")
+cat("Median Skewness: ", median_skewness, "\n")
+
+# Determine which measure to use for clustering
+if (abs(median_skewness) > 0.1) {
+  cat("Use Median for clustering based on skewness.\n")
+} else {
+  cat("Use Mean for clustering based on skewness.\n")
+}
+```
+
+
+Since there is a huge skewness, we will use median and not mean for analysis!
+
+### 7.1.2 Visualizing the clusters
+
+In this part of the analysis, we are examining **Local Moran’s I**, which helps us identify where drug-related incidents in Thailand are spatially clustered at the local level. Unlike Global Moran's I, which gives us an overall sense of spatial autocorrelation across the entire dataset, **Local Moran’s I** zooms in on individual provinces. It reveals whether specific provinces are surrounded by others with similar (high-high or low-low) or dissimilar (high-low or low-high) patterns of drug cases.
+
+**High-High and Low-Low Clustering**
+
+-   **High-High Clusters**: These are provinces where a high number of drug-related incidents are clustered with neighboring provinces that also have high numbers. This indicates **hotspots** of drug activity, which are critical for public health officials and policymakers to target interventions. These areas are experiencing a concentrated issue that may require urgent attention, such as increased law enforcement or public health campaigns.
+
+-   **Low-Low Clusters**: On the other hand, low-low clusters occur where provinces with low drug-related incidents are surrounded by others that also report low numbers. These areas are typically not a cause for immediate concern but might reflect regions that could benefit from maintaining current preventive measures.
+
+-   **High-Low and Low-High**: These are areas where the province's drug case count contrasts with its neighbors (e.g., a high number of incidents surrounded by low-incident provinces). These outliers may indicate regions where drug problems are emerging or where prevention strategies are not uniform across regions.
+
+**The Importance of Statistical Significance (P_ii_sim)**
+
+The significance value, represented by **P_ii_sim**, plays a crucial role in determining whether these local clusters are statistically significant or just random noise. In our case, we are considering clusters as significant if their p-value is less than 0.05.
+
+-   **Significant Clusters**: If a cluster is significant, it means that the observed spatial pattern (whether it’s high-high, low-low, etc.) is unlikely to have occurred by chance. These are the clusters that demand the most attention, as they reflect genuine patterns in the spatial distribution of drug cases.
+
+-   **Non-Significant Clusters**: These clusters, on the other hand, may not represent real patterns and could have occurred randomly. They are less important for immediate action and should be interpreted with caution.
+
+By visualizing both the **Local Moran’s I** and the corresponding **p-values**, we can visually assess which provinces exhibit significant spatial patterns of clustering. The side-by-side maps allow us to see:
+
+-   **Where high-high and low-low clusters are happening (Local Moran’s I map)**.
+
+-   **Which of these clusters are statistically significant (P-value map)**.
+
+This combination of local spatial autocorrelation and significance testing helps us prioritize where to focus resources and interventions. It enables policymakers to target areas with strong evidence of clustering and take proactive measures in provinces where drug-related issues are concentrated.
+
+
+```{r, include = FALSE}
+# Set tmap mode to plot
+tmap_mode("plot")
+```
+
+```{r, fig.width=15, fig.height=10}
+LISA_TotalDensity <- LISA_TotalDensity %>%
+  mutate(significant = ifelse(p_ii_sim < 0.05, "Significant", "Not Significant"))
+
+# Create map for local Moran's 
+map1 <- tm_shape(LISA_TotalDensity) +  # Use the spatial data frame
+  tm_fill("median", title = "Local Moran's I") +  # Change to the relevant column for local Moran's I
+  tm_borders(alpha = 0.5) +
+  tm_view(set.zoom.limits = c(6, 8)) +
+  tm_layout(main.title = "Local Moran's I of TotalDensity",
+            main.title.size = 0.8)
+
+# Create map for p-value of local Moran's I
+map2 <- tm_shape(LISA_TotalDensity) +
+  tm_fill("p_ii_sim",  # Change to your p-value column
+          breaks = c(0, 0.001, 0.01, 0.05, 1),
+          labels = c("0.001", "0.01", "0.05", "Not sig"),
+          title = "P-Value of Local Moran's I") + 
+  tm_borders(alpha = 0.5) +
+  tm_layout(main.title = "P-Value of Local Moran's I",
+            main.title.size = 0.8)
+
+# Arrange the maps side by side
+tmap_arrange(map1, map2, ncol = 2)
+```
+
+
+The side-by-side maps display the **Local Moran’s I** clustering (left) and the corresponding **p-values** for significance (right) of drug-related incidents across provinces in Thailand.
+
+On the **Local Moran’s I** map, we can observe areas of **high-high** clustering, such as in the eastern regions, indicating provinces where drug cases are concentrated and surrounded by similarly affected provinces. Conversely, **low-low** clusters, seen in some northern and southern regions, suggest areas with low drug case densities surrounded by similarly low-density provinces. There are also some **high-low** and **low-high** outliers, which might represent emerging drug-related issues or unusual distribution patterns.
+
+However, the **P-value map** reveals that many of these clusters are marked as **not significant** (in darker orange). This suggests that although spatial patterns appear in the Local Moran’s I map, they may not be statistically significant. To focus the analysis on reliable clusters, it would be useful to filter out these non-significant areas and concentrate only on the significant clusters (those with p-values below 0.05), which will provide a clearer picture of where interventions are truly needed.
+
+By filtering out the non-significant areas, we can better prioritize the regions where statistically significant spatial clustering of drug cases occurs, allowing for more targeted and data-driven policy measures.
+
+
+```{r, include = FALSE}
+# Set tmap mode to view for interactive mapping
+tmap_mode("view")
+```
+
+```{r, warning = FALSE}
+# Filter significant local Moran's I results
+LISA_TotalDensity_Sig <- LISA_TotalDensity %>%
+  filter(p_ii_sim < 0.05)
+
+# Create the map
+map <- tm_shape(LISA_TotalDensity) +
+  tm_polygons() +
+  tm_borders(alpha = 0.5) +
+  tm_shape(LISA_TotalDensity_Sig) +
+  tm_view(set.zoom.limits = c(6,8)) +
+  tm_fill("median", 
+          popup.vars = c("Province" = "Province", "P-value" = "p_ii_sim", "Cluster" = "median","Drug Case Density (Km^2)" = "TotalDensity")) +  # Corrected popup.vars
+  tm_borders(alpha = 0.4) +
+  tm_layout(title="Drug Use Per Density of Thailand Province with Significant Clusters")
+
+# Print the map
+map
+```
+
+```{r, include = FALSE}
+tmap_mode("plot")
+```
+
+
+This map highlights the **significant clusters** of Local Moran’s I after filtering out the non-significant regions. The provinces that remain on this map are those where the spatial clustering of drug-related incidents is statistically significant, meaning that these areas demonstrate true spatial patterns that are not likely to have occurred by chance.
+
+-   **Chiang Mai** and a few neighboring provinces in the north exhibit **low-low clustering** (green), suggesting these regions have lower densities of drug-related cases and are surrounded by similarly low-case provinces. This could indicate effective control measures or a less severe drug issue in this part of the country.
+
+-   **Bangkok and surrounding provinces** (in red) show **high-high clustering**, indicating that these areas are experiencing significantly higher concentrations of drug-related cases, and they are surrounded by similarly affected provinces. These regions are likely hotspots and would be priority areas for intervention strategies, such as increased law enforcement or public health outreach.
+
+-   A few provinces in the **northeastern and northern regions** (yellow) display **low-high clusters**, where relatively low case densities are adjacent to provinces with higher case densities. These areas could represent transitional zones or emerging problem areas, which may require monitoring to prevent future escalation.
+
+This focused map allows policymakers to concentrate on the most critical regions, ensuring that resources are directed to areas where drug-related clustering is a statistically significant concern.
+
+### 7.1.3 Analysis On Province with Signifcant Clusters
+
+
+```{r}
+# Drop the geometry and keep only the relevant columns
+LISA_TotalDensity_Sig_Table <- LISA_TotalDensity_Sig %>%
+  st_drop_geometry() %>%  # This removes the geometry column
+  select(Province, p_ii_sim, median, TotalDensity)  # Select the required columns
+
+# Print the resulting table
+# Create the bar chart
+ggplot(LISA_TotalDensity_Sig_Table, aes(x = reorder(Province, -TotalDensity), y = TotalDensity, fill = as.factor(median))) +
+  geom_bar(stat = "identity") +
+  labs(
+    title = "Total Drug Case Density by Province with Clusters",
+    x = "Province",
+    y = "Drug Case Density (Km^2)",
+    fill = "Cluster"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+
+The bar chart visualizes **Drug Case Density (Km²) by Province**, with clusters categorized as **High-High (blue)**, **High-Low (green)**, and **Low-Low (red)**.
+
+**Key Insights:**
+
+1.  **Urban Hotspots (High-High)**:
+
+    -   Provinces like **Bangkok**, **Samut Prakan**, and **Nonthaburi** exhibit the highest drug case densities, suggesting a concentration of drug-related issues in highly urbanized areas.
+
+2.  **Localized Issues (High-Low)**:
+
+    -   **Khon Kaen** and **Phrae** show elevated drug cases despite being surrounded by lower-risk areas, indicating potential localized problems or emerging threats.
+
+3.  **Widespread Low Risk (Low-Low)**:
+
+    -   Most provinces (e.g., **Phichit**, **Uttaradit**, **Tak**) report low drug case density, reflecting minimal or well-controlled drug-related activities.
+
+**Implications:**
+
+-   **Targeted Interventions**: Focus efforts in **Bangkok and neighboring urban areas** to address high-risk zones.
+
+-   **Monitoring Emerging Issues**: Keep an eye on **High-Low clusters** to prevent escalation in localized areas.
+
+-   **Preventive Measures**: Maintain efforts in **Low-Low provinces** to sustain low drug activity levels.
+
+This chart underscores the need for **geographically tailored strategies**, with a stronger focus on urban centers and potential early interventions in emerging high-risk areas.
+
+## 7.2 Local Moran’s I Over Multiple Years
+
+While analyzing the **total density** of drug cases across provinces provides valuable insights, it's also crucial to consider how these patterns change over time. By examining **Local Moran’s I** for each year from 2017 to 2022, we can uncover temporal trends in the clustering of drug cases, which may indicate emerging hotspots or shifts in drug-related activity across different periods.
+
+The process for analyzing drug-related incidents over multiple years follows the same approach we used for the total density of cases. We calculate **Local Moran’s I** for each year individually, applying the same statistical consistency, and using the **median** to handle any skewness in the data. This ensures we maintain a robust analysis across different time frames.
+
+### 7.2.1 Prepping the data across.
+
+By looping through each year from **2017 to 2022**, we compute Local Moran’s I for each year’s drug cases per square kilometer. For each year, we extract the **p_ii_sim** values to determine the statistical significance of clusters and use the **median** to capture the central tendency of clustering patterns.
+
+This step helps us track how spatial clustering of drug cases evolves over time. It enables us to answer key questions, such as whether the same regions consistently exhibit significant clustering (whether high-high or low-low), or if new hotspots have emerged in recent years. By focusing on **p_ii_sim** values and the median, we ensure consistency and reliability in the temporal analysis, which will allow us to plot time-based charts and compare year-on-year trends.
+
+Ultimately, analyzing drug case clustering over time provides a more dynamic and comprehensive view of the drug situation in Thailand. It enables policymakers to not only respond to current hotspots but also to anticipate emerging trends and allocate resources accordingly to prevent escalation in regions showing increasing clustering patterns.
+
+
+```{r}
+# Define the years
+years <- 2017:2022
+# Loop through each year to calculate p_ii_sim and median
+for (year in years) {
+  # Construct the year-specific variable names
+  year_column <- paste0("Drugs_Cases_Per_Km2_", year)
+  
+  # Calculate local Moran's I for the current year
+  LISA <- thailand_province_final_sf %>%
+    mutate(local_moran = local_moran(
+      !!sym(year_column),  # Use !!sym() to handle dynamic column names
+      nb,
+      wt,
+      nsim = 999
+    )) %>%
+    unnest(local_moran)
+  
+  # Extract p_ii_sim and median from LISA
+  p_ii_sim_values <- LISA$p_ii_sim  # Get all p_ii_sim values for the year
+  median_values <- LISA$median       # Get all median values for the year 
+  
+  # Add new columns to the existing LISA_TotalDensity data frame
+  LISA_TotalDensity <- LISA_TotalDensity %>%
+    mutate(!!paste0("p_ii_sim_", year) := p_ii_sim_values,
+           !!paste0("median_", year) := median_values)
+}
+# Print the resulting LISA_TotalDensity data frame
+print(LISA_TotalDensity)
+```
+
+
+### 7.2.2 Visualizing the chart Local Moran Across different years
+
+
+```{r, fig.width=15, fig.height=8, warning = FALSE}
+# Define the years
+years <- 2017:2022
+
+# Create an empty list to store individual maps
+map_list <- list()
+
+# Loop through each year to create maps for significant clusters
+for (year in years) {
+  # Filter significant clusters for the current year
+  LISA_Sig <- LISA_TotalDensity %>%
+    filter(!!sym(paste0("p_ii_sim_", year)) < 0.05)  # Filter for significance
+
+  # Create the map for significant clusters for the current year
+  map <- tm_shape(LISA_TotalDensity) +
+    tm_polygons() +
+    tm_borders(alpha = 0.5) +
+    tm_shape(LISA_Sig) +
+    tm_fill(paste0("median_", year), alpha = 0.7) + 
+    tm_borders(col = "darkblue", alpha = 0.4) +
+    tm_layout(main.title = paste("Significant Clusters of Local Moran's I -", year),
+              main.title.size = 1.2,
+              legend.position = c("right", "bottom")) +
+    tm_view(set.zoom.limits = c(6, 8))
+
+  # Store the current map in the list
+  map_list[[as.character(year)]] <- map
+}
+
+# Combine all maps into one layout
+combined_map <- do.call(tmap_arrange, c(map_list, ncol = 3))
+
+# Print the combined map
+print(combined_map)
+```
+
+
+In this analysis, we are generating a **3x2 grid of maps** that will allow us to compare the **significant clusters** of Local Moran’s I across the years from **2017 to 2022**. Each map will focus on displaying the provinces where drug-related incidents exhibit statistically significant spatial clustering patterns for that specific year, ensuring that only meaningful and significant data is highlighted.
+
+For each year, we filter the data to include only clusters that have **p-values less than 0.05**, meaning they are statistically significant. This ensures that the clusters we observe represent genuine spatial patterns rather than random variations. By mapping these clusters across multiple years, we can visually compare the changes and consistency in spatial clustering over time.
+
+-   The maps are arranged in a **3x2 layout** to make it easy to view and compare the data for each year side by side. This layout helps us observe how the spatial distribution of drug cases evolves, whether the same regions continue to show significant clustering year after year, or if new areas emerge as hotspots.
+
+-   Each map will include visual indicators for the **median values** of Local Moran’s I, ensuring consistency in the method used to analyze and display the clustering data. This also helps us maintain uniformity in the interpretation across different years.
+
+This comparative analysis is useful for policymakers, as it highlights **temporal trends** in drug-related incidents. By visualizing significant clusters over time, it becomes easier to pinpoint persistent problem areas or identify emerging regions of concern, helping to inform more targeted and timely interventions.
+
+#### 7.2.2.1 Animation across years
+
+
+```{r, eval = FALSE, warning = FALSE}
+# Define the years
+years <- 2017:2022
+
+# Set tmap mode to plot (for static rendering)
+tmap_mode("plot")
+
+# Create an empty list to store individual frames
+map_list <- list()
+
+# Loop through each year to create maps for significant clusters
+for (year in years) {
+  # Filter significant clusters for the current year
+  LISA_Sig <- LISA_TotalDensity %>%
+    filter(!!sym(paste0("p_ii_sim_", year)) < 0.05)  # Filter for significance
+
+  # Create the map for the current year
+  map <- tm_shape(LISA_TotalDensity) +
+    tm_polygons() +
+    tm_borders(alpha = 0.5) +
+    tm_shape(LISA_Sig) +
+    tm_fill(paste0("median_", year), alpha = 0.7) + 
+    tm_borders(col = "darkblue", alpha = 0.4) +
+    tm_layout(main.title = paste("Significant Clusters of Local Moran's I -", year),
+              main.title.size = 0.8,
+              legend.position = c("right", "bottom")) +
+    tm_view(set.zoom.limits = c(6, 8))
+
+  # Store the current map in the list
+  map_list[[as.character(year)]] <- map
+}
+
+# Create an animated GIF by saving each map as a frame
+tmap_animation(
+  map_list, 
+  filename = "LISA_Animation.gif", 
+  delay = 100,  # Delay between frames in milliseconds
+  width = 800, 
+  height = 600
+)
+```
+
+
+![](LISA_Animation.gif)
+
+### 7.2.3 Multi-Year Drug Case Density Analysis
+
+
+```{r, fig.width=15, fig.height=10, warning = FALSE}
+# Define the years
+years <- 2017:2022
+
+# Create an empty list to store individual bar charts
+plot_list <- list()
+
+# Loop through each year to create a bar chart for significant clusters
+for (year in years) {
+  # Filter data for the current year
+  LISA_Sig <- LISA_TotalDensity %>%
+    st_drop_geometry() %>%  # Remove geometry column
+    filter(!!sym(paste0("p_ii_sim_", year)) < 0.05) %>%  # Filter significant clusters
+    select(Province, 
+           median = !!sym(paste0("median_", year)), 
+           Drugs_Cases_Per_Km2 = !!sym(paste0("Drugs_Cases_Per_Km2_", year)))  # Select relevant columns
+
+  # Create a bar chart for the current year
+  plot <- ggplot(LISA_Sig, aes(x = reorder(Province, -Drugs_Cases_Per_Km2), y = Drugs_Cases_Per_Km2, fill = as.factor(median))) +
+    geom_bar(stat = "identity") +
+    labs(
+      title = paste("Year:", year),
+      x = "Province",
+      y = "Drug Cases Per Km^2",
+      fill = "Cluster"
+    ) +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+  # Store the plot in the list
+  plot_list[[as.character(year)]] <- plot
+}
+
+# Combine all the bar charts into a 3x2 layout
+combined_plot <- wrap_plots(plot_list, ncol = 3)
+
+# Print the combined plot
+print(combined_plot)
+```
+
+
+This series of bar charts shows **drug case density per Km² by province** from **2017 to 2022**, with clusters categorized as:
+
+-   **High-High (blue/purple)**: High drug case density both within the province and surrounding areas.
+
+-   **High-Low (green)**: High density in the province but low in neighboring regions.
+
+-   **Low-Low (red)**: Low density both in the province and its surroundings.
+
+**Key Trends:**
+
+1.  **Consistent Urban Hotspots**:
+
+    -   **Bangkok**, **Samut Prakan**, and **Nonthaburi** maintain **High-High** clusters throughout the years, indicating ongoing drug-related challenges in these urban areas.
+
+2.  **Emerging Shifts in 2022**:
+
+    -   A new **purple color** cluster emerges, suggesting shifts in clustering methods or data focus in 2022. **Non-urban areas**, such as **Phuket**, appear with high density in recent years, hinting at new or growing issues.
+
+3.  **Stability of Low-Risk Areas**:
+
+    -   Provinces like **Phichit**, **Tak**, and **Uttaradit** remain consistently in the **Low-Low** category, reflecting well-maintained control over drug-related issues.
+
+4.  **Fluctuating High-Low Clusters**:
+
+    -   **Khon Kaen** and **Phrae** oscillate between **High-Low** and **Low-Low** across the years, indicating instability in drug cases that require periodic monitoring.
+
+**Implications:**
+
+-   **Urban Focus**: Consistent high densities in metropolitan areas (Bangkok, Samut Prakan) suggest a need for sustained interventions.
+
+-   **Emerging Concerns**: Newly appearing provinces with significant clusters (e.g., Phuket in 2022) demand attention to prevent escalation.
+
+-   **Monitoring Trends**: Provinces switching between High-Low and Low-Low require close tracking for early interventions.
+
+This multi-year analysis reveals the importance of **tailored, region-specific strategies**, with particular attention on urban centers and monitoring of new risk areas over time.
+
+## 7.3 Conclusion
+
+The 3x2 grid of maps showcases the **significant clusters of Local Moran’s I** across the years 2017 to 2022, highlighting where drug-related incidents have shown consistent spatial clustering over time. Here's the key analysis based on the visualization:
+
+**Consistent Clustering Patterns:**
+
+-   **Bangkok and surrounding areas** have consistently shown **high-high clustering** across all years from 2017 to 2022. This suggests that this region remains a persistent hotspot for drug-related incidents, indicating that the problem has not been mitigated over time. The **significance** of these clusters each year emphasizes the importance of sustained intervention in these regions.
+
+-   **Northern and central provinces** show **low-low clustering** consistently throughout the years. These provinces have lower drug-related incidents compared to their neighbors, and the stability of this pattern over time suggests that these areas have not experienced a significant increase in drug activity.
+
+**Potential Anomalies in 2021:**
+
+-   In 2021, we observe some slight changes in the clustering patterns, where fewer regions appear significant compared to other years. This could potentially be linked to the effects of **COVID-19**, where disruptions in law enforcement, reporting, or drug activities might have led to temporary fluctuations in spatial patterns. However, this change seems to be short-lived, as the patterns return to similar levels in 2022.
+
+**Concerning Stability of Active Regions:**
+
+-   The fact that the **same provinces** (both high-high and low-low) remain significant across multiple years is concerning. This persistence suggests that certain regions have been continuously affected by either a concentration of drug-related problems or consistently low incident rates. For areas showing **high-high clustering**, this implies a **failure to effectively address the issue** over time.
+
+**Policy Implications:**
+
+The lack of significant change in clustering patterns year after year highlights the need for **long-term strategies** and possibly new approaches to mitigate drug-related incidents in regions like Bangkok and its surrounding areas. Meanwhile, for regions with low-low clustering, efforts should continue to maintain preventive measures, ensuring that these areas remain under control.
+
+This analysis underscores the importance of regularly monitoring spatial clustering to track the effectiveness of policy interventions and to identify emerging trends that may require attention.
+
+# **8.0 Emerging Hot Spot Analysis (EHSA)**
+
+Emerging Hot Spot Analysis (EHSA) is a spatial-temporal analysis technique used to identify evolving patterns of hotspots over time. It helps detect areas where incidents (such as drug-related cases) are increasing or decreasing, allowing policymakers to anticipate trends and respond proactively to emerging problems.
+
+Unlike static spatial autocorrelation methods (like Local Moran’s I), EHSA analyzes changes in spatial clustering patterns over time. This makes it particularly useful for detecting not only existing problem areas but also regions where issues are **escalating**, **stabilizing**, or **dissipating**. By examining clusters at different time intervals, EHSA can provide a deeper understanding of the dynamics within an area, helping to focus interventions on regions where emerging trends indicate future risks.
+
+## 8.1 EHSA Total Density
+
+### 8.1.1 Creating the Weights
+
+In the provided code snippet, we prepare the data by constructing a neighborhood structure for each province and calculating the weights necessary for the EHSA.
+
+
+```{r}
+thailand_idw <- thailand_province_final_sf %>%
+  mutate(nb = include_self(st_contiguity(geometry)),
+         geometry_centroid = st_centroid(geometry), # Convert polygons to centroids
+         wts = st_inverse_distance(nb, 
+                                   geometry_centroid, # Use centroids for inverse distance
+                                   scale = 1,
+                                   alpha = 1))
+
+```
+
+
+**Explanation:**
+
+-   **Neighborhood Structure (`nb`)**: The `include_self(st_contiguity(geometry))` creates a spatial contiguity matrix where each province is considered to be a neighbor of itself. This ensures that when calculating clustering metrics, the province is included in its own analysis.
+
+-   **Weights (`wts`)**: The weights are calculated using the **inverse distance method**, which gives more weight to closer neighbors and less weight to farther ones. The parameters `scale = 1` and `alpha = 1` control the scaling factor and decay rate of the distance weighting. The use of these inverse-distance weights is important because it reflects how incidents in nearby areas have a greater impact on the clustering of a province.
+
+After the neighborhood structure and weights are established, we calculate the *Local Gi statistic*\* to identify local hotspots using the following code:
+
+
+```{r}
+HCSA_Total <- thailand_idw %>% 
+  mutate(local_Gi = local_gstar_perm(
+    TotalDensity, nb, wts, nsim = 999)) %>%
+  unnest(local_Gi)
+HCSA_Total
+```
+
+
+-   **`local_Gi` Calculation**: Here, we are calculating the *Local Gi statistic*\* using a permutation approach (`local_gstar_perm`). This statistic measures local hotspots and coldspots based on the density of drug cases (TotalDensity) and the spatial relationships (nb and wts). The number of simulations (`nsim = 999`) ensures that we have a robust estimate of the significance of clustering.
+
+The `local_Gi` statistic helps in identifying whether a province is part of a **hotspot** (higher-than-expected incidents of drug cases) or a **coldspot** (lower-than-expected incidents). By applying this statistic over multiple time periods, we can track whether hotspots are **emerging**, **dissipating**, or remaining stable over time, making this a powerful tool for understanding the evolving nature of drug-related incidents.
+
+The results of EHSA, combined with statistical measures like Local Gi\*, allow us to visualize which provinces are experiencing significant changes in drug-related activity, helping to inform more timely and localized interventions. This makes it an essential tool for long-term strategic planning in addressing the drug problem in Thailand.
+
+### 8.1.2 Visualising the HotSpot Areas
+
+To visualize the results of the **Emerging Hot Spot Analysis (EHSA)**, we follow a similar process to what we did for Local Moran’s I, but this time we are focusing on the *Gi statistic*\* (also known as Getis-Ord Gi\*) and its corresponding p-values.
+
+The goal here is to display the **hotspots** (areas with higher-than-expected drug-related incidents) and **coldspots** (areas with lower-than-expected incidents) alongside the **statistical significance** of these patterns, just like in the Local Moran’s I analysis.
+
+::: callout-note
+**Why Visualize the Gi\* Statistic and p-values?**
+
+By visualizing both the *Gi statistic*\* and its **p-values**, we can understand not only where clustering occurs but also which clusters are statistically significant. This allows us to differentiate between areas that may show some clustering patterns but are not significant from those that have a strong statistical basis for further investigation or intervention.
+
+Visualizing these charts is crucial for understanding which provinces have stable or emerging hotspots of drug activity, helping authorities make informed, data-driven decisions.
+:::
+
+#### 8.1.2.1 Visualizing the Gi\* Statistic and p-values
+
+The first map (`map1`) shows the Gi\* clustering for density, where the **color-coding indicates whether a region is part of a high-high cluster (hotspot) or a low-low cluster (coldspot)**. The second map (`map2`) focuses on the **p-values**, showing which clusters are statistically significant (with a p-value less than 0.05) and thus are more likely to represent real patterns rather than random noise.
+
+
+```{r, fig.width=15, fig.height=8, warning = FALSE}
+map1 <- tm_shape(HCSA_Total) +
+  tm_fill("cluster") + 
+  tm_borders(alpha = 0.5) +
+  tm_view(set.zoom.limits = c(6,8)) +
+  tm_layout(main.title = "Gi* of Density",
+            main.title.size = 0.8)
+
+map2 <- tm_shape(HCSA_Total) +
+  tm_fill("p_sim",
+          breaks = c(0, 0.001, 0.01, 0.05, 1),
+              labels = c("0.001", "0.01", "0.05", "Not sig")) + 
+  tm_borders(alpha = 0.5) +
+  tm_layout(main.title = "p-value of Gi*",
+            main.title.size = 0.8)
+
+tmap_arrange(map1, map2, ncol = 2)
+```
+
+
+#### 8.1.2.2 Filtering Out for Significant Clusters
+
+To ensure we only focus on meaningful results, we filter the dataset to include only significant clusters (p-values \< 0.05) and visualize these clusters again:
+
+
+```{r, include = FALSE}
+tmap_mode("view")
+```
+
+```{r, warning = FALSE}
+HCSA_total_sig <- HCSA_Total %>%
+  filter(p_sim < 0.05)
+
+tm_shape(HCSA_Total) +
+  tm_polygons() +
+  tm_borders(alpha = 0.5) +
+  tm_layout(title = "Significant Clusters of HSCA by Thailand Province",
+            title.size = 0.8) +  # Add + here
+tm_shape(HCSA_total_sig) +
+  tm_fill("cluster", 
+          popup.vars = c("Province" = "Province", "P-Value" = "p_sim", "Cluster" = "cluster", "Drug Case Density (Km^2)" = "TotalDensity")) +  # Set popup variables order
+  tm_borders(alpha = 0.4) +
+  tm_view(set.zoom.limits = c(6, 8))
+
+```
+
+```{r, include = FALSE}
+tmap_mode("plot")
+```
+
+
+The map displays the results of the **Emerging Hot Spot Analysis (EHSA)**, specifically highlighting the significant clusters of drug-related incidents in Thailand. The regions are color-coded based on whether they represent **high or low clusters** of drug-related activity:
+
+-   **Yellow regions** represent **high clusters (hotspots)**, where drug-related incidents are higher than expected. These areas, centered around Bangkok and its surrounding provinces, indicate **persistent hotspots** of drug activity. This suggests a concentration of drug-related issues that have continued to be significant over time, signaling the need for sustained intervention in these areas.
+
+-   **Green regions** indicate **low clusters (coldspots)**, where drug-related incidents are lower than expected. These are regions primarily in the northern and central parts of Thailand, where drug activity appears to be under better control compared to the surrounding areas. The consistency of these low clusters suggests that these provinces have relatively fewer drug-related problems and may serve as areas with effective preventive measures.
+
+#### 8.1.2.3 Analysis On Total Density By Province With Significant clusters.
+
+
+```{r}
+# Drop geometry, sort by TotalDensity, and select relevant columns
+HCSA_total_sig <- HCSA_total_sig %>%
+  st_drop_geometry() %>%  # Remove geometry
+  select(Province, p_sim, cluster, TotalDensity) %>%
+  arrange(desc(TotalDensity))  # Sort by TotalDensity
+
+# Create the bar chart
+ggplot(HCSA_total_sig, aes(x = reorder(Province, -TotalDensity), y = TotalDensity, fill = as.factor(cluster))) +
+  geom_bar(stat = "identity") +
+  labs(
+    title = "Total Drug Case Density by Province with Signficant HSCA Clusters",
+    x = "Province",
+    y = "Drug Case Density (Km^2)",
+    fill = "Cluster"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+
+**Analysis of Total Drug Case Density by Province with Significant HSCA Clusters**
+
+This chart shows the **drug case density (per Km²)** by province, with clusters categorized as **High (teal)** and **Low (red)**, reflecting the **HSCA (Hot Spot Cluster Analysis)** results.
+
+**Key Observations:**
+
+1.  **Urban Hotspots** (High Cluster):
+
+    -   **Bangkok**, **Samut Prakan**, and **Nonthaburi** display the highest drug case densities, highlighting persistent drug-related issues in major urban centers.
+
+    -   These areas likely face challenges due to population density, social factors, and higher substance availability.
+
+2.  **Moderate Risk Provinces**:
+
+    -   Provinces such as **Pathum Thani** and **Chachoengsao** are also in the high cluster but with lower densities compared to Bangkok. They indicate spillover effects from nearby urban areas.
+
+3.  **Low Clusters (Red)**:
+
+    -   Several provinces, including **Khon Kaen**, **Phichit**, and **Uttaradit**, show **low-density clusters**, reflecting fewer drug-related incidents.
+
+    -   This suggests these areas have fewer drug problems or effective control measures in place.
+
+4.  **Distribution Trend**:
+
+    -   The drug case density drops sharply after the first few high-risk provinces, with most of the remaining provinces showing minimal cases.
+
+**Implications:**
+
+-   **Focused Intervention**: Urban areas like **Bangkok** and surrounding provinces need targeted policies, such as increased monitoring, prevention programs, and rehabilitation efforts.
+
+-   **Preventive Action in Low-Risk Areas**: The **low-cluster provinces** should continue preventive measures to maintain their low-density status.
+
+-   **Spillover Monitoring**: Moderate-risk provinces (e.g., Pathum Thani) could benefit from monitoring efforts to prevent escalation from neighboring high-risk areas.
+
+## 8.2 EHSA Across the years
+
+### 8.2.1 Visualizing the Province by Significant ESHA cluster
+
+Analyzing the **Emerging Hot Spot Analysis (EHSA)** across multiple years allows us to track **temporal trends** in drug-related incidents. By comparing significant clusters each year, we can identify whether certain provinces remain consistent hotspots or if new areas emerge as concerns. This helps in determining if interventions are working effectively over time or if new strategies are needed to address emerging regions.
+
+By performing this analysis year by year, we can:
+
+1.  **Monitor Stability**: Identify provinces that consistently show significant clustering, which may indicate areas where drug-related activities are deeply rooted or interventions have not been effective.
+
+2.  **Detect Emerging Hotspots**: Identify regions where clustering is becoming significant over time, signaling an increase in drug-related incidents that may require new policies or interventions.
+
+3.  **Measure Policy Effectiveness**: Track changes in significant clusters, which helps to evaluate whether implemented strategies in previous years have succeeded in reducing drug-related cases in problem areas.
+
+
+```{r}
+# Define the years
+years <- 2017:2022
+# Loop through each year to calculate p_ii_sim and median
+for (year in years) {
+  # Construct the year-specific variable names
+  year_column <- paste0("Drugs_Cases_Per_Km2_", year)
+  # Calculate local Moran's I for the current year
+  HSCA <- thailand_idw %>%
+    mutate(local_Gi = local_gstar_perm(
+      !!sym(year_column),  # Use !!sym() to handle dynamic column names
+      nb,
+      wts,
+      nsim = 999)
+    ,.before = 1) %>%
+    unnest(local_Gi)
+  
+  
+  # Extract p_ii_sim and median from LISA
+  p_sim_values <- HSCA$p_sim  # Get all p_ii_sim values for the year
+  cluster_values <- HSCA$cluster       # Get all median values for the year 
+  
+  # Add new columns to the existing LISA_TotalDensity data frame
+  HCSA_Total <- HCSA_Total %>%
+    mutate(!!paste0("p_sim_", year) := p_sim_values,
+           !!paste0("cluster_", year) := cluster_values)
+}
+
+# Print the resulting LISA_TotalDensity data frame
+print(HCSA_Total)
+```
+
+```{r, include = FALSE}
+# Set tmap mode to plot for static visualization
+tmap_mode("plot")
+```
+
+```{r, fig.width=15, fig.height=15, warning = FALSE}
+# Define the years
+years <- 2017:2022
+
+# Create an empty list to store individual maps
+map_list <- list()
+
+# Loop through each year to create maps for significant clusters
+for (year in years) {
+  # Filter significant clusters for the current year
+  HSCA_Sig <- HCSA_Total %>%
+    filter(!!sym(paste0("p_sim_", year)) < 0.05)  # Filter for significance
+
+  # Create the map for significant clusters for the current year
+  map_HSCA <- tm_shape(HCSA_Total) +
+    tm_polygons() +
+    tm_borders(alpha = 0.5) +
+    tm_shape(HSCA_Sig) +
+    tm_fill(paste0("cluster_", year), alpha = 0.7) + 
+    tm_borders(col = "darkblue", alpha = 0.4) +
+    tm_layout(main.title = paste("Significant Clusters of HSCA -", year),
+              main.title.size = 1.2,
+              legend.position = c("right", "bottom")) +
+    tm_view(set.zoom.limits = c(6, 8))
+
+  # Store the current map in the list
+  map_list[[as.character(year)]] <- map_HSCA
+}
+
+# Combine all maps into one layout
+combined_map <- do.call(tmap_arrange, c(map_list, ncol = 3))
+print(combined_map)
+```
+
+
+The maps above depict the significant clusters of drug-related incidents across Thailand from **2017 to 2022**, showing both **high clusters (hotspots)** and **low clusters (coldspots)**.
+
+1.  **2017-2022 Consistency**:
+
+    -   **Hotspots in Bangkok and surrounding provinces** are consistent across the years. This persistent high clustering in central Thailand indicates that drug-related activities remain concentrated in this area. Despite any potential interventions, these regions continue to display significant hotspots, signaling a need for stronger or alternative policies to address this issue.
+
+    -   **Low clusters in northern provinces** such as Chiang Mai are also consistent over the years. These areas have maintained a lower-than-expected rate of drug incidents, which could indicate successful long-term preventive measures or generally lower drug-related activities.
+
+2.  **Emerging Patterns**:
+
+    -   In **2020**, the clustering patterns remain similar to previous years, with no significant changes, suggesting that the drug activity hotspots and coldspots are stable.
+
+    -   In **2021**, there is some slight variation in the clustering patterns, though the changes are minimal. The continued high clustering in the central provinces emphasizes that the core problem areas have not shifted substantially.
+
+3.  **Key Observations**:
+
+    -   The regions around Bangkok remain significant **hotspots** throughout the six years, indicating that drug-related incidents are entrenched in this area.
+
+    -   **Northern and central provinces** consistently show **low clustering**, which suggests effective long-term measures or inherently lower drug activities.
+
+    -   There are **no new emerging hotspots** in other regions, suggesting that the drug issue has remained largely concentrated in these identified provinces over time.
+
+#### 8.2.1.2 Animation across the years ESHA
+
+
+```{r, eval = FALSE, warning = FALSE}
+# Define the years
+years <- 2017:2022
+
+# Create an empty list to store individual maps
+map_list <- list()
+
+# Loop through each year to create maps for significant clusters
+for (year in years) {
+  # Filter significant clusters for the current year
+  HSCA_Sig <- HCSA_Total %>%
+    filter(!!sym(paste0("p_sim_", year)) < 0.05)  # Filter for significance
+
+  # Create the map for significant clusters for the current year
+  map_HSCA <- tm_shape(HCSA_Total) +
+    tm_polygons() +
+    tm_borders(alpha = 0.5) +
+    tm_shape(HSCA_Sig) +
+    tm_fill(paste0("cluster_", year), alpha = 0.7) + 
+    tm_borders(col = "darkblue", alpha = 0.4) +
+    tm_layout(
+      main.title = paste("Significant Clusters of HSCA -", year),
+      main.title.size = 0.8,
+      legend.position = c("right", "bottom")
+    ) +
+    tm_view(set.zoom.limits = c(6, 8))
+
+  # Store the current map in the list
+  map_list[[as.character(year)]] <- map_HSCA
+}
+
+# Create an animated GIF by stitching the maps together
+tmap_animation(
+  map_list,
+  filename = "HSCA_Animation.gif",  # Output GIF file
+  delay = 1000,  # Delay between frames in milliseconds (1 second)
+  width = 800, 
+  height = 600
+)
+
+```
+
+
+![](HSCA_Animation.gif)
+
+### 8.2.2 Analysis of the EHSA Maps (2017-2022)
+
+
+```{r, fig.width=15, fig.height=10, warning = FALSE}
+# Define the years
+years <- 2017:2022
+
+# Create an empty list to store individual bar charts
+plot_list <- list()
+
+# Loop through each year to create a bar chart for significant HSCA clusters
+for (year in years) {
+  # Filter data for the current year
+  HCSA_Sig <- HCSA_Total %>%
+    st_drop_geometry() %>%  # Remove geometry column
+    filter(!!sym(paste0("p_sim_", year)) < 0.05) %>%  # Filter significant clusters
+    select(
+      Province,
+      cluster = !!sym(paste0("cluster_", year)),
+      Density = !!sym(paste0("Drugs_Cases_Per_Km2_", year))  # Use year-specific density
+    ) %>%
+    arrange(desc(Density))  # Sort by that year's density
+
+  # Create a bar chart for the current year
+  plot <- ggplot(HCSA_Sig, aes(x = reorder(Province, -Density), y = Density, fill = as.factor(cluster))) +
+    geom_bar(stat = "identity") +
+    labs(
+      title = paste("Year:", year),
+      x = "Province",
+      y = "Drug Cases Per Km²",
+      fill = "Cluster"
+    ) +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+  # Store the plot in the list
+  plot_list[[as.character(year)]] <- plot
+}
+
+# Combine all the bar charts into a 3x2 layout
+combined_plot <- wrap_plots(plot_list, ncol = 3)
+
+# Print the combined plot
+print(combined_plot)
+```
+
+
+This series of bar charts shows the **drug case density (per Km²) by province** across the years 2017-2022, with clusters categorized as:
+
+-   **High (teal)**: Provinces with high drug case density.
+
+-   **Low (red)**: Provinces with lower drug case density.
+
+**Key Observations:**
+
+1.  **Consistent Urban Hotspots**:
+
+    -   **Bangkok**, **Samut Prakan**, and **Nonthaburi** maintain high drug case density across all years. These urban areas are consistently identified as high-risk zones, requiring sustained interventions.
+
+2.  **Growth and Decline Patterns**:
+
+    -   **Samut Prakan** shows a rise in density by 2022, becoming the leading hotspot.
+
+    -   Drug density in other provinces, such as **Bangkok**, fluctuates but remains high throughout the period, showing persistent challenges.
+
+3.  **Emerging Risks**:
+
+    -   **Phrae** and **Khon Kaen** occasionally appear with high density in some years, suggesting emerging or localized risks that require periodic monitoring.
+
+4.  **Stable Low-Density Provinces**:
+
+    -   Provinces such as **Tak**, **Sukhothai**, and **Phitsanulok** remain consistently low-risk, indicating effective control or minimal drug-related issues.
+
+**Trends Over Time:**
+
+-   **Urban Spread**: Drug cases remain concentrated in metropolitan areas, with little spread to rural provinces.
+
+-   **Shift in Focus in 2022**: The dominance of **Samut Prakan** in 2022 suggests a shift in hotspot dynamics, possibly requiring resource reallocation.
+
+**Implications:**
+
+-   **Targeted Interventions in Urban Centers**: Consistent high-density areas (e.g., Bangkok, Samut Prakan) demand focused strategies, including prevention, treatment, and law enforcement.
+
+-   **Monitoring Emerging Risks**: Provinces like **Khon Kaen** and **Phrae** need to be monitored closely to prevent escalation.
+
+-   **Maintain Stability in Low-Risk Areas**: Continued preventive efforts are necessary in low-risk provinces to avoid future outbreaks.
+
+## **8.3 EHSA Conclusion**
+
+The analysis of significant clusters across the years reveals a **stable spatial distribution** of drug-related incidents. The **persistent hotspots in Bangkok and surrounding areas** are concerning and point to the need for **continued or enhanced interventions**. The **low clustering in northern provinces** is a positive indicator of stable regions with lower drug incidents, but monitoring should continue to ensure these areas remain under control.
+
+# 9.0 Merging Global, Local, and Temporal Analysis for Comprehensive Insights
+
+Understanding drug abuse trends requires the integration of **Global Moran’s I (global spatial autocorrelation)**, **Local Indicators of Spatial Association (LISA)**, and **Hot Spot Cluster Analysis (HSCA)** over time. This combined approach captures patterns at macro and micro levels, tracks changes over time, and identifies emerging risks.
+
+## 9.1 Global-Local-Temporal Integration Overview
+
+| **Method**                 | **Purpose**                                                                                             |
+|----------------------------|---------------------------------------------------------------------------------------------------------|
+| **Global Moran’s I**       | Measures overall clustering to reveal if drug cases are dispersed or concentrated.                      |
+| **LISA (Local Moran’s I)** | Identifies clusters and outliers, highlighting provinces with high or low activity.                     |
+| **HSCA**                   | Classifies regions into **high-high hotspots** or **low-low stable areas** and tracks shifts over time. |
+
+These methods together answer:
+
+-   **Global Trends**: Are drug cases concentrated or spread out across Thailand?
+
+-   **Local Insights**: Which provinces are contributing to these patterns?
+
+-   **Temporal Dynamics**: How are these trends shifting over time?
+
+## 9.2 Merging Insights for Holistic Understanding
+
+### 9.2.1 Spatial and Temporal Consistency
+
+-   **Global Moran’s I** shows persistent clustering, suggesting entrenched spatial patterns of drug-related issues.
+
+-   **LISA** confirms **Bangkok and neighboring provinces** form high-high clusters, while northern provinces like **Chiang Mai** remain low-risk.
+
+-   **HSCA** analysis supports this, with urban centers in central Thailand reporting **sustained drug activity from 2017 to 2022**, while northern regions maintain **stable, low-risk conditions**.
+
+### 9.2.2 Emerging Hotspots and Coldspots
+
+-   No **new hotspots** have emerged outside of known high-risk areas, with activity concentrated near **Bangkok**.
+
+-   Northern provinces show stable low incident rates, confirming the effectiveness of their **preventive strategies**.
+
+## 9.3 High-Risk Provinces Identified
+
+| **Category**              | **Provinces**                                | **Description**                                                                      |
+|---------------------------|----------------------------------------------|--------------------------------------------------------------------------------------|
+| **Persistent Hotspots**   | Bangkok, Samut Prakan, Nonthaburi            | High-risk areas with consistent drug activity flagged by both **LISA** and **HSCA**. |
+| **Emerging Risks**        | Pathum Thani, Chachoengsao, Khon Kaen, Phrae | Areas showing fluctuating or increasing drug density, needing **monitoring**.        |
+| **Stable Low-Risk Areas** | Phichit, Tak, Sukhothai                      | Consistently low-risk, serving as models for **prevention strategies**.              |
+
+## 9.4 Conclusion and Next Steps for Thailand
+
+**Bangkok and Samut Prakan** remain central to Thailand’s drug-related challenges, with **new risks emerging** in **Khon Kaen** and **Phrae**. Immediate interventions and **proactive monitoring** are essential.
+
+### 9.4.1. Key Recommendations
+
+| **Action**                           | **Details**                                                                                                                      |
+|--------------------------------------|----------------------------------------------------------------------------------------------------------------------------------|
+| **Urban Hotspot Interventions**      | Strengthen **law enforcement**, raise **awareness**, and expand **treatment programs** in Bangkok, Samut Prakan, and Nonthaburi. |
+| **Monitoring Emerging Risks**        | Deploy **early interventions** in **Pathum Thani** and **Khon Kaen** to prevent escalation.                                      |
+| **Sustaining Prevention Strategies** | Maintain existing strategies in **Phichit** and **Tak** to avoid future outbreaks.                                               |
+| **Dynamic Policy Adjustments**       | Use **real-time data** to continuously refine policies and ensure **efficient resource allocation**.                             |
+
+# 10.0 References:
+
+-   **Bavaud, F.**, 2010. *Models for Spatial Weights: A Systematic Look*. Geographical Analysis, 30(2), pp. 153-171.
+
+
+```{=html}
+<!-- -->
+```
+
+-   **Griffith, D.A.**, 2009. *Spatial Autocorrelation*.
+
+-   **Getis, A.**, 2010. *B.3 Spatial Autocorrelation*. In: Fischer, M.M. and Getis, A., eds. 2010. *Handbook of Applied Spatial Analysis: Software Tools, Methods, and Applications*. Springer.
+
+-   **Humdata**, 2022. *Thailand - Subnational Administrative Boundaries* \[online\]. Available at: <https://data.humdata.org/dataset/cod-ab-tha> \[Accessed 12 October 2024\].
+
+-   **Kaggle**, 2022. *Thailand Drug Offenses 2017-2022* \[online\]. Available at: <https://www.kaggle.com/datasets/thaweewatboy/thailand-drug-offenses-2017-2022> \[Accessed 12 October 2024\].
+
+-   **Parry, J.**, 2022. *sfdep: Tools for Spatial Dependence Analysis* \[online\]. Available at: <https://sfdep.josiahparry.com/> \[Accessed 12 October 2024\].
+
+-   **STPP**, 2022. *Analysis of Spatio-Temporal Point Patterns* \[online\]. Available at: <https://cran.r-project.org/web/packages/stpp/index.html> \[Accessed 12 October 2024\].
+
+
+```{r, include = FALSE, eval = FALSE}
+save_dir <- "data/rds/"
+if (!dir.exists(save_dir)) {
+  dir.create(save_dir)
+}
+
+vars <- ls()
+
+# Save each variable as an RDS file
+for (var in vars) {
+  saveRDS(get(var), file = paste0(save_dir, var, ".rds"))
+}
+```
+
