@@ -9,7 +9,7 @@ execute:
   freeze: true
 ---
 
-# **9Geographical Segmentation with Spatially Constrained Clustering Techniques**
+# **9 Geographical Segmentation with Spatially Constrained Clustering Techniques**
 
 ## **9.1 Overview**
 
@@ -211,9 +211,9 @@ ggplot(data=ict_derived,
 In the figure below, multiple histograms are plotted to reveal the distribution of the selected variables in the *ict_derived* data.frame.
 
 ::: callout-note
-**What can you observed from the distributions reveal in the histogram and boxplot.
+\*\*What can you observed from the distributions reveal in the histogram and boxplot.
 
-Histogram Observations:**
+Histogram Observations:\*\*
 
 1.  **Distribution Shape**: The histogram appears slightly **right-skewed**, meaning there are more data points concentrated towards the lower values, with fewer higher values extending towards the right tail.
 
@@ -357,7 +357,7 @@ tm_shape(shan_sf) +
 **Key Differences:**
 
 | **Aspect**          | **1st Code Block (tmap_arrange)**       | **2nd Code Block (tm_facets)**         |
-|---------------------|-----------------------------------------|----------------------------------------|
+|-----------------|----------------------------|---------------------------|
 | **Layout**          | Two independent maps side-by-side       | Synchronized maps in facets            |
 | **Interactivity**   | No interaction between maps             | Maps share zoom and pan behavior       |
 | **Legends**         | Separate for each map                   | Single, unified legend placement       |
