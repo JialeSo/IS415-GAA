@@ -1,0 +1,121 @@
+/* Import Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&family=Open+Sans:wght@400;600&display=swap');
+
+/* General Layout */
+body {
+  font-family: 'Open Sans', sans-serif !important;
+  color: #e0e0e0 !important;
+  background-color: #1c1c1c !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: 1.6 !important;
+}
+
+/* Headers */
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Montserrat', sans-serif !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  margin-top: 20px !important;
+  margin-bottom: 10px !important;
+}
+
+/* Details and Summary */
+details {
+  border: 1px solid #444 !important;
+  border-radius: 4px !important;
+  background-color: #2e3436 !important;
+  padding: 10px !important;
+  margin-bottom: 10px !important;
+}
+
+summary {
+  font-size: 16px !important;
+  font-weight: bold !important;
+  color: #fff !important;
+  cursor: pointer !important;
+  margin-bottom: 5px !important;
+}
+
+summary:hover {
+  color: #66afe9 !important;
+}
+
+/* Inline Code */
+code {
+  background-color: #2e3436 !important;
+  color: #66afe9 !important;
+  font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace !important;
+  padding: 4px 8px !important;
+  border-radius: 4px !important;
+}
+
+/* Code Blocks */
+pre {
+  white-space: pre-wrap !important;  /* Ensure wrapping */
+  word-wrap: break-word !important;  /* Prevent breaking words abruptly */
+  overflow-x: auto !important;       /* Add horizontal scrolling */
+  overflow-y: hidden !important;     /* Hide vertical scrolling */
+  max-width: 100% !important;
+  background-color: #2e3436 !important;
+  border: 1px solid #444 !important;
+  border-radius: 4px !important;
+  padding: 10px !important;
+  color: #e0e0e0 !important;
+}
+
+/* Source Code */
+.sourceCode {
+  overflow: auto !important;
+  white-space: pre-wrap !important;
+  word-wrap: break-word !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace !important;
+  background-color: #2e3436 !important;
+  color: #e0e0e0 !important;
+}
+
+
+/* Scrollbar Customization */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #2e3436 !important;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #444 !important;
+  border-radius: 4px !important;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: #66afe9 !important;
+}
+
+/* Table Styling */
+table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  margin-bottom: 15px !important;
+}
+
+th, td {
+  border: 1px solid #444 !important;
+  padding: 8px 12px !important;
+  text-align: left !important;
+}
+
+th {
+  background-color: #2e3436 !important;
+  color: #66afe9 !important;
+  font-weight: bold !important;
+}
+
+td {
+  background-color: #1c1c1c !important;
+  color: #e0e0e0 !important;
+}

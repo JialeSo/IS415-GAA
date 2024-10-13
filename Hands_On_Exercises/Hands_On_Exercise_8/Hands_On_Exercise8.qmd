@@ -1,5 +1,5 @@
 ---
-title: "Hands-On Exercise 1" 
+title: "Hands-On Exercise 8" 
 author: "Jiale SO"
 date: "August 18, 2024"
 date-modified: "last-modified"
@@ -9,4 +9,6 @@ execute:
   freeze: true
 ---
 
-## Yet to start
+There's no In Hands On Exercise 8, so here's a picture of a cat.
+
+![](images/clipboard-1399650041.png)

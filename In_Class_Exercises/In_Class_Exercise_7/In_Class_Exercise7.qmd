@@ -8,3 +8,5 @@ execute:
   echo: true
   freeze: true
 ---
+
+View in class 7 here: <https://jialeso.shinyapps.io/GAShiny/>
