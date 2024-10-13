@@ -5,8 +5,9 @@
 body {
   font-family: 'Open Sans', sans-serif !important;
   color: #e0e0e0 !important;
-  background-color: #1c1c1c !important;  /* Slightly darker background for better contrast */
+  background-color: #1c1c1c !important;
   padding: 0 !important;
+  margin: 0 !important;
   line-height: 1.6 !important;
 }
 
@@ -19,68 +20,46 @@ h1, h2, h3, h4, h5, h6 {
   margin-bottom: 10px !important;
 }
 
-/* Details and Summary Styling */
-details {
-  border: 1px solid #444 !important;
-  border-radius: 4px !important;
-  background-color: #2e3436 !important;
-  padding: 10px !important;
-  width: fit-content !important;
-  margin-bottom: 10px !important;
-}
-
-summary {
-  font-size: 16px !important;
-  font-weight: bold !important;
-  color: #fff !important;
-  cursor: pointer !important;
-  margin-bottom: 5px !important;
-}
-
-summary:hover {
-  color: #66afe9 !important;  /* Lighter hover effect for summary */
-}
-
 /* Inline Code */
 code {
   background-color: #2e3436 !important;
   color: #66afe9 !important;
-  font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace !important;
+  font-family: Consolas, Monaco, 'Courier New', monospace !important;
   padding: 4px 8px !important;
   border-radius: 4px !important;
+  white-space: pre-wrap !important;  /* Preserve spaces and line breaks */
+  word-wrap: break-word !important;  /* Allow words to break */
 }
 
 /* Code Blocks */
 pre {
-  white-space: pre-wrap !important;   /* Wrap code to the next line */
-  word-wrap: break-word !important;   /* Prevent breaking words abruptly */
-  overflow-x: auto !important;        /* Add horizontal scrolling when needed */
-  overflow-y: hidden !important;      /* Hide vertical scrollbar */
-  max-width: 100% !important;
+  white-space: pre-wrap !important;  /* Ensure code wraps to next line */
+  word-wrap: break-word !important;  /* Avoid cutting words abruptly */
+  overflow-x: auto !important;       /* Add horizontal scroll if needed */
+  overflow-y: hidden !important;     /* Hide vertical scroll */
+  max-width: 100% !important;  
   background-color: #2e3436 !important;
   border: 1px solid #444 !important;
   border-radius: 4px !important;
   padding: 10px !important;
   color: #e0e0e0 !important;
-  margin-bottom: 15px !important;
 }
 
-/* Source Code Styling */
+/* Source Code Styling for Quarto Blocks */
 .sourceCode {
-  overflow: auto !important;  /* Horizontal scroll when necessary */
-  white-space: pre-wrap !important;  /* Allow line breaks within code */
-  word-wrap: break-word !important;  /* Break long words */
-  width: 100% !important;
-  max-width: 100% !important;
-  font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace !important;
+  overflow: auto !important;  /* Enable scroll for long code */
+  white-space: pre-wrap !important;  /* Preserve spacing */
+  word-wrap: break-word !important;  /* Allow word breaking */
+  font-family: Consolas, Monaco, 'Courier New', monospace !important;
   background-color: #2e3436 !important;
   color: #e0e0e0 !important;
+  max-width: 100% !important;
 }
 
 /* Leaflet Legend Styling */
 .leaflet-control .leaflet-legend {
-  max-height: 150px !important;  /* Adjust the height */
-  overflow-y: scroll !important;  /* Enable vertical scrolling */
+  max-height: 150px !important;
+  overflow-y: scroll !important;
   border: 1px solid #444 !important;
   border-radius: 4px !important;
 }
@@ -104,7 +83,7 @@ pre {
   background-color: #66afe9 !important;
 }
 
-/* Adjust tables for better layout */
+/* Table Layout Adjustments */
 table {
   width: 100% !important;
   border-collapse: collapse !important;
