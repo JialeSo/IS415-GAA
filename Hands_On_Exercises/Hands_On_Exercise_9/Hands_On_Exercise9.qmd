@@ -721,3 +721,12 @@ qtm(shan_sf_cluster, "CLUSTER")
 ```
 
 The choropleth map above reveals the clusters are very fragmented. The is one of the major limitation when non-spatial clustering algorithm such as hierarchical cluster analysis method is used.
+
+Saving it for next hands on 10
+
+```{r, eval= FALSE}
+write_rds(shan_ict, "data/rds/shan_ict.rds")
+write_rds(shan_sf_cluster, "data/rds/shan_sf_cluster.rds")
+write_rds(proxmat, "data/rds/proxmat.rds")
+
+```

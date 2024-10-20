@@ -1,7 +1,7 @@
 ---
-title: "Hands-On Exercise 1" 
+title: "Hands-On Exercise 10: Skater Approach to Spatially Constrainted Clustering" 
 author: "Jiale SO"
-date: "August 18, 2024"
+date: "October 10, 2024"
 date-modified: "last-modified"
 execute: 
   eval: true
@@ -9,4 +9,510 @@ execute:
   freeze: true
 ---
 
-## Yet to start
+# Chapter 10: Spatially Constrainted Clustering Methods
+
+In this hands on we will carry on from Hands on 9 where we stocked on the hierarchical analysis, here we look at the different methods such as skater, ClustGeo and the visual interpretation of clusters.
+
+# 10.1 Carrying on From Hands on 9 from 12.8 onward.
+
+Refer to this doc\
+<https://r4gdsa.netlify.app/chap12.html#spatially-constrained-clustering-skater-approach>
+
+## 10.1.1 Loading Packages
+
+```{r}
+pacman::p_load(spdep, tmap, sf, ClustGeo, 
+               ggpubr, cluster, factoextra, NbClust,
+               heatmaply, corrplot, psych, tidyverse, GGally)
+```
+
+## **10.1.2 Read File from Hands on 9**
+
+```{r}
+shan_sf <- read_rds("data/rds/shan_sf.rds")
+shan_ict <- read_rds("data/rds/shan_ict.rds")
+shan_sf_cluster <- read_rds("data/rds/shan_sf_cluster.rds")
+proxmat <- read_rds("data/rds/proxmat.rds")
+```
+
+# 10.2 **Spatially Constrained Clustering: SKATER approach**
+
+In this section, you will learn how to derive spatially constrained cluster by using [*skater()*](https://r-spatial.github.io/spdep/reference/skater.html) method of [**spdep**](https://r-spatial.github.io/spdep/index.html) package.
+
+## **10.2.1 Converting into SpatialPolygonsDataFrame**
+
+First, we need to convert `shan_sf` into SpatialPolygonsDataFrame. This is because SKATER function only support **sp** objects such as SpatialPolygonDataFrame.
+
+The code chunk below uses [*as_Spatial()*](https://r-spatial.github.io/sf/reference/coerce-methods.html) of **sf** package to convert *shan_sf* into a SpatialPolygonDataFrame called *shan_sp*.
+
+```{r}
+shan_sp <- as_Spatial(shan_sf)
+```
+
+## **10.2.2 Computing Neighbour List**
+
+Next, [poly2nd()](https://r-spatial.github.io/spdep/reference/poly2nb.html) of **spdep** package will be used to compute the neighbours list from polygon list.
+
+```{r}
+shan.nb <- poly2nb(shan_sp)
+summary(shan.nb)
+```
+
+We can plot the neighbours list on shan_sp by using the code chunk below. Since we now can plot the community area boundaries as well, we plot this graph on top of the map. The first plot command gives the boundaries. This is followed by the plot of the neighbor list object, with coordinates applied to the original SpatialPolygonDataFrame (Shan state township boundaries) to extract the centroids of the polygons. These are used as the nodes for the graph representation. We also set the color to blue and specify add=TRUE to plot the network on top of the boundaries.
+
+```{r}
+coords <- st_coordinates(
+  st_centroid(st_geometry(shan_sf)))
+```
+
+```{r}
+plot(st_geometry(shan_sf), 
+     border=grey(.5))
+plot(shan.nb,
+     coords, 
+     col="blue", 
+     add=TRUE)
+```
+
+Note that if weplot the network first and then the boundaries, some of the areas will be clipped. This is because the plotting area is determined by the characteristics of the first plot. In this example, because the boundary map extends further than the graph, we plot it first.
+
+## **10.2.3 Computing minimum spanning tree**
+
+### 10.2.3.1 Calculating edge costs
+
+Next, [*nbcosts()*](https://r-spatial.github.io/spdep/reference/nbcosts.html) of spdep package is used to compute the cost of each edge. It is the distance between it nodes. This function compute this distance using a data.frame with observations vector in each node.
+
+The code chunk below is used to compute the cost of each edge.
+
+```{r}
+lcosts <- nbcosts(shan.nb, shan_ict)
+```
+
+For each observation, this gives the pairwise dissimilarity between its values on the five variables and the values for the neighbouring observation (from the neighbour list). Basically, this is the notion of a generalised weight for a spatial weights matrix.
+
+Next, We will incorporate these costs into a weights object in the same way as we did in the calculation of inverse of distance weights. In other words, we convert the neighbour list to a list weights object by specifying the just computed ***lcosts*** as the weights.
+
+In order to achieve this, [*nb2listw()*](https://r-spatial.github.io/spdep/reference/nb2listw.html) of **spdep** package is used as shown in the code chunk below.
+
+Note that we specify the *style* as **B** to make sure the cost values are not row-standardised.
+
+```{r}
+shan.w <- nb2listw(shan.nb, 
+                   lcosts, 
+                   style="B")
+summary(shan.w)
+```
+
+## **10.2.4 Computing minimum spanning tree**
+
+The minimum spanning tree is computed by mean of the [*mstree()*](https://r-spatial.github.io/spdep/reference/mstree.html) of **spdep** package as shown in the code chunk below.
+
+```{r}
+shan.mst <- mstree(shan.w)
+```
+
+After computing the MST, we can check its class and dimension by using the code chunk below.
+
+```{r}
+class(shan.mst)
+```
+
+```{r}
+dim(shan.mst)
+```
+
+Note that the dimension is 54 and not 55. This is because the minimum spanning tree consists on n-1 edges (links) in order to traverse all the nodes.
+
+We can display the content of *shan.mst* by using *head()* as shown in the code chunk below.
+
+```{r}
+head(shan.mst)
+```
+
+The plot method for the MST include a way to show the observation numbers of the nodes in addition to the edge. As before, we plot this together with the township boundaries. We can see how the initial neighbour list is simplified to just one edge connecting each of the nodes, while passing through all the nodes.
+
+```{r}
+plot(st_geometry(shan_sf), 
+                 border=gray(.5))
+plot.mst(shan.mst, 
+         coords, 
+         col="blue", 
+         cex.lab=0.7, 
+         cex.circles=0.005, 
+         add=TRUE)
+```
+
+## **10.2.5 Computing spatially constrained clusters using SKATER method**
+
+The code chunk below compute the spatially constrained cluster using [*skater()*](https://r-spatial.github.io/spdep/reference/skater.html) of **spdep** package.
+
+```{r}
+clust6 <- spdep::skater(edges = shan.mst[,1:2], 
+                 data = shan_ict, 
+                 method = "euclidean", 
+                 ncuts = 5)
+```
+
+The *skater()* takes three mandatory arguments: - the first two columns of the MST matrix (i.e. not the cost), - the data matrix (to update the costs as units are being grouped), and - the number of cuts. Note: It is set to **one less than the number of clusters**. So, the value specified is **not** the number of clusters, but the number of cuts in the graph, one less than the number of clusters.
+
+The result of the *skater()* is an object of class **skater**. We can examine its contents by using the code chunk below.
+
+```{r}
+str(clust6)
+```
+
+The most interesting component of this list structure is the groups vector containing the labels of the cluster to which each observation belongs (as before, the label itself is arbitary). This is followed by a detailed summary for each of the clusters in the edges.groups list. Sum of squares measures are given as ssto for the total and ssw to show the effect of each of the cuts on the overall criterion.
+
+We can check the cluster assignment by using the conde chunk below.
+
+```{r}
+ccs6 <- clust6$groups
+ccs6
+```
+
+We can find out how many observations are in each cluster by means of the table command. Parenthetially, we can also find this as the dimension of each vector in the lists contained in edges.groups. For example, the first list has node with dimension 12, which is also the number of observations in the first cluster.
+
+```{r}
+table(ccs6)
+```
+
+Lastly, we can also plot the pruned tree that shows the five clusters on top of the townshop area.
+
+```{r, warning = FALSE}
+plot(st_geometry(shan_sf), 
+     border=gray(.5))
+plot(clust6, 
+     coords, 
+     cex.lab=.7,
+     groups.colors=c("red","green","blue", "brown", "pink"),
+     cex.circles=0.005, 
+     add=TRUE)
+```
+
+## **10.2.6 Visualising the clusters in choropleth map**
+
+The code chunk below is used to plot the newly derived clusters by using SKATER method.
+
+```{r}
+groups_mat <- as.matrix(clust6$groups)
+shan_sf_spatialcluster <- cbind(shan_sf_cluster, as.factor(groups_mat)) %>%
+  rename(`SP_CLUSTER`=`as.factor.groups_mat.`)
+qtm(shan_sf_spatialcluster, "SP_CLUSTER")
+```
+
+For easy comparison, it will be better to place both the hierarchical clustering and spatially constrained hierarchical clustering maps next to each other.
+
+```{r}
+hclust.map <- qtm(shan_sf_cluster,
+                  "CLUSTER") + 
+  tm_borders(alpha = 0.5) 
+
+shclust.map <- qtm(shan_sf_spatialcluster,
+                   "SP_CLUSTER") + 
+  tm_borders(alpha = 0.5) 
+
+tmap_arrange(hclust.map, shclust.map,
+             asp=NA, ncol=2)
+```
+
+# **10.3 Spatially Constrained Clustering: ClustGeo Method**
+
+In this section, you will gain hands-on experience on using functions provided by **ClustGeo** package to perform non-spatially constrained hierarchical cluster analysis and spatially constrained cluster analysis.
+
+## **10.3.1 A short note about ClustGeo package**
+
+[**ClustGeo**](https://cran.r-project.org/web/packages/ClustGeo/) package is an R package specially designed to support the need of performing spatially constrained cluster analysis. More specifically, it provides a Ward-like hierarchical clustering algorithm called `hclustgeo()` including spatial/geographical constraints.
+
+In the nutshell, the algorithm uses two dissimilarity matrices D0 and D1 along with a mixing parameter alpha, whereby the value of alpha must be a real number between \[0, 1\]. D0 can be non-Euclidean and the weights of the observations can be non-uniform. It gives the dissimilarities in the **attribute/clustering variable space**. D1, on the other hand, gives the dissimilarities in the **constraint space**. The criterion minimised at each stage is a convex combination of the homogeneity criterion calculated with D0 and the homogeneity criterion calculated with D1.
+
+The idea is then to determine a value of alpha which increases the spatial contiguity without deteriorating too much the quality of the solution based on the variables of interest. This need is supported by a function called `choicealpha()`.
+
+## **10.3.2 Ward-like hierarchical clustering: ClustGeo**
+
+ClustGeo package provides function called `hclustgeo()` to perform a typical Ward-like hierarchical clustering just like `hclust()` you learned in previous section.
+
+To perform non-spatially constrained hierarchical clustering, we only need to provide the function a dissimilarity matrix as shown in the code chunk below.
+
+```{r}
+nongeo_cluster <- hclustgeo(proxmat)
+plot(nongeo_cluster, cex = 0.5)
+rect.hclust(nongeo_cluster, 
+            k = 6, 
+            border = 2:5)
+```
+
+Note that the dissimilarity matrix must be an object of class `dist`, i.e. an object obtained with the function `dist()`. For sample code chunk, please refer to [5.7.6 Computing proximity matrix](https://r4gdsa.netlify.app/chap05#computing-proximity-matrix)
+
+### 10.3.2.1 Mapping the clusters formed
+
+Similarly, we can plot the clusters on a categorical area shaded map by using the steps we learned in 5.7.12 Mapping the clusters formed.
+
+```{r}
+groups <- as.factor(cutree(nongeo_cluster, k=6))
+```
+
+```{r}
+shan_sf_ngeo_cluster <- cbind(shan_sf, as.matrix(groups)) %>%
+  rename(`CLUSTER` = `as.matrix.groups.`)
+```
+
+```{r}
+qtm(shan_sf_ngeo_cluster, "CLUSTER")
+```
+
+## **10.3.3 Spatially Constrained Hierarchical Clustering**
+
+Before we can performed spatially constrained hierarchical clustering, a spatial distance matrix will be derived by using [`st_distance()`](https://r-spatial.github.io/sf/reference/geos_measures.html) of sf package.
+
+```{r}
+dist <- st_distance(shan_sf, shan_sf)
+distmat <- as.dist(dist)
+```
+
+Notice that `as.dist()` is used to convert the data frame into matrix.
+
+Next, `choicealpha()` will be used to determine a suitable value for the mixing parameter alpha as shown in the code chunk below.
+
+```{r}
+cr <- choicealpha(proxmat, distmat, range.alpha = seq(0, 1, 0.1), K=6, graph = TRUE)
+```
+
+With reference to the graphs above, alpha = 0.2 will be used as shown in the code chunk below.
+
+```{r}
+clustG <- hclustgeo(proxmat, distmat, alpha = 0.2)
+```
+
+Next, `cutree()` is used to derive the cluster objecct.
+
+```{r}
+groups <- as.factor(cutree(clustG, k=6))
+```
+
+We will then join back the group list with *shan_sf* polygon feature data frame by using the code chunk below.
+
+```{r}
+shan_sf_Gcluster <- cbind(shan_sf, as.matrix(groups)) %>%
+  rename(`CLUSTER` = `as.matrix.groups.`)
+```
+
+We can now plot the map of the newly delineated spatially constrained clusters.
+
+```{r}
+qtm(shan_sf_Gcluster, "CLUSTER")
+```
+
+# **10.4 Visual Interpretation of Clusters**
+
+## **10.4.1 Visualising individual clustering variable**
+
+Code chunk below is used to reveal the distribution of a clustering variable (i.e RADIO_PR) by cluster.
+
+```{r}
+ggplot(data = shan_sf_ngeo_cluster,
+       aes(x = CLUSTER, y = RADIO_PR)) +
+  geom_boxplot()
+```
+
+The boxplot reveals Cluster 3 displays the highest mean Radio Ownership Per Thousand Household. This is followed by Cluster 2, 1, 4, 6 and 5.
+
+## **10.4.2 Multivariate Visualisation**
+
+Past studies shown that parallel coordinate plot can be used to reveal clustering variables by cluster very effectively. In the code chunk below, [`ggparcoord()`](https://ggobi.github.io/ggally/reference/ggparcoord.html) of [**GGally**](https://ggobi.github.io/ggally/index.html) package
+
+```{r, fig.width=10, fig.height=5}
+ggparcoord(data = shan_sf_ngeo_cluster, 
+           columns = c(17:21), 
+           scale = "globalminmax",
+           alphaLines = 0.2,
+           boxplot = TRUE, 
+           title = "Multiple Parallel Coordinates Plots of ICT Variables by Cluster") +
+  facet_grid(~ CLUSTER) + 
+  theme(axis.text.x = element_text(angle = 30))
+```
+
+The parallel coordinate plot above reveals that households in Cluster 4 townships tend to own the highest number of TV and mobile-phone. On the other hand, households in Cluster 5 tends to own the lowest of all the five ICT.
+
+Note that the `scale` argument of `ggparcoor()` provide several methods to scale the clustering variables. They are:
+
+-   std: univariately, subtract mean and divide by standard deviation.
+
+-   robust: univariately, subtract median and divide by median absolute deviation.
+
+-   uniminmax: univariately, scale so the minimum of the variable is zero, and the maximum is one.
+
+-   globalminmax: no scaling is done; the range of the graphs is defined by the global minimum and the global maximum.
+
+-   center: use uniminmax to standardize vertical height, then center each variable at a value specified by the scaleSummary param.
+
+-   centerObs: use uniminmax to standardize vertical height, then center each variable at the value of the observation specified by the centerObsID param
+
+There is no one best scaling method to use. You should explore them and select the one that best meet your analysis need.
+
+Last but not least, we can also compute the summary statistics such as mean, median, sd, etc to complement the visual interpretation.
+
+In the code chunk below, `group_by()` and `summarise()` of dplyr are used to derive mean values of the clustering variables.
+
+```{r}
+shan_sf_ngeo_cluster %>% 
+  st_set_geometry(NULL) %>%
+  group_by(CLUSTER) %>%
+  summarise(mean_RADIO_PR = mean(RADIO_PR),
+            mean_TV_PR = mean(TV_PR),
+            mean_LLPHONE_PR = mean(LLPHONE_PR),
+            mean_MPHONE_PR = mean(MPHONE_PR),
+            mean_COMPUTER_PR = mean(COMPUTER_PR))
+```
+
+# **10.5: Key Insights and Takeaways from Spatially Constrained Clustering**
+
+This chapter delves into two methods for spatially constrained clustering: the **SKATER approach** and the **ClustGeo method**. Both approaches seek to group spatial units into meaningful clusters while ensuring geographic continuity. Below, each method is summarized in detail, followed by key considerations, comparisons, and reflective questions to deepen understanding.
+
+## **10.5.1 SKATER Approach – Key Takeaways and Steps**
+
+The **SKATER approach**, available through the `spdep` package, constructs clusters using a **Minimum Spanning Tree (MST)** to connect all nodes (spatial units) with minimal total edge costs. This method emphasizes minimizing the distance or dissimilarity between neighboring spatial units. It is particularly useful for small to medium-sized datasets with clearly defined neighbors.
+
+### **10.5.1.1 Key Concepts:**
+
+-   **MST (Minimum Spanning Tree):**\
+    The MST connects all nodes with the smallest possible sum of edge costs. It ensures no cycles exist and provides the basis for forming clusters.
+
+-   **Number of Cuts:**\
+    The number of **cuts** determines how the tree is partitioned into clusters. A higher number of cuts produces more clusters.
+
+-   **Weights and Edge Costs:**\
+    Weights are assigned to edges based on the dissimilarity between neighboring units. These weights are used to determine the optimal way to form clusters.
+
+-   **Cluster Formation:**\
+    The `skater()` function divides the MST into clusters by cutting the tree into a specified number of segments.
+
+### **10.5.1.2 Steps to Implement SKATER:**
+
+1.  **Convert to SpatialPolygonsDataFrame:**\
+    Convert the `sf` object into `sp` format using `as_Spatial()`.
+
+    ```{r}
+    shan_sp <- as_Spatial(shan_sf)
+    ```
+
+2.  **Create Neighbor List:**\
+    Use `poly2nb()` to generate a list of neighboring polygons.
+
+    ```{r, eval = FALSE}
+    shan.nb <- poly2nb(shan_sp)
+    ```
+
+3.  **Compute Edge Costs\
+    **Calculate the costs of connecting neighboring polygons using `nbcosts()`.
+
+    ```{r, eval = FALSE}
+    lcosts <- nbcosts(shan.nb, shan_ict)
+    ```
+
+4.  **Generate MST:**\
+    Create an MST using the neighbor list and edge costs with `mstree()`.
+
+    ```{r, eval = FALSE}
+    shan.mst <- mstree(nb2listw(shan.nb, lcosts, style = "B"))
+    ```
+
+5.  **Apply SKATER Clustering:**\
+    Partition the MST into clusters by specifying the number of cuts.
+
+    ```{r, eval = FALSE}
+    clust6 <- skater(edges = shan.mst[, 1:2], data = shan_ict, ncuts = 5)
+    ```
+
+6.  **Visualize Clusters:**\
+    Plot the clusters to interpret spatial patterns.
+
+    ```{r, eval = FALSE}
+    plot(st_geometry(shan_sf), border = gray(0.5))
+    plot(clust6, coords, col = "blue", add = TRUE)
+    ```
+
+## **10.5.2 ClustGeo Method – Key Takeaways and Steps**
+
+The **ClustGeo method** from the `ClustGeo` package provides a more flexible way to create spatially constrained clusters by balancing attribute similarity and geographic proximity. It extends the traditional hierarchical clustering algorithm by introducing spatial constraints through two dissimilarity matrices.
+
+### **10.5.2.1 Key Concepts:**
+
+-   **Dissimilarity Matrices (D0 and D1):**
+
+    -   **D0** measures the difference between units based on attributes (e.g., socioeconomic data).
+
+    -   **D1** measures the geographic distance between units.
+
+-   **Alpha Parameter:**
+
+    -   Alpha (ranging from 0 to 1) controls the trade-off between D0 and D1. A lower value prioritizes attribute similarity, while a higher value emphasizes geographic continuity.
+
+-   **Choice of Alpha:**\
+    The `choicealpha()` function helps determine the optimal alpha value that balances spatial and attribute-based clustering.
+
+-   **Hierarchical Clustering:**\
+    The `hclustgeo()` function performs clustering with the selected alpha value, generating spatially constrained clusters.
+
+### **10.5.2.2 Steps to Implement ClustGeo:**
+
+1.  **Create Attribute and Distance Matrices:**\
+    Calculate the distance matrix using `st_distance()`.
+
+    ```{r, eval = FALSE}
+
+    distmat <- as.dist(st_distance(shan_sf))
+    ```
+
+2.  **Determine Optimal Alpha:**\
+    Use `choicealpha()` to find the best balance between attributes and spatial proximity.
+
+    ```{r, eval = FALSE}
+    cr <- choicealpha(proxmat, distmat, range.alpha = seq(0, 1, 0.1), K = 6, graph = TRUE)
+
+    ```
+
+3.  **Perform Hierarchical Clustering:**\
+    Apply `hclustgeo()` with the optimal alpha value.
+
+    ```{r, eval = FALSE}
+    clustG <- hclustgeo(proxmat, distmat, alpha = 0.2)
+    ```
+
+4.  **Generate Final Clusters:**\
+    Use `cutree()` to define the number of clusters.
+
+    ```{r, eval = FALSE}
+    groups <- cutree(clustG, k = 6)
+    ```
+
+5.  **Visualize Clusters:**\
+    Plot the clusters on a choropleth map for comparison.
+
+    ```{r, eval = FALSE}
+    qtm(shan_sf_Gcluster, "CLUSTER")
+    ```
+
+## **10.5.3 Key Considerations and Comparison Between SKATER and ClustGeo Methods**
+
++--------------------------------------------------+---------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------+
+| **Aspect**                                       | **SKATER**                                                                                              | **ClustGeo**                                                                                                                |
++==================================================+=========================================================================================================+=============================================================================================================================+
+| **Approach**                                     | Constructs clusters using a Minimum Spanning Tree (MST) for minimal distance between neighboring units. | Uses hierarchical clustering with two dissimilarity matrices: one for attributes (D0) and one for geographic distance (D1). |
++--------------------------------------------------+---------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------+
+| **Control over Spatial and Attribute Trade-off** | No explicit control; clusters are purely based on minimizing spatial distance.                          | Offers flexibility through the alpha parameter, balancing attribute similarity and spatial continuity.                      |
++--------------------------------------------------+---------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------+
+| **Dataset Size Suitability**                     | Works best with small to medium-sized datasets with clearly defined neighbors.                          | Suitable for larger, more complex datasets that require a balance between multiple factors.                                 |
++--------------------------------------------------+---------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------+
+| **Computational Efficiency**                     | Faster and easier to implement due to reliance on MST.                                                  | Computationally intensive, especially for large datasets, due to hierarchical clustering and alpha optimization.            |
++--------------------------------------------------+---------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------+
+| **Interpretation of Results**                    | Simple interpretation through MST visualization and cluster boundaries.                                 | Provides deeper insights using parallel coordinate plots, box plots, and attribute-based comparisons.                       |
++--------------------------------------------------+---------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------+
+| **Scalability**                                  | Limited scalability; performance declines with larger datasets.                                         | Scales better with larger datasets, though it may require more computing resources.                                         |
++--------------------------------------------------+---------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------+
+| **Visualization Capabilities**                   | Focuses on visualizing MST and cluster boundaries.                                                      | Supports both spatial and multivariate visualization through choropleth maps and statistical plots.                         |
++--------------------------------------------------+---------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------+
+| **Flexibility in Cluster Formation**             | Relies on MST structure, limiting flexibility.                                                          | Greater flexibility by adjusting alpha to balance between spatial and attribute-based clustering.                           |
++--------------------------------------------------+---------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------+
+| **Limitations**                                  | \- Limited control over trade-offs between spatial and attribute similarity.\                           | \- Requires careful alpha selection, which can be time-consuming.\                                                          |
+|                                                  | - Less effective with large datasets.                                                                   | - More computationally demanding.                                                                                           |
++--------------------------------------------------+---------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------+
