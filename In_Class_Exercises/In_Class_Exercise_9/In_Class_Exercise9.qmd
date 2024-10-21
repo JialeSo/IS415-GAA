@@ -1,7 +1,7 @@
 ---
-title: "In Class Exercise1: Geospatial Data Science"
+title: "In Class Exercise 9: Geospatial Data Science"
 author: "Jiale SO"
-date: "August 18, 2024"
+date: "October 21, 2024"
 date-modified: "last-modified"
 execute: 
   eval: true
@@ -9,4 +9,60 @@ execute:
   freeze: true
 ---
 
-There's no In Class Exercise 1, so here's a picture of a cat.
+In Class 9:
+
+# 9.1 Carrying on From Hands on 9 from 12.y onward.
+
+Refer to this doc\
+<https://r4gdsa.netlify.app/chap12.html#spatially-constrained-clustering-skater-approach>
+
+## 9.1.1 Loading Packages
+
+```{r}
+pacman::p_load(spdep, tmap, sf, ClustGeo,ggpubr, cluster, factoextra, NbClust, heatmaply, corrplot, psych, tidyverse, GGally)
+```
+
+## **9.1.2 Read File from Hands on 9**
+
+```{r}
+shan_sf <- read_rds("data/rds/shan_sf.rds")
+shan_ict <- read_rds("data/rds/shan_ict.rds")
+shan_sf_cluster <- read_rds("data/rds/shan_sf_cluster.rds")
+proxmat <- read_rds("data/rds/proxmat.rds")
+```
+
+# 9.2 Conventional Hierarchical Clustering
+
+::: panel-tabset
+## Hierachcal Clustering
+
+## Append to Geospatial Data
+
+```{r}
+shan_sf_cluster <- cbind(shan_sf, as.matrix(groups)) %>%
+  rename("CLUSTER" = "as.matrix.groups.") %>%
+  select(-c(3:4, 7:9)) %>%
+  rename(TS = TS.x)
+```
+
+## The Dendrogram
+
+```{r}
+plot(hcluster_ward, cex = 0.6)
+rect.hclust(hclust_ward, k = 6, border = 2:5)
+```
+
+## ClusterMap
+
+```{r}
+qtm(shan_sf_cluster, "CLUSTER")
+```
+:::
+
+```{r}
+
+```
+
+```{r}
+
+```

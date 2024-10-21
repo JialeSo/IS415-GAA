@@ -9,6 +9,7 @@ execute:
   freeze: true 
 ---
 
+
 In Class 10:
 
 # 1 Carrying on From Hands on 9 from onward.
@@ -18,11 +19,14 @@ Refer to this doc\
 
 ## 1.1 Loading Packages
 
+
 ```{r}
 pacman::p_load(spdep, tmap, sf, ClustGeo,ggpubr, cluster, factoextra, NbClust, heatmaply, corrplot, psych, tidyverse, GGally)
 ```
 
+
 ## **1.2 Read File from Hands on 9**
+
 
 ```{r}
 shan_sf <- read_rds("data/rds/shan_sf.rds")
@@ -31,10 +35,12 @@ shan_sf_cluster <- read_rds("data/rds/shan_sf_cluster.rds")
 proxmat <- read_rds("data/rds/proxmat.rds")
 ```
 
+
 # 2 Conventional Hierarchical Clustering
 
 ::: panel-tabset
 ## Hierachcal Clustering
+
 
 ```{r}
 proxmat <- dist(shan_ict, method = 'euclidean')
@@ -42,24 +48,31 @@ hclust_ward <- hclust(proxmat, method = 'ward.D')
 groups <- as.factor(cutree(hclust_ward, k =6 ))
 ```
 
+
 ## Append to Geospatial Data
+
 
 ```{r}
 shan_sf_cluster <- cbind(shan_sf, as.matrix(groups)) %>%   rename("CLUSTER" = "as.matrix.groups.") %>%   select(-c(3:4, 7:9)) %>%   rename(TS = TS.x)
 ```
 
+
 ## The Dendrogram
+
 
 ```{r}
 plot(hclust_ward, cex = 0.6) 
 rect.hclust(hclust_ward, k = 6, border = 2:5)
 ```
 
+
 ## ClusterMap
+
 
 ```{r}
 qtm(shan_sf_cluster, "CLUSTER")
 ```
+
 :::
 
 # 3 Skater
@@ -68,12 +81,15 @@ qtm(shan_sf_cluster, "CLUSTER")
 
 ### Step 1: Computing Nearest Neighbours
 
+
 ```{r}
 shan.nb <- poly2nb(shan_sf)
 summary(shan.nb)
 ```
 
+
 ### Step 2: Visualizing the neighbours
+
 
 ```{r, warning = FALSE}
 plot(st_geometry(shan_sf), border=grey(0.5))
@@ -85,18 +101,22 @@ plot(shan.nb,
       ) 
 ```
 
+
 ## Step 3: Computing Minimum Spanning Tree
 
 ::: panel-tabset
 ## Calculating Edge Costs
 
+
 ```{r}
 lcosts <- nbcosts(shan.nb, shan_ict)
 ```
 
+
 ## Incorporating These costs into a weights object
 
 Style have to have B,
+
 
 ```{r}
 shan.w <- nb2listw(shan.nb,
@@ -105,13 +125,17 @@ shan.w <- nb2listw(shan.nb,
 summary(shan.w)
 ```
 
+
 ## Computing MST
+
 
 ```{r}
 shan.mst <- mstree(shan.w)
 ```
 
+
 ## VIsualising MST
+
 
 ```{r}
 plot(st_geometry((shan_sf), baorder=gray(0.5)))
@@ -121,12 +145,14 @@ plot.mst(shan.mst, pts,
          cex.circles = 0.005,
          add= TRUE)
 ```
+
 :::
 
 ### Computing Spatially Constraint Clusters using SKATER Method
 
 ::: panel-tabset
 ## Code
+
 
 ```{r}
 skater.clust6 <- skater(edges = shan.mst[,1:2],
@@ -136,7 +162,9 @@ skater.clust6 <- skater(edges = shan.mst[,1:2],
                         )
 ```
 
+
 ## Skater Tree
+
 
 ```{r, fig.width=10, fig.height=5, warning=FALSE, echo = FALSE}
 plot(st_geometry(shan_sf), border = gray(0.5))
@@ -150,7 +178,9 @@ plot(skater.clust6,
      add = TRUE)           
 ```
 
+
 ## The Code to plot
+
 
 ```{r, fig.width=10, fig.height=5, warning=FALSE}
 plot(st_geometry(shan_sf), border = gray(0.5))
@@ -163,6 +193,7 @@ plot(skater.clust6,
      cex.circles = 0.005,             # Adjust the circle size
      add = TRUE)                    # Overlay on the previous plot
 ```
+
 :::
 
 ## Computing Spatially Constrained Clusters using SKATER method
@@ -170,21 +201,25 @@ plot(skater.clust6,
 ::: panel-tabset
 ## Plot
 
+
 ```{r}
 groups_mat <- as.matrix(skater.clust6$groups)
 shan_sf_spatialcluster <- cbind(shan_sf_cluster, as.factor(groups_mat)) %>%
   rename('skater_CLUSTER' = 'as.factor.groups_mat.')
 qtm(shan_sf_spatialcluster, "skater_CLUSTER")
 ```
+
 
 ## Code
 
+
 ```{r}
 groups_mat <- as.matrix(skater.clust6$groups)
 shan_sf_spatialcluster <- cbind(shan_sf_cluster, as.factor(groups_mat)) %>%
   rename('skater_CLUSTER' = 'as.factor.groups_mat.')
 qtm(shan_sf_spatialcluster, "skater_CLUSTER")
 ```
+
 :::
 
 # 4.0 Spatially Constrained Clustering : ClustGeo Method
@@ -196,12 +231,15 @@ qtm(shan_sf_spatialcluster, "skater_CLUSTER")
 
 ST_distance() of sf package is used to compute the distance matrix.
 
+
 ```{r}
 dist <- st_distance(shan_sf, shan_sf)
 distmat <- as.dist(dist)
 ```
 
+
 ## The Cluster Graphs
+
 
 ```{r, echo = FALSE}
 cr <- choicealpha(proxmat, distmat,
@@ -210,7 +248,9 @@ cr <- choicealpha(proxmat, distmat,
                   )
 ```
 
+
 ## The Code
+
 
 ```{r}
 cr <- choicealpha(proxmat, distmat,
@@ -219,7 +259,9 @@ cr <- choicealpha(proxmat, distmat,
                   )
 ```
 
+
 ## Saving ClustGeoOutput
+
 
 ```{r}
 clust6 <- hclustgeo(proxmat, distmat, alpha = 0.2)
@@ -228,15 +270,19 @@ shan_sf_clustGeo <- cbind( shan_sf,
                             as.matrix(groups)) %>%
   rename("clustGEO" = "as.matrix.groups." )
 ```
+
 :::
 
 ## 4.2 Visualizing the map
+
 
 ```{r}
 qtm(shan_sf_clustGeo, "clustGEO")
 ```
 
+
 # **5.0 Characterizing the clusters**
+
 
 ```{r, fig.width=10, fig.height=5, warning=FALSE}
 
@@ -249,3 +295,4 @@ ggparcoord(data = shan_sf_clustGeo,
   facet_grid(~ clustGEO) +
   theme(axis.text.x = element_text(angle = 30))
 ```
+

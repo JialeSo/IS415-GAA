@@ -873,5 +873,61 @@
     "title": "Hands-On Exercise 10: Skater Approach to Spatially Constrainted Clustering",
     "section": "10.5.3 Key Considerations and Comparison Between SKATER and ClustGeo Methods",
     "text": "10.5.3 Key Considerations and Comparison Between SKATER and ClustGeo Methods\n\n\n\n\n\n\n\n\nAspect\nSKATER\nClustGeo\n\n\n\n\nApproach\nConstructs clusters using a Minimum Spanning Tree (MST) for minimal distance between neighboring units.\nUses hierarchical clustering with two dissimilarity matrices: one for attributes (D0) and one for geographic distance (D1).\n\n\nControl over Spatial and Attribute Trade-off\nNo explicit control; clusters are purely based on minimizing spatial distance.\nOffers flexibility through the alpha parameter, balancing attribute similarity and spatial continuity.\n\n\nDataset Size Suitability\nWorks best with small to medium-sized datasets with clearly defined neighbors.\nSuitable for larger, more complex datasets that require a balance between multiple factors.\n\n\nComputational Efficiency\nFaster and easier to implement due to reliance on MST.\nComputationally intensive, especially for large datasets, due to hierarchical clustering and alpha optimization.\n\n\nInterpretation of Results\nSimple interpretation through MST visualization and cluster boundaries.\nProvides deeper insights using parallel coordinate plots, box plots, and attribute-based comparisons.\n\n\nScalability\nLimited scalability; performance declines with larger datasets.\nScales better with larger datasets, though it may require more computing resources.\n\n\nVisualization Capabilities\nFocuses on visualizing MST and cluster boundaries.\nSupports both spatial and multivariate visualization through choropleth maps and statistical plots.\n\n\nFlexibility in Cluster Formation\nRelies on MST structure, limiting flexibility.\nGreater flexibility by adjusting alpha to balance between spatial and attribute-based clustering.\n\n\nLimitations\n- Limited control over trade-offs between spatial and attribute similarity.\n- Less effective with large datasets.\n- Requires careful alpha selection, which can be time-consuming.\n- More computationally demanding."
+  },
+  {
+    "objectID": "In_Class_Exercises/In_Class_Exercise_10/In_Class_Exercise10.html",
+    "href": "In_Class_Exercises/In_Class_Exercise_10/In_Class_Exercise10.html",
+    "title": "In Class Exercise 10: Geospatial Data Science",
+    "section": "",
+    "text": "In Class 10:"
+  },
+  {
+    "objectID": "In_Class_Exercises/In_Class_Exercise_10/In_Class_Exercise10.html#loading-packages",
+    "href": "In_Class_Exercises/In_Class_Exercise_10/In_Class_Exercise10.html#loading-packages",
+    "title": "In Class Exercise 10: Geospatial Data Science",
+    "section": "1.1 Loading Packages",
+    "text": "1.1 Loading Packages\n\npacman::p_load(spdep, tmap, sf, ClustGeo,ggpubr, cluster, factoextra, NbClust, heatmaply, corrplot, psych, tidyverse, GGally)"
+  },
+  {
+    "objectID": "In_Class_Exercises/In_Class_Exercise_10/In_Class_Exercise10.html#read-file-from-hands-on-9",
+    "href": "In_Class_Exercises/In_Class_Exercise_10/In_Class_Exercise10.html#read-file-from-hands-on-9",
+    "title": "In Class Exercise 10: Geospatial Data Science",
+    "section": "1.2 Read File from Hands on 9",
+    "text": "1.2 Read File from Hands on 9\n\nshan_sf &lt;- read_rds(\"data/rds/shan_sf.rds\")\nshan_ict &lt;- read_rds(\"data/rds/shan_ict.rds\") \nshan_sf_cluster &lt;- read_rds(\"data/rds/shan_sf_cluster.rds\")\nproxmat &lt;- read_rds(\"data/rds/proxmat.rds\")"
+  },
+  {
+    "objectID": "In_Class_Exercises/In_Class_Exercise_10/In_Class_Exercise10.html#computing-spatial-distance-matrix",
+    "href": "In_Class_Exercises/In_Class_Exercise_10/In_Class_Exercise10.html#computing-spatial-distance-matrix",
+    "title": "In Class Exercise 10: Geospatial Data Science",
+    "section": "3.1 Computing Spatial Distance Matrix",
+    "text": "3.1 Computing Spatial Distance Matrix\n\nStep 1: Computing Nearest Neighbours\n\nshan.nb &lt;- poly2nb(shan_sf)\nsummary(shan.nb)\n\nNeighbour list object:\nNumber of regions: 55 \nNumber of nonzero links: 264 \nPercentage nonzero weights: 8.727273 \nAverage number of links: 4.8 \nLink number distribution:\n\n 2  3  4  5  6  7  8  9 \n 5  9  7 21  4  3  5  1 \n5 least connected regions:\n3 5 7 9 47 with 2 links\n1 most connected region:\n8 with 9 links\n\n\n\n\nStep 2: Visualizing the neighbours\n\nplot(st_geometry(shan_sf), border=grey(0.5))\npts &lt;- st_coordinates(st_centroid(shan_sf))\nplot(shan.nb,\n      pts,\n      col = 'blue',\n      add = TRUE\n      )"
+  },
+  {
+    "objectID": "In_Class_Exercises/In_Class_Exercise_10/In_Class_Exercise10.html#step-3-computing-minimum-spanning-tree",
+    "href": "In_Class_Exercises/In_Class_Exercise_10/In_Class_Exercise10.html#step-3-computing-minimum-spanning-tree",
+    "title": "In Class Exercise 10: Geospatial Data Science",
+    "section": "Step 3: Computing Minimum Spanning Tree",
+    "text": "Step 3: Computing Minimum Spanning Tree\n\nCalculating Edge CostsIncorporating These costs into a weights objectComputing MSTVIsualising MST\n\n\n\nlcosts &lt;- nbcosts(shan.nb, shan_ict)\n\n\n\nStyle have to have B,\n\nshan.w &lt;- nb2listw(shan.nb,\n                   lcosts,\n                   style = \"B\")\nsummary(shan.w)\n\nCharacteristics of weights list object:\nNeighbour list object:\nNumber of regions: 55 \nNumber of nonzero links: 264 \nPercentage nonzero weights: 8.727273 \nAverage number of links: 4.8 \nLink number distribution:\n\n 2  3  4  5  6  7  8  9 \n 5  9  7 21  4  3  5  1 \n5 least connected regions:\n3 5 7 9 47 with 2 links\n1 most connected region:\n8 with 9 links\n\nWeights style: B \nWeights constants summary:\n   n   nn       S0       S1        S2\nB 55 3025 76267.65 58260785 522016004\n\n\n\n\n\nshan.mst &lt;- mstree(shan.w)\n\n\n\n\nplot(st_geometry((shan_sf), baorder=gray(0.5)))\nplot.mst(shan.mst, pts,\n         col=\"blue\",\n         cex.lab = 0.7, \n         cex.circles = 0.005,\n         add= TRUE)\n\n\n\n\n\n\n\n\n\n\n\n\nComputing Spatially Constraint Clusters using SKATER Method\n\nCodeSkater TreeThe Code to plot\n\n\n\nskater.clust6 &lt;- skater(edges = shan.mst[,1:2],\n                        data = shan_ict,\n                        method = \"euclidean\",\n                        ncuts = 5\n                        )\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nplot(st_geometry(shan_sf), border = gray(0.5))\n\n# Plot the skater clusters with better parameter alignment\nplot(skater.clust6,\n     coords = pts,                  # Specify coordinates\n     cex.lab = 1,                   # Adjust label size for clarity\n     groups.colors = c(\"red\", \"green\", \"blue\", \"brown\", \"pink\"),\n     cex.circles = 0.005,             # Adjust the circle size\n     add = TRUE)                    # Overlay on the previous plot"
+  },
+  {
+    "objectID": "In_Class_Exercises/In_Class_Exercise_10/In_Class_Exercise10.html#computing-spatially-constrained-clusters-using-skater-method",
+    "href": "In_Class_Exercises/In_Class_Exercise_10/In_Class_Exercise10.html#computing-spatially-constrained-clusters-using-skater-method",
+    "title": "In Class Exercise 10: Geospatial Data Science",
+    "section": "Computing Spatially Constrained Clusters using SKATER method",
+    "text": "Computing Spatially Constrained Clusters using SKATER method\n\nPlotCode\n\n\n\ngroups_mat &lt;- as.matrix(skater.clust6$groups)\nshan_sf_spatialcluster &lt;- cbind(shan_sf_cluster, as.factor(groups_mat)) %&gt;%\n  rename('skater_CLUSTER' = 'as.factor.groups_mat.')\nqtm(shan_sf_spatialcluster, \"skater_CLUSTER\")\n\n\n\n\n\n\n\n\n\n\n\ngroups_mat &lt;- as.matrix(skater.clust6$groups)\nshan_sf_spatialcluster &lt;- cbind(shan_sf_cluster, as.factor(groups_mat)) %&gt;%\n  rename('skater_CLUSTER' = 'as.factor.groups_mat.')\nqtm(shan_sf_spatialcluster, \"skater_CLUSTER\")"
+  },
+  {
+    "objectID": "In_Class_Exercises/In_Class_Exercise_10/In_Class_Exercise10.html#computing-spatial-distance-matrix-1",
+    "href": "In_Class_Exercises/In_Class_Exercise_10/In_Class_Exercise10.html#computing-spatial-distance-matrix-1",
+    "title": "In Class Exercise 10: Geospatial Data Science",
+    "section": "4.1 Computing Spatial Distance Matrix",
+    "text": "4.1 Computing Spatial Distance Matrix\n\nComputing Spatial Distance MatrixThe Cluster GraphsThe CodeSaving ClustGeoOutput\n\n\nST_distance() of sf package is used to compute the distance matrix.\n\ndist &lt;- st_distance(shan_sf, shan_sf)\ndistmat &lt;- as.dist(dist)\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\ncr &lt;- choicealpha(proxmat, distmat,\n                  range.alpha = seq(0, 1, 0.1),\n                  K=6, graph = TRUE\n                  )\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nclust6 &lt;- hclustgeo(proxmat, distmat, alpha = 0.2)\ngroups &lt;- as.factor(cutree(clust6, k=6))\nshan_sf_clustGeo &lt;- cbind( shan_sf, \n                            as.matrix(groups)) %&gt;%\n  rename(\"clustGEO\" = \"as.matrix.groups.\" )"
+  },
+  {
+    "objectID": "In_Class_Exercises/In_Class_Exercise_10/In_Class_Exercise10.html#visualizing-the-map",
+    "href": "In_Class_Exercises/In_Class_Exercise_10/In_Class_Exercise10.html#visualizing-the-map",
+    "title": "In Class Exercise 10: Geospatial Data Science",
+    "section": "4.2 Visualizing the map",
+    "text": "4.2 Visualizing the map\n\nqtm(shan_sf_clustGeo, \"clustGEO\")"
   }
 ]
