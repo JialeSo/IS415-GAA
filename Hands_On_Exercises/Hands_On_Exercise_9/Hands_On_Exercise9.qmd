@@ -357,7 +357,7 @@ tm_shape(shan_sf) +
 **Key Differences:**
 
 | **Aspect**          | **1st Code Block (tmap_arrange)**       | **2nd Code Block (tm_facets)**         |
-|-----------------|----------------------------|---------------------------|
+|---------------------|-----------------------------------------|----------------------------------------|
 | **Layout**          | Two independent maps side-by-side       | Synchronized maps in facets            |
 | **Interactivity**   | No interaction between maps             | Maps share zoom and pan behavior       |
 | **Legends**         | Separate for each map                   | Single, unified legend placement       |

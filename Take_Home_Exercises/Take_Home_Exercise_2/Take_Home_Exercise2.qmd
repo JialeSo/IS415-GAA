@@ -796,7 +796,7 @@ These charts visualize the **drug case density (cases per km²)** across Thailan
 
 This pattern of concentration in a few urban provinces suggests that densely populated areas are facing more significant drug issues relative to their size, demanding focused urban interventions.
 
-### 5.2.3 Rank Chart for Total Drug Cases and Density Across years. 
+### 5.2.3 Rank Chart for Total Drug Cases and Density Across years.
 
 A **rank chart** is used to display the relative positions of provinces based on their total number of drug cases or the density of drug abuse over time. It helps to visualize how provinces compare to one another and how their ranks shift across different years.
 
@@ -2052,9 +2052,8 @@ These methods together answer:
 
 -   **Bavaud, F.**, 2010. *Models for Spatial Weights: A Systematic Look*. Geographical Analysis, 30(2), pp. 153-171.
 
-```{=html}
 <!-- -->
-```
+
 -   **Griffith, D.A.**, 2009. *Spatial Autocorrelation*.
 
 -   **Getis, A.**, 2010. *B.3 Spatial Autocorrelation*. In: Fischer, M.M. and Getis, A., eds. 2010. *Handbook of Applied Spatial Analysis: Software Tools, Methods, and Applications*. Springer.
