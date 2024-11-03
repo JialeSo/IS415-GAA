@@ -1,12 +1,2143 @@
 ---
-title: "In Class Exercise1: Geospatial Data Science"
+title: "Take Home 3: Prototyping Modules for Geospatial Analytics Shiny Application"
 author: "Jiale SO"
-date: "August 18, 2024"
+date: "November 1st, 2024"
 date-modified: "last-modified"
+format: html
 execute: 
   eval: true
   echo: true
   freeze: true
 ---
 
-There's no In Class Exercise 1, so here's a picture of a cat.
+# 1.0 Introduction
+
+Our group is working on understanding Jakarta's complex travel patterns, a city known for its unique blend of cultural vibrancy and high-density traffic. Various factors such as weather, time of day, and location play a crucial role in influencing daily travel flows. Understanding these patterns is essential for tackling transportation challenges and enhancing urban mobility. This project aims to analyze Jakarta’s origin and destination travel trends using the Grab Posisi dataset to gain valuable insights into the city’s movement patterns. To maintain focus and reduce computational load, we will limit our analysis to trips at the district level, rather than township level.
+
+# 2.0 Objectives
+
+The analysis will center on uncovering key insights from Grab’s origin and destination data by exploring:
+
+-   **Peak Travel Periods**: Identifying the times of highest traffic flow and understanding the factors driving these patterns.
+
+-   **Popular Destinations and Points of Interest**: Mapping frequently visited destinations within Jakarta and analyzing the effects of weather, events, and local attractions on travel to these areas.
+
+-   **Influential Travel Factors**: Investigating variables like weather conditions, time of day, and proximity to popular landmarks that may affect travel behaviors.
+
+# 3.0 My Responsibilities in the Group Project
+
+-   **Data Sourcing**: Identifying additional data sources that could impact trip patterns, including weather data, points of interest, and population size by district.
+
+-   **Data Preparation**:
+
+    -   Preprocessing the Jakarta trip dataset provided by Grab Posisi.
+
+    -   Integrating weather data with trip records.
+
+    -   Categorizing trip times to facilitate time-based analysis.
+
+    -   Cleaning and mapping points of interest data to relevant districts.
+
+    -   Gathering population data for each Jakarta district.
+
+-   **Exploratory Data Analysis (EDA)**:
+
+    -   Visualizing POI Across Jakarta and Categories
+
+    -   Visualizing Origin/Destination Hot Spots Across Jakarta
+
+-   **Spatial Point Analysis**
+
+    -   1st Order Spatial Point Kernel Density of where Origin/Destination are being made on District Level
+
+-   **Origin / Destination Analysis On Individual District Layer**
+
+    -   Origin / Destination Flow Line Map
+    -   Interactive Chord Diagram to visualize map flow
+
+# 4.0 Creating the Environment
+
+```{r, include = FALSE, eval = FALSE}
+devtools::install_github("mattflor/chorddiag")
+```
+
+```{r}
+pacman::p_load(sf,st,arrow,lubridate,tidyverse,raster,tmap,ggplot2, patchwork,spatstat,spNetwork,classInt,viridis,gifski,dplyr, geosphere, httr, jsonlite, DT, stplanr, chorddiag)
+```
+
+```{r}
+set.seed(1227)
+```
+
+# 5.0 Data Sources
+
+Our analysis will use the following data sources:
+
+1.  **Weather Data** - [Weatherbit API](https://www.weatherbit.io/): Provides Historical weather conditions to examine how factors like rain and temperature impact travel.
+
+2.  **Points of Interest (POI)** - [Humanitarian Data Exchange (HDX)](https://data.humdata.org/dataset/hotosm_idn_points_of_interest?): Lists popular locations in Jakarta, helping us understand common travel destinations.
+
+3.  **Population Data** - [ArcGIS StoryMaps](https://storymaps.arcgis.com/stories/36e38ceefab0455eb6059a734381723c): Provides population details by district to see how population size correlates with travel demand.
+
+4.  **Jakarta Map** - [HDX Jakarta Map](https://data.humdata.org/dataset/cod-ab-idn?): Supplies district boundaries for mapping and visualizing travel flows.
+
+5.  **Grab Posisi Dataset** - [Grab Engineering](https://engineering.grab.com/grab-posisi): Our main dataset for analyzing origin and destination travel patterns across Jakarta.
+
+# 6.0 Data Wrangling and Preparation
+
+## 6.1 Jakarta Map Shapefile
+
+### 6.1.1 Jakarta District Level
+
+In this section, we will process the Indonesia administrative boundary shapefile to focus specifically on the district level for Jakarta. The following steps will help us filter and clean the data to create a simplified and interactive map for Jakarta
+
+#### Step 1: Load the Indonesia Administrative Boundary Shapefile
+
+We start by loading the shapefile for Indonesia’s administrative boundaries. This shapefile contains various administrative levels, but we will filter it to focus on the Jakarta region.
+
+```{r, eval = FALSE}
+indonesia_district <- st_read(
+  dsn = "data/geospatial/indo", 
+  layer = "idn_admbnda_adm3_bps_20200401"
+)
+```
+
+#### Step 2: Filter for Jakarta
+
+Here, we filter the dataset to include only entries for **DKI Jakarta** and rename it to "Jakarta" for consistency.
+
+```{r, eval = FALSE}
+jakarta_district <- indonesia_district %>%
+  filter(ADM1_EN == "Dki Jakarta") %>%
+  mutate(ADM1_EN = "Jakarta")
+```
+
+#### Step 3: Exclude Kepulauan Seribu Districts
+
+We exclude districts belonging to **Kepulauan Seribu**, as they are outside our area of interest. As it's a lake within Jakarta that grab cannot reach. Below map shows you where kepulauan Seribu is on the map.
+
+![](images/clipboard-3286060530.png)
+
+```{r, eval = FALSE}
+jakarta_district <- jakarta_district %>% filter(ADM2_EN != "Kepulauan Seribu")
+```
+
+#### Step 4: Select Relevant Columns
+
+To keep the data focused and manageable, we select only the columns we need: province, city, district, and geometry.
+
+```{r, eval = FALSE}
+jakarta_district <- jakarta_district %>%
+  dplyr::select(ADM3_EN, ADM1_EN, ADM2_EN, geometry)
+```
+
+#### Step 5: Rename Columns for Clarity
+
+We rename the columns to more intuitive names that reflect the data they hold (e.g., `ADM1_EN` to `province`).
+
+```{r, eval = FALSE}
+jakarta_district <- jakarta_district %>%
+  rename(
+    province = ADM1_EN,
+    city = ADM2_EN,
+    district = ADM3_EN
+  )
+
+```
+
+#### Step 6: Ensure the CRS is EPSG:6384(WGS84)
+
+We transform the dataset to ensure it uses the WGS84 coordinate reference system, which is standard for geospatial data.
+
+```{r, eval = FALSE}
+jakarta_district <- jakarta_district %>%
+  st_transform(crs = 6384)
+```
+
+#### Step 7: Standardize Text Formatting
+
+We make all text lowercase for consistency across data entries.
+
+```{r, eval = FALSE}
+jakarta_district <- jakarta_district %>%
+  mutate(across(where(is.character), tolower))
+```
+
+#### Step 8: Simplify the Geometry
+
+To improve performance, we simplify the geometry with a specified tolerance. This reduces file size while retaining essential boundary shapes.
+
+```{r, eval = FALSE}
+jakarta_district <- jakarta_district %>%
+  st_simplify(dTolerance = 10.0)
+```
+
+#### Step 9: Create an Interactive Map
+
+Create an interactive map with Jakarta’s district boundaries, using `OpenStreetMap` as a basemap for better visualization.
+
+```{r, include = FALSE}
+tmap_mode("view")
+jakarta_district <- read_rds("data/finaldata/jakarta_district.rds")
+```
+
+```{r, warning = FALSE}
+tm_shape(jakarta_district) +
+  tm_polygons("district", border.col = "black", lwd = 0.5) +
+  tm_basemap("OpenStreetMap")
+```
+
+```{r, include = FALSE}
+tmap_mode("plot")
+```
+
+#### Step 10: Create the shapefile for future usage
+
+This map will be passed on to our teammates for future usage.
+
+```{r}
+write_rds(jakarta_district, "data/finaldata/jakarta_district.rds")
+```
+
+### 6.1.2 Jakarta Population Dataset
+
+#### Step 1: Retrieve Population Data from Online Source
+
+We query population data for Jakarta townships from an online ArcGIS source. The data includes township names and population estimates for 2019.
+
+```{r, eval = FALSE}
+# Define the URL and parameters
+url <- "https://services9.arcgis.com/ZKS1gJ6m5K5XsloZ/arcgis/rest/services/PopulasiJkt_WFL1/FeatureServer/3/query"
+params <- list(
+  where = "1=1",  
+  outFields = "WADMKD,TotPop2019",
+  f = "json",
+  returnGeometry = "false"
+)
+
+# Request the data
+response <- GET(url, query = params)
+
+# Parse the response if successful
+if (status_code(response) == 200) {
+  raw_content <- content(response, as = "text", encoding = "UTF-8")
+  data <- fromJSON(raw_content, flatten = TRUE)
+  
+  # Extract population data and clean township names
+  jakarta_township_population_data <- data$features %>%
+    dplyr::select(township = attributes.WADMKD, population_2019 = attributes.TotPop2019) %>%
+    mutate(township = str_to_lower(township))
+} else {
+  cat("Failed to fetch data:", status_code(response), "\n", content(response, "text"))
+}
+
+```
+
+Step 1b: Keep this data in case the website is down in the future.
+
+```{r, eval = FALSE}
+write_rds(jakarta_township_population_data, "data/finaldata/jakarta_township_population_data.rds")
+```
+
+```{r, include = FALSE}
+jakarta_township_population_data <- read_rds("data/finaldata/jakarta_township_population_data.rds")
+```
+
+#### Step 2: Load Jakarta Township Data
+
+We begin by loading the township data for Indonesia, filtering it to include only DKI Jakarta, and renaming columns to meaningful names. Save this file because it's alittle big size
+
+```{r, eval = FALSE}
+# Load Indonesia township data
+indonesia_township <- st_read(
+  dsn = "data/geospatial/indo", 
+  layer = "idn_admbnda_adm4_bps_20200401"
+)
+# Filter for Jakarta and rename columns
+jakarta_township <- indonesia_township %>%
+  filter(ADM1_EN == "Dki Jakarta") %>%
+  mutate(ADM1_EN = "Jakarta") %>%
+  filter(ADM2_EN != "Kepulauan Seribu") %>%  # Exclude Kepulauan Seribu
+  dplyr::select(ADM1_EN, ADM2_EN, ADM3_EN, ADM4_EN, geometry) %>%
+  rename(
+    province = ADM1_EN,
+    city = ADM2_EN,
+    district = ADM3_EN,
+    township = ADM4_EN
+  ) %>% 
+  st_drop_geometry() %>%
+  mutate(across(where(is.character), tolower))
+```
+
+```{r, eval = FALSE}
+write_rds(jakarta_township, "data/finaldata/jakarta_township.rds")
+```
+
+```{r, include = FALSE}
+jakarta_township <- read_rds("data/finaldata/jakarta_township.rds")
+```
+
+#### Step 3: Apply Name Corrections to Population Data
+
+To ensure townships in `population_data` match those in `jakarta_township`, we apply a predefined list of name corrections.
+
+```{r}
+# Define a list for mismatched names
+mismatch_mapping <- c(
+  "kalibaru" = "kali baru",
+  "kerendang" = "krendang",
+  "pal meriam" = "pal meriem",
+  "papanggo" = "papango",
+  "rawa jati" = "rawajati",
+  "rawasari" = "rawa sari",
+  "wijaya kusuma" = "wijaya kesuma",
+  "tanjung priok" = "tanjung priuk",
+  "rawa badak utara" = "rawabadak utara",
+  "rawa badak selatan" = "rawabadak selatan",
+  "sukapura" = "suka pura",
+  "harapan mulia" = "harapan mulya",
+  "kali anyar" = "kalianyar"
+)
+
+# Apply name corrections
+jakarta_township_population_data <- jakarta_township_population_data %>%
+  mutate(
+    township = str_to_lower(str_trim(township)),
+    township = ifelse(
+      township %in% names(mismatch_mapping),
+      mismatch_mapping[township],
+      township
+    )
+  )
+
+```
+
+#### Step 4: Join Population Data to Township Data
+
+Now, we join `population_data_clean` to `jakarta_township_df` using the township name. This provides population data at the township level.
+
+```{r}
+# Join township data with population data
+jakarta_township <- jakarta_township %>%
+  left_join(jakarta_township_population_data, by = "township")
+```
+
+#### Step 6: Address Missing Population Values
+
+To handle missing values, we explicitly set the population of certain townships to 0. We also replace any remaining `NA` values with 0. These Townships are located at the lake and are not residential areas.
+
+```{r}
+# Set population to 0 for specified townships and replace remaining NA with 0
+jakarta_township <- jakarta_township %>%
+  mutate(
+    population_2019 = ifelse(
+      township %in% c("danau sunter", "danau sunter dll", "prepedan"),
+      0,
+      replace_na(population_2019, 0)
+    )
+  )
+```
+
+#### Step 7: Aggregate Population Data to District Level
+
+With population data at the township level, we now aggregate it up to the district level by summing population counts for each district.
+
+```{r}
+# Aggregate population to district level
+district_population <- jakarta_township %>%
+  group_by(district) %>%
+  summarize(population_2019 = sum(population_2019, na.rm = TRUE))
+```
+
+#### Step 8: Write the dataset for future usage
+
+```{r}
+write_rds(district_population, "data/finaldata/district_population.rds")
+```
+
+## 6.2 Grab Possisi's Trajectory Dataset
+
+In this section, we process the Grab Posisi dataset, which contains detailed trajectory data for trips within Jakarta. The data is split across multiple parquet files, and we’ll combine these into a single DataFrame for ease of analysis.
+
+::: callout-note
+Note that the dataset is very huge here! It may take some time to load for this section
+:::
+
+### **6.2.1 Making Trajectory to Trips Dataset**
+
+#### Step 1: Read and Combine Parquet Files
+
+We read multiple parquet files that contain trip data from Grab and combine them into a single DataFrame.
+
+```{r, eval = FALSE}
+df <- read_parquet('data/aspatial/grabs/part-00000.snappy.parquet',as_data_frame = TRUE)
+df1 <- read_parquet('data/aspatial/grabs/part-00001.snappy.parquet',as_data_frame = TRUE)
+df2 <- read_parquet('data/aspatial/grabs/part-00002.snappy.parquet',as_data_frame = TRUE)
+df3 <- read_parquet('data/aspatial/grabs/part-00003.snappy.parquet',as_data_frame = TRUE)
+df4 <- read_parquet('data/aspatial/grabs/part-00004.snappy.parquet',as_data_frame = TRUE)
+df5 <- read_parquet('data/aspatial/grabs/part-00005.snappy.parquet',as_data_frame = TRUE)
+df6 <- read_parquet('data/aspatial/grabs/part-00006.snappy.parquet',as_data_frame = TRUE)
+df7 <- read_parquet('data/aspatial/grabs/part-00007.snappy.parquet',as_data_frame = TRUE)
+df8 <- read_parquet('data/aspatial/grabs/part-00008.snappy.parquet',as_data_frame = TRUE)
+df9 <- read_parquet('data/aspatial/grabs/part-00009.snappy.parquet',as_data_frame = TRUE)
+df_trajectories <- bind_rows(df, df1, df2, df3, df4, df5, df6, df7, df8, df9)
+```
+
+#### Step 2: Convert Timestamp to POSIXct Format
+
+To work with timestamps effectively, we ensure they are in `POSIXct` format.
+
+```{r, eval = FALSE}
+df_trajectories$pingtimestamp <- as.POSIXct(
+  df_trajectories$pingtimestamp, 
+  origin = "1970-01-01", 
+  tz = "UTC"
+)
+```
+
+#### Step 3: Aggregate Trip-Level Data
+
+Here, we group the data by `trj_id` (trajectory ID) and **Extract Key Information for Each Trajectory**:
+
+-   **Driving Mode**: Records the mode of driving from the first ping.
+
+-   **Start and End Times**: Takes the first and last timestamp to capture the start and end times of the journey.
+
+-   **Duration**: Calculates the total duration of each trajectory in minutes.
+
+-   **Distance**: Computes the straight-line distance between the origin and destination coordinates using the Haversine formula, which accounts for Earth’s curvature.
+
+-   **Average Speed**: Calculates the average speed based on the distance and duration.
+
+-   **Origin and Destination Coordinates**: Records the latitude and longitude for both the starting and ending points of each trajectory.
+
+The final output provides a summarized plot of each journey, including key details about time, distance, speed, and geographical start and end points.
+
+```{r, eval = FALSE}
+trajectory_data <- df_trajectories %>%
+  arrange(trj_id, pingtimestamp) %>%
+  group_by(trj_id) %>%
+  summarize(
+    driving_mode = first(driving_mode),  
+    origin_time = first(pingtimestamp),
+    destination_time = last(pingtimestamp),
+    total_duration_minutes = as.numeric(
+      difftime(last(pingtimestamp), first(pingtimestamp), units = "mins")
+    ),
+    total_distance_km = distHaversine(
+      c(first(rawlng), first(rawlat)), 
+      c(last(rawlng), last(rawlat))
+    ) / 1000,
+    average_speed_kmh = total_distance_km / (total_duration_minutes / 60),
+    origin_rawlat = first(rawlat),  
+    origin_rawlng = first(rawlng),
+    destination_rawlat = last(rawlat),
+    destination_rawlng = last(rawlng),
+    .groups = "drop"
+  )
+```
+
+#### Step 4: Convert Coordinates to Spatial Points
+
+This code processes trajectory data to create spatial representations of origin and destination points, enhancing accuracy for spatial analysis. Initially, the data is read in EPSG:4326 (WGS84), a standard latitude/longitude CRS for GPS data. Then, each set of points is transformed to EPSG:6384, a local CRS that minimizes distortions for the specific geographic area.
+
+```{r, eval = FALSE}
+origin_points <- st_as_sf(
+  trajectory_data, 
+  coords = c("origin_rawlng", "origin_rawlat"), 
+  crs = 4326  # Original CRS in lat/lon
+) %>%
+  st_transform(crs = 6384)  # Transform to EPSG:5580
+
+destination_points <- st_as_sf(
+  trajectory_data, 
+  coords = c("destination_rawlng", "destination_rawlat"), 
+  crs = 4326
+) %>%
+  st_transform(crs = 6384)
+```
+
+#### Step 5: Extract Transformed Coordinates
+
+We retrieve the transformed latitude and longitude values from spatial points.
+
+```{r, eval = FALSE}
+trajectory_data <- trajectory_data %>%
+  mutate(
+    origin_lat = st_coordinates(origin_points)[, 2],
+    origin_lng = st_coordinates(origin_points)[, 1],
+    destination_lat = st_coordinates(destination_points)[, 2],
+    destination_lng = st_coordinates(destination_points)[, 1]
+  )
+```
+
+#### Step 6: Perform Spatial Joins with Jakarta Districts
+
+Using spatial joins, we match origin and destination points to Jakarta districts for additional context.
+
+```{r, eval = FALSE}
+origin_admin <- st_join(origin_points, jakarta_district, join = st_within, left = TRUE) %>%
+  st_drop_geometry() %>%
+  dplyr::select(trj_id, origin_province = province, origin_city = city, 
+                origin_district = district) %>%
+  distinct(trj_id, .keep_all = TRUE)
+
+
+destination_admin <- st_join(destination_points, jakarta_district, join = st_within, left = TRUE) %>%
+  st_drop_geometry() %>%
+  dplyr::select(trj_id, destination_province = province, destination_city = city, 
+                destination_district = district) %>%
+  distinct(trj_id, .keep_all = TRUE)
+```
+
+#### Step 7: Add Administrative Data to Main DataFrame
+
+we adds administrative details (province, city, district) for each trip's origin and destination by joining with `origin_admin` and `destination_admin` data. If a location is outside Jakarta, missing fields are labeled as "outside of jakarta," ensuring each trip has comprehensive location context.
+
+```{r, eval = FALSE}
+
+trajectory_data <- trajectory_data %>%
+  left_join(origin_admin, by = "trj_id") %>%
+  left_join(destination_admin, by = "trj_id") %>%
+  mutate(
+    origin_province = ifelse(is.na(origin_province), "outside of jakarta", origin_province),
+    origin_city = ifelse(is.na(origin_city), "outside of jakarta", origin_city),
+    origin_district = ifelse(is.na(origin_district), "outside of jakarta", origin_district),
+    destination_province = ifelse(is.na(destination_province), "outside of jakarta", destination_province),
+    destination_city = ifelse(is.na(destination_city), "outside of jakarta", destination_city),
+    destination_district = ifelse(is.na(destination_district), "outside of jakarta", destination_district)
+  )
+```
+
+#### Step 8: Add Time Clusters to Trip Data
+
+Finally, to analyze trip patterns by time of day, we create time clusters for both origin and destination times.
+
+```{r, eval = FALSE}
+trip_data <- trajectory_data %>%
+  mutate(
+    origin_datetime = as.POSIXct(origin_time, origin = "1970-01-01", tz = "UTC"),
+    destination_datetime = as.POSIXct(destination_time, origin = "1970-01-01", tz = "UTC"),
+    origin_day = weekdays(origin_datetime),
+    origin_hour = as.numeric(format(origin_datetime, "%H")),
+    destination_day = weekdays(destination_datetime),
+    destination_hour = as.numeric(format(destination_datetime, "%H")),
+    origin_time_cluster = case_when(
+      origin_hour >= 5 & origin_hour < 8 ~ "Morning Peak",
+      origin_hour >= 8 & origin_hour < 11 ~ "Morning Lull",
+      origin_hour >= 11 & origin_hour < 14 ~ "Afternoon Peak",
+      origin_hour >= 14 & origin_hour < 17 ~ "Afternoon Lull",
+      origin_hour >= 17 & origin_hour < 20 ~ "Evening Peak",
+      origin_hour >= 20 & origin_hour < 23 ~ "Evening Lull",
+      origin_hour >= 23 | origin_hour < 2 ~ "Midnight Peak",
+      origin_hour >= 2 & origin_hour < 5 ~ "Midnight Lull",
+      TRUE ~ NA_character_
+    ),
+    destination_time_cluster = case_when(
+      destination_hour >= 5 & destination_hour < 8 ~ "Morning Peak",
+      destination_hour >= 8 & destination_hour < 11 ~ "Morning Lull",
+      destination_hour >= 11 & destination_hour < 14 ~ "Afternoon Peak",
+      destination_hour >= 14 & destination_hour < 17 ~ "Afternoon Lull",
+      destination_hour >= 17 & destination_hour < 20 ~ "Evening Peak",
+      destination_hour >= 20 & destination_hour < 23 ~ "Evening Lull",
+      destination_hour >= 23 | destination_hour < 2 ~ "Midnight Peak",
+      destination_hour >= 2 & destination_hour < 5 ~ "Midnight Lull",
+      TRUE ~ NA_character_
+    )
+  )
+```
+
+### 6.2.2 Adding Weather to the trip
+
+To assess if weather impacts trips, we'll retrieve historical data from the OpenWeather API.
+
+This API requires
+
+1.  date,
+
+2.  coordinates in EPSG:4326 (latitude/longitude),
+
+3.  and our API key,
+
+returning weather conditions for the specified location.
+
+::: callout-note
+***Due to API limitations, we won’t obtain weather data for each exact trip point. Instead, we'll assume uniform weather within each district: if it rains at the district's centroid, we’ll consider it raining across the entire district.***
+:::
+
+#### Step 1. Get maximum trip and end trip dates from trip_data
+
+```{r, eval = FALSE}
+trip_start_date <- format(as.Date(min(trip_data$origin_time)), "%Y-%m-%d") %>%
+  sub("-0", "-", .)
+trip_end_date <- format(as.Date(max(trip_data$destination_time)), "%Y-%m-%d") %>%
+  sub("-0", "-", .)
+```
+
+#### Step 2. Get Centroid of each district and assume that the entire district is raining
+
+Clculates the centroids of Jakarta's districts and converts them to EPSG:4326 coordinates. It then extracts the latitude and longitude of each centroid, removes the spatial geometry, and converts the result to a data frame for easy reference.
+
+```{r, eval = FALSE}
+jakarta_district_centroid <- jakarta_district %>%
+  mutate(geometry = st_centroid(geometry))  
+
+jakarta_district_centroid_4326 <- st_transform(jakarta_district_centroid, crs = 4326)
+
+jakarta_district_centroid_4326 <- jakarta_district_centroid_4326 %>%
+  mutate(
+    centroid_lat = st_coordinates(geometry)[, 2],  
+    centroid_lng = st_coordinates(geometry)[, 1]   
+  ) %>%
+  st_drop_geometry() %>%
+  as.data.frame()
+```
+
+#### Step 3: Define the Function to Fetch Weather Data
+
+To retrieve weather data for each district, we first define our API keys and create a function, `get_weather_description`. This function will call the Weatherbit API to get historical weather data for a specified location and time range. You have to give your own api key i have masked mine.
+
+```{r, eval = FALSE}
+jiale_weather_api_key <- "YOURAPIKEY"
+```
+
+```{r, include = FALSE}
+jiale_weather_api_key <- "329773c7858642f189d6f387a62d3759"
+```
+
+```{r, eval = FALSE}
+# Function to fetch weather description
+get_weather_description <- function(district, lat, lon, start_date, end_date, api_key) {
+  # Construct the API URL
+  api_url <- paste0(
+    "https://api.weatherbit.io/v2.0/history/subhourly?",
+    "lat=", lat,
+    "&lon=", lon,
+    "&start_date=", start_date,
+    "&end_date=", end_date,
+    "&key=", api_key
+  )
+  print(api_url)
+  
+  # Make the API request
+  response <- GET(api_url)
+  
+  # Handle the response
+  if (status_code(response) == 200) {
+    # Parse the response content
+    content_data <- content(response, as = "parsed", simplifyDataFrame = TRUE)
+
+    # Check if 'data' field exists and is not empty
+    if (!is.null(content_data$data) && nrow(content_data$data) > 0) {
+      # Extract relevant weather data
+      weather_df <- content_data$data %>%
+        mutate(
+          description = weather$description,  # Extract nested weather description
+          timestamp = as.POSIXct(timestamp_local, format = "%Y-%m-%dT%H:%M:%S"),
+          district = district  # Add township name
+        ) %>%
+        dplyr::select(district, timestamp, description)  # Keep only needed columns
+
+      return(weather_df)
+    } else {
+      warning(paste0("No data returned for district: ", district))
+      return(NULL)
+    }
+  } else {
+    warning(paste0("API request failed for district: ", district))
+    return(NULL)
+  }
+}
+```
+
+#### Step 4: Retrieve Weather Data for Each District
+
+Using the `get_weather_description` function, we loop through each district in `jakarta_district_centroid_4326`, specifying the latitude, longitude, and date range. The data for each district is appended to a consolidated DataFrame, `weather_data_df`.
+
+```{r, eval = FALSE}
+# Initialize an empty DataFrame to store weather data
+weather_data_df <- data.frame()
+
+# Loop through each district and fetch weather data
+for (i in 1:nrow(jakarta_district_centroid_4326)) {
+  district_data <- get_weather_description(
+    district = jakarta_district_centroid_4326$district[i],
+    lat = jakarta_district_centroid_4326$centroid_lat[i],
+    lon = jakarta_district_centroid_4326$centroid_lng[i],
+    start_date = trip_start_date,  
+    end_date = trip_end_date,      
+    api_key = jiale_weather_api_key
+  )
+
+  # Append the new data if the request was successful
+  if (!is.null(district_data)) {
+    weather_data_df <- bind_rows(weather_data_df, district_data)
+  }
+}
+```
+
+**Because the API has limitation usage we need to write this data-file out and store it for future usage.**
+
+```{r, eval = FALSE}
+write_rds(weather_data_df, "data/rds/weather_data_df.rds")
+```
+
+```{r, include = FALSE}
+weather_data_df <- read_rds("data/rds/weather_data_df.rds")
+```
+
+#### Step 5: Process and Clean Weather Data
+
+Now, we extract the date and hour from the timestamp in `weather_data_df` and keep only relevant columns. We also rename the `description` column to `weather_description`.
+
+```{r, eval = FALSE}
+# Extract date and hour from the timestamp
+jakarta_district_weather_day_hour <- weather_data_df %>%
+  mutate(
+    date = as.Date(timestamp),  # Extract date
+    hour = format(timestamp, "%H")  # Extract hour
+  ) %>%
+  dplyr::select(district, date, hour, description) %>%  # Keep only needed columns
+  rename(weather_description = description)  # Rename column
+
+```
+
+#### Step 6: Aggregate it on hourly than 15 minutes interval.
+
+Because the data is in 15 minutes interval, to avoid duplicate records for the same district, date, and hour, we group by these columns and retain only the earliest timestamp.
+
+```{r, eval = FALSE}
+jakarta_district_weather_day_hour <- jakarta_district_weather_day_hour %>%
+  group_by(district, date, hour) %>%
+  slice(1) %>%  # Keep only the first record per group
+  ungroup()
+```
+
+#### Step 7: Create Unique Weather Descriptions CSV
+
+We create a DataFrame of unique weather descriptions and save it to `weather_description.csv` to be mapped my our team mates to know which is raining or not.
+
+```{r, eval = FALSE}
+# Extract unique weather descriptions and save to CSV
+unique_weather_description_df <- data.frame(
+  weather_description = unique(jakarta_district_weather_day_hour$weather_description)
+)
+write_csv(unique_weather_description_df, "data/aspatial/weather/weather_description.csv")
+```
+
+#### Step 8: Map Weather Descriptions to Categories
+
+We read the `unique_weather_description_mapping.csv` file, which contains a mapping of weather descriptions to broader categories, and join it to our weather data. This mapping is agreed upon the team members.
+
+| **weather_description** | **weather_description_category** |
+|-------------------------|----------------------------------|
+| Scattered clouds        | Not_Rain                         |
+| Broken clouds           | Not_Rain                         |
+| Drizzle                 | Rain                             |
+| Light rain              | Rain                             |
+| Moderate rain           | Rain                             |
+| Overcast clouds         | Not_Rain                         |
+| Fog                     | Not_Rain                         |
+| Haze                    | Not_Rain                         |
+| Few clouds              | Not_Rain                         |
+| Heavy rain              | Rain                             |
+
+```{r, eval = FALSE}
+# Read the unique weather description mapping CSV
+unique_weather_mapping <- read_csv("data/aspatial/weather/unique_weather_description_mapping.csv")
+
+# Map description categories back to the original DataFrame
+jakarta_district_weather_day_hour <- jakarta_district_weather_day_hour %>%
+  left_join(unique_weather_mapping, by = "weather_description")
+```
+
+#### Step 9: Finalize Weather Data for Joining
+
+We select only the columns needed for the final `jakarta_weather_data`, which includes the district, date, hour, weather description, and its category.
+
+```{r, eval = FALSE}
+# Select the relevant columns for the final result
+jakarta_district_weather_day_hour <- jakarta_district_weather_day_hour %>%
+  dplyr::select(district, date, hour, weather_description, weather_description_category)
+```
+
+#### Step 10: Prepare Trip Data for Joining
+
+We prepare `trip_data` by extracting the origin date and hour, and converting character columns to lowercase for consistency.
+
+```{r, eval = FALSE}
+jakarta_district_weather_day_hour <- jakarta_district_weather_day_hour %>%
+  mutate(hour = as.numeric(hour))
+
+trip_data <- trip_data %>%
+  mutate(
+    origin_date = as.Date(origin_datetime), # Extract date
+    origin_hour = as.numeric(origin_hour)  # Extract hour as numeric
+  )
+```
+
+#### Step 11: Join Weather Data with Trip Data
+
+We perform a join between `trip_data` and `jakarta_weather_data` based on the origin district, date, and hour.
+
+```{r, eval = FALSE}
+trip_data <- trip_data %>%
+  left_join(
+    jakarta_district_weather_day_hour, 
+    by = c("origin_district" = "district", 
+           "origin_date" = "date", 
+           "origin_hour" = "hour")
+  )
+```
+
+#### Step 12: Handle Missing Weather Data
+
+To address any `NA` values resulting from missing weather data, we replace them with "Outside of Jakarta".
+
+```{r, eval = FALSE}
+trip_data <- trip_data %>%
+  mutate(
+    weather_description = ifelse(is.na(weather_description), "outside of jakarta", weather_description),
+    weather_description_category = ifelse(is.na(weather_description_category), "outside of jakarta", weather_description_category)
+  ) %>%
+  rename(
+    origin_weather_description = weather_description,
+    origin_weather_description_category = weather_description_category
+  )
+```
+
+#### Step 13 Writing the dataset for future usage for team members.
+
+```{r, eval = FALSE}
+write_rds(trip_data, "data/finaldata/trip_data.rds")
+```
+
+## 6.3 Point Of Interest Dataset
+
+#### Step 1: Load Indonesia POI Data
+
+We start by loading the Points of Interest (POI) data for Indonesia, which contains information on various types of locations such as amenities, shops, and tourist spots.
+
+```{r, eval = FALSE}
+# Load Indonesia POI data
+indonesia_poi <- st_read(
+  dsn = "data/geospatial/indo_poi", 
+  layer = "hotosm_idn_points_of_interest_points_shp"
+)
+```
+
+#### Step 2: Transform Coordinate Reference System (CRS)
+
+To ensure consistency, we transform the POI data to match Jakarta’s township data CRS, allowing us to perform spatial joins accurately.
+
+```{r, eval = FALSE}
+# Transform to WGS84 (EPSG:4326) and match CRS with Jakarta township
+indonesia_poi_4326 <- st_transform(indonesia_poi, crs = st_crs(4326))
+indonesia_poi <- st_transform(indonesia_poi, crs = 6384)
+```
+
+#### Step 3: Filter POIs within Jakarta Using a Spatial Join
+
+Using a spatial join with `st_within`, we filter the POI data to retain only those located within Jakarta’s district boundaries.
+
+```{r, eval = FALSE}
+# Spatial join to filter POIs within Jakarta and add admin levels
+jakarta_poi <- indonesia_poi %>%
+  st_join(jakarta_district, join = st_within, left = FALSE)
+```
+
+#### Step 4: Create 'poi_name' column and filter out rows with missing names
+
+We create a new column, `poi_name`, that uses the primary name if available, or the English name (`name_en`) otherwise. Rows with missing names are removed.
+
+![](images/clipboard-595267933.png)
+
+```{r, eval = FALSE}
+# Create 'poi_name' column and filter out rows with missing names
+jakarta_poi_cleaned <- jakarta_poi %>%
+  mutate(
+    poi_name = ifelse(!is.na(name), name, name_en)  # Use 'name' if available; otherwise 'name_en'
+  ) %>%
+  filter(!is.na(poi_name))  # Remove rows with missing 'poi_name'
+```
+
+#### Step 5: Define POI Type Based on First Non-NA Category
+
+To standardize the POI type, we create a new column, `poi_type`, that takes the first non-missing category among several possible columns (`amenity`, `shop`, `man_made`, `tourism`).
+
+```{r, eval = FALSE}
+# Define POI type based on the first non-NA category
+jakarta_poi_cleaned <- jakarta_poi_cleaned %>%
+  mutate(
+    poi_type = purrr::pmap_chr(
+      list(amenity, shop, man_made, tourism), 
+      ~ na.omit(c(...))[1]  # Select the first non-NA value
+    )
+  )
+```
+
+#### Step 6: Save Unique POI Types to CSV for Mapping
+
+We save the unique POI types to a CSV file for mapping, allowing us to categorize them consistently.
+
+```{r, eval = FALSE}
+# Store and print unique POI types
+unique_category_combined <- unique(jakarta_poi_cleaned$poi_type)
+write_csv(data.frame(poi_type = unique_category_combined), "data/aspatial/poi/unique_poi_types.csv")
+```
+
+#### Step 7: Load and Apply Category Mapping Data
+
+We read a mapping file that associates each `poi_type` with a broader category. This mapping is then joined to the cleaned POI data, with any unmatched types categorized as "Others".
+
+```{r, eval = FALSE}
+# Load the category mapping data
+mapping_data <- read_csv("data/aspatial/poi/category_mapping.csv")
+
+# Apply category mapping and handle unmatched cases
+jakarta_poi_cleaned <- jakarta_poi_cleaned %>%
+  left_join(mapping_data, by = c("poi_type" = "value")) %>%
+  mutate(
+    new_category = ifelse(is.na(new_category), "Others", new_category)  # Assign "Others" for unmatched types
+  )
+```
+
+#### Step 8: Select Relevant Columns and Convert to Spatial Format
+
+We select the necessary columns, including geometry, and convert the DataFrame back to a spatial format for further spatial analysis.
+
+```{r, eval = FALSE}
+# Select relevant columns and convert to spatial format
+jakarta_poi_final <- jakarta_poi_cleaned %>%
+  dplyr::select(poi_name, province, city, district, new_category, poi_type, geometry) %>%
+  rename(category = new_category)
+```
+
+#### Step 9: Write it to our team
+
+```{r, eval = FALSE}
+write_rds(jakarta_poi_final, "data/finaldata/jakarta_poi_final.rds")
+```
+
+# 7.0 Reading in Prepared Files
+
+We will read in the files that i prepared for my team and prepare my analysis base on the dataset.
+
+```{r, warning = FALSE}
+jakarta_poi <- read_rds("data/finaldata/jakarta_poi_final.rds")
+district_population <- read_rds("data/finaldata/district_population.rds")
+trip_data <- read_rds("data/finaldata/trip_data.rds")
+jakarta_district <- read_rds("data/finaldata/jakarta_district.rds")
+
+jakarta_district <- jakarta_district %>%
+  st_make_valid()
+  
+jakarta_district <- jakarta_district %>%
+  st_cast("POLYGON")
+
+```
+
+## 7.1 Making Origin and Destination from trip_data.
+
+We’re filtering the `trip_data` dataset to focus on trips within Jakarta, creating three subsets:
+
+1.  **`trip_data_origin_sf`**: Contains trips that **start in Jakarta** (i.e., trips where the origin is within Jakarta). This subset allows us to analyze the number of trips originating in Jakarta.
+
+2.  **`trip_data_destination_sf`**: Contains trips that **end in Jakarta** (i.e., trips where the destination is within Jakarta). This subset helps us study trips arriving in Jakarta.
+
+3.  **`trip_within_jakarta`**: Contains trips that **both start and end within different districts of Jakarta**. This subset provides insights into trips moving between districts within Jakarta. Intradistrict trips, where the origin and destination are the same, are excluded to focus on inter-district movements only.
+
+```{r}
+trip_data_origin_sf <- trip_data %>%
+  filter(origin_district != "outside of jakarta") %>%  
+  st_as_sf(coords = c("origin_lng", "origin_lat"), crs = 6384)
+
+trip_data_destination_sf <- trip_data %>%
+  filter(destination_district != "outside of jakarta") %>%  
+  st_as_sf(coords = c("destination_lng", "destination_lat"), crs = 6384)  
+
+trip_within_jakarta_sf <- trip_data %>%
+  filter(
+    origin_district != "outside of jakarta" & 
+    destination_district != "outside of jakarta" & 
+    origin_district != destination_district
+  )
+```
+
+# 8.0 Dashboard Feature EDA: Visualizing Jakarta POI across districts
+
+This dashboardprovides an interactive visual exploration of Jakarta's points of interest (POIs), helping users to easily identify and understand POI distribution across the city.
+
+***Main Idea***
+
+1.  **Choropleth Map by District**: The base layer of the map displays Jakarta’s districts in varying shades to represent the density of POIs. Darker shades indicate districts with a higher concentration of POIs, allowing quick identification of popular areas.
+
+2.  **POI Markers**: Each POI is marked on the map to show its exact location, enabling users to see specific POI distributions and patterns within and between districts.
+
+***Features to have to filter by***
+
+1.  **Category**: The POIs are organized by category, such as entertainment, dining, and shopping. This filter helps users focus on types of attractions that match their interests.
+
+2.  **Sub-Category**: Within each category, POIs are further classified into sub-categories, offering a more detailed breakdown. For instance, dining can be split into restaurants, cafes, and food trucks.
+
+3.  **District Information**: Each POI marker is linked to its respective district, providing geographical context and allowing users to explore POIs within specific areas of Jakarta.
+
+## 8.1 Aggregating Counts of POI Data
+
+We first need to aggregate the different type of POI data.
+
+```{r}
+jakarta_poi_df <-jakarta_poi %>%
+  st_drop_geometry()
+# Step 1: Count the number of POIs per category for each district in `jakarta_poi`
+poi_counts <- jakarta_poi_df %>%
+  group_by(district, category) %>%
+  summarise(count = n(), .groups = "drop") 
+
+poi_counts_wide <- poi_counts %>%
+  pivot_wider(
+    names_from = category, 
+    values_from = count, 
+    names_glue = "No_Of_{category}_POI",
+    values_fill = 0          
+  )
+
+poi_counts_wide <- poi_counts_wide %>%
+  mutate(Total_POI = rowSums(dplyr:: select(., starts_with("No_Of_"))))
+
+jakarta_district_poi <- jakarta_district %>%
+  left_join(poi_counts_wide, by = "district")
+```
+
+## 8.2 Showing the Total POI By Jakarta District and The locations of the POI as markers
+
+This creates the map to see where the point of interest are and also the color each district by their total point of interest.
+
+Since there are so many POIs in Jakarta, we will display two sets of data here: one static map representing all POIs and another interactive map showing a random sample of 100 POI markers. This approach is due to the high computational resources required to render all POI markers, which is too demanding for R. In the actual prototype, all markers representing each POI will be displayed.
+
+### 8.2.1 Static Version For all POI in Jakarta
+
+```{r, include = FALSE}
+# Set tmap to interactive mode
+tmap_mode("plot")
+```
+
+```{r, warning = FALSE}
+category_colors <- c(
+  "Facilities_Services" = "blue",
+  "Essentials" = "red",
+  "Offices_Business" = "green",
+  "Cultural_Attractions" = "purple",
+  "Restaurants_Food" = "orange",
+  "Recreation_Entertainment" = "pink",
+  "Others" = "brown",
+  "Shops" = "cyan",
+  "Tourism_Spots" = "yellow"
+)
+
+map <- tm_shape(jakarta_district_poi) +
+  tm_polygons(
+    col = "Total_POI",                
+    palette = "Blues",                
+    title = "No. of POIs by District",
+    border.col = "lightgrey",         
+    id = "district",                  
+    popup.vars = c(                   
+      "District Name" = "district",
+      "Province" = "province",
+      "Total POIs" = "Total_POI",
+      "No Of Facilities Services POI" = "No_Of_Facilities_Services_POI",
+      "No Of Essentials POI" = "No_Of_Essentials_POI",
+      "No Of Offices Business POI" = "No_Of_Offices_Business_POI",
+      "No Of Cultural Attractions POI" = "No_Of_Cultural_Attractions_POI",
+      "No Of Restaurants Food POI" = "No_Of_Restaurants_Food_POI",
+      "No Of Recreation Entertainment POI" = "No_Of_Recreation_Entertainment_POI",
+      "No Of Others POI" = "No_Of_Others_POI",
+      "No Of Shops POI" = "No_Of_Shops_POI",
+      "No Of Tourism Spots POI" = "No_Of_Tourism_Spots_POI"
+    )
+  ) +
+  tm_borders(col = "darkblue") +
+  tm_layout(
+    main.title = "Jakarta District By Point Of Interests",
+    main.title.position = "center",
+    main.title.size = 1.5,
+    legend.position = c("right", "bottom"),   # Place legend to the right and below the main plot area
+    legend.title.size = 1.2,
+    legend.text.size = 0.8,
+    legend.outside = TRUE,                   # Move legend outside the main plot
+    legend.outside.position = "bottom"       # Position the legend horizontally at the bottom
+  )
+
+# Adding POI markers with customized legend for categories
+map <- map +
+  tm_shape(jakarta_poi) +
+  tm_dots(
+    col = "category",                
+    palette = category_colors,       
+    size = 0.1,
+    title = "POI Categories",
+    alpha = 0.2,
+    popup.vars = c(
+      "District" = "district",
+      "Category" = "category",
+      "Sub-Category" = "poi_type"
+    )
+  ) +
+  tm_layout(
+    legend.outside = TRUE,            # Ensure the legend remains outside
+    legend.outside.position = "right" # Legend positioned below the map
+  )
+
+map
+```
+
+### 8.2.2 Interactive Version Sampled Version with 100
+
+Currently, the map takes too long to render because there are too many points of interest (POIs) in this dataset. To improve performance, we will simulate the map by displaying only the first 100 markers to illustrate the POI locations and demonstrate interactivity.
+
+```{r, include = FALSE}
+tmap_mode("view")
+```
+
+```{r, warning = FALSE}
+sampled_poi <- jakarta_poi[sample(nrow(jakarta_poi), min(100, nrow(jakarta_poi))), ]
+
+# Plot with the reduced markers
+map <- tm_shape(jakarta_district_poi) +
+  tm_polygons(
+    col = "Total_POI",                
+    palette = "Blues",                
+    title = "No. of POIs by District",
+    border.col = "lightgrey",         
+    id = "district",                  
+    popup.vars = c(                   
+      "District Name" = "district",
+      "Province" = "province",
+      "Total POIs" = "Total_POI",
+      "No Of Facilities Services POI" = "No_Of_Facilities_Services_POI",
+      "No Of Essentials POI" = "No_Of_Essentials_POI",
+      "No Of Offices Business POI" = "No_Of_Offices_Business_POI",
+      "No Of Cultural Attractions POI" = "No_Of_Cultural_Attractions_POI",
+      "No Of Restaurants Food POI" = "No_Of_Restaurants_Food_POI",
+      "No Of Recreation Entertainment POI" = "No_Of_Recreation_Entertainment_POI",
+      "No Of Others POI" = "No_Of_Others_POI",
+      "No Of Shops POI" = "No_Of_Shops_POI",
+      "No Of Tourism Spots POI" = "No_Of_Tourism_Spots_POI"
+    )
+  ) +
+  tm_borders(col = "darkblue") +
+  tm_layout(title = "Jakarta District By Point Of Interests")
+
+map <- map +
+  tm_shape(sampled_poi) +
+  tm_dots(
+    col = "category",                
+    palette = category_colors,       
+    size = 0.1,
+    title = "POI Categories",
+    popup.vars = c(
+      "District" = "district",
+      "Category" = "category",
+      "Sub-Category" = "poi_type"
+    )
+  )
+
+map
+```
+
+## 8.3 Function to Create a map with Filters
+
+### 8.3.1 Generate Map with All POI Markers
+
+This function is used when we are filtering all POIS but due to computational resources this is not used at the moment.
+
+```{r}
+# Function to generate a map based on a selected POI category
+POI_Category_Map <- function(POI_category) {
+  # Construct the column name based on the POI category
+  poi_column <- paste0("No_Of_", POI_category, "_POI")
+  
+  # Check if the constructed column exists in jakarta_district
+  if (!poi_column %in% colnames(jakarta_district_poi)) {
+    stop("The selected POI category does not exist in 'jakarta_district'. Please check the category name.")
+  }
+  # Base map with districts colored by the specific POI category count
+  map <- tm_shape(jakarta_district_poi) +
+    tm_fill(col = poi_column, title = paste("No. of", POI_category, "by District"), palette = "Blues") +  # Dynamic column for category
+    tm_borders()  + # Add borders for clarity
+    tm_layout(title = paste("Jakarta District By", POI_category, "POI"))
+
+  
+  # Filter jakarta_poi for the chosen category
+  category_data <- jakarta_poi %>% filter(category == POI_category)
+  
+  # Add POI layer for the selected category
+  map <- map +
+    tm_shape(category_data) +
+    tm_dots(col = "red", 
+            size = 0.01, 
+            alpha = 0.7,  
+            popup.vars = c(
+              "District" = "district",
+              "Category" = "category",
+              "Sub-Category" = "poi_type"
+            ),
+            title = paste("POI -", POI_category)
+    )
+  return(map)
+}
+```
+
+### 8.3.2 Generate Map with only sample 100 POI Markers
+
+We use this at the moment due to the computational resources required to display all markers on the map.
+
+```{r, warning = FALSE}
+# Function to generate a map based on a selected POI category with sampling and external title/legend
+Sample_POI_Category_Map <- function(POI_category) {
+  # Construct the column name based on the POI category
+  poi_column <- paste0("No_Of_", POI_category, "_POI")
+  
+  # Check if the constructed column exists in jakarta_district_poi
+  if (!poi_column %in% colnames(jakarta_district_poi)) {
+    stop("The selected POI category does not exist in 'jakarta_district_poi'. Please check the category name.")
+  }
+  
+  # Base map with districts colored by the specific POI category count
+  map <- tm_shape(jakarta_district_poi) +
+    tm_fill(
+      col = poi_column,
+      title = paste("No. of", POI_category, "by District"),
+      palette = "Blues"
+    ) +  
+    tm_borders() +
+    tm_layout(
+      main.title = paste("Jakarta District by", POI_category, "POI"),
+      main.title.position = "center",
+      main.title.size = 1.5,
+      legend.outside = TRUE,                 # Move legend outside
+      legend.outside.position = "bottom"     # Position legend at the bottom
+    )
+
+  # Filter jakarta_poi for the chosen category and sample 100 points
+  category_data <- jakarta_poi %>% filter(category == POI_category)
+  sampled_category_data <- category_data[sample(nrow(category_data), min(100, nrow(category_data))), ]
+  
+  # Add POI layer for the selected category with sampled data
+  map <- map +
+    tm_shape(sampled_category_data) +
+    tm_dots(
+      col = "red",
+      size = 0.2,
+      alpha = 0.7,  # Set alpha for semi-transparency
+      title = paste("POI -", POI_category),
+      popup.vars = c(
+        "District" = "district",
+        "Category" = "category",
+        "Sub-Category" = "poi_type"
+      )
+    ) +
+    tm_layout(
+      legend.outside = TRUE,                 # Ensure legend remains outside
+      legend.outside.position = "right"     # Position legend at the bottom
+    )
+  
+  return(map)
+}
+
+```
+
+## 8.4 Calling the function to create the map base on filters
+
+::: callout-note
+Note that it's only displaying random 100 markers within the category. It's not display all the POI Markers due to the computational resources required.
+:::
+
+```{r, include = FALSE}
+tmap_mode("view")
+```
+
+::: panel-tabset
+## Facilities_Services
+
+```{r, warning = FALSE, fig.height=8, fig.width = 8}
+Sample_POI_Category_Map("Facilities_Services")
+```
+
+## Offices_Business
+
+```{r, warning = FALSE, fig.height=8, fig.width = 8}
+Sample_POI_Category_Map("Offices_Business")
+```
+
+## Cultural_Attractions
+
+```{r, warning = FALSE, fig.height=8, fig.width = 8}
+POI_Category_Map("Cultural_Attractions")
+```
+:::
+
+## 8.5 Using it on the dashboard
+
+As seen on the dashboard we want to allow our users to see the different point of interest available on Jakarta to understand what could be the possible reason as to why districts are popular, this serves as an EDA analysis to figure out which districts have a higher counts of POI.
+
+### 8.5.1 Seeing All Jakrata POI By District
+
+![](images/clipboard-805884394.png)
+
+### 8.5.2 Seeing all Total POI With Markers
+
+![](images/clipboard-805884394.png)
+
+### 8.5.3 Filtering By Type Of Point Of Interest
+
+![](images/clipboard-2643328333.png)
+
+### 8.5.4 Prototyping Things to do
+
+All filters and make it dynamic in when selecting right now it's only filtering by category but we can show more, like filtering by district and many others!
+
+# 9.0 Visualizing where trips are being made around Jakarta.
+
+This Visual provides a dynamic way to analyze trip patterns throughout Jakarta, helping users explore where trips start and end across different districts.
+
+1.  **Origin and Destination Toggle**: Users can switch between origin and destination plots, gaining insights into where trips are commonly initiated and where they conclude. This toggle feature is valuable for identifying popular starting points and destinations within Jakarta.
+
+2.  **District Comparison**: By visualizing trip data across districts, users can compare trip density and identify hotspots. This comparison can reveal patterns in travel behavior, highlighting which districts are most frequently traveled from or to.
+
+3.  **Filtering Options**: To provide a deeper understanding of trip characteristics, the dashboard includes filters for:
+
+    -   **Time Cluster**: Allows users to plot trips grouped by time intervals, like peak or off-peak hours.
+
+    -   **Days**: Users can filter trips by specific days, uncovering weekday vs. weekend travel trends.
+
+    -   **Weather Condition**: A filter to see how trips correlate with weather, such as sunny, rainy, or overcast days.
+
+    -   **Driving Mode**: This filter focuses on different travel modes, such as car, motorbike.
+
+    -   **Districts**: Users can narrow down the data to particular districts, allowing for targeted analysis within specific areas of Jakarta.
+
+By combining these filters, users can gain a comprehensive plot of travel trends, making it easier to identify factors influencing trip patterns across the city.
+
+::: callout-note
+For the sake of this exercise as there are too many possible combinations for this visualization, we will see how it's like seeing it when users when users want to see trips origin's and driving mode.
+:::
+
+## 9.1 Aggregating the Data-set
+
+-   **Filter Trips**: Starts by filtering `trip_data` to include only trips originating from districts within Jakarta.
+
+-   **Count Trips by Mode and District**: Groups the filtered data by origin district and driving mode, calculating the number of trips for each combination.
+
+-   **Reshape to Wide Format**: Transforms the data into a wide format where each driving mode has its own column (e.g., "No_Of_Car"), filling any missing values with 0.
+
+-   **Calculate Total Trips**: Adds a column, `Total_Trips`, which sums up the counts for each driving mode, providing a total trip count for each district.
+
+-   **Merge with District Data**: Joins this summary with the `jakarta_district` data, so each district now includes information on trip counts by mode and total trips.
+
+```{r, warning = FALSE}
+trip_data_origin <- trip_data %>%
+  filter(origin_district != "outside of jakarta")
+
+trips_count <- trip_data_origin %>%
+  group_by(origin_district, driving_mode) %>%
+  summarise(count = n(), .groups = "drop") 
+
+trips_count_wide <- trips_count %>%
+  pivot_wider(
+    names_from = driving_mode, 
+    values_from = count, 
+    names_glue = "No_Of_{driving_mode}",  
+    values_fill = 0         
+  )
+
+trips_count_wide <- trips_count_wide %>%
+  mutate(Total_Trips = rowSums(dplyr::select(., starts_with("No_Of_"))))
+
+jakarta_district_trips <- jakarta_district %>%
+  left_join(trips_count_wide, by = c("district" = "origin_district"))
+```
+
+## 9.2 Showing the Total Trips By Jakarta District and the locations of trips as markers
+
+This creates the map to see where the point of interest are and also the color each district by their total point of interest.
+
+::: callout-note
+Since there are so many TRIPS made within in Jakarta, we will display two sets of data here: one static map representing all trips and another interactive map showing a random sample of 100 trips markers. This approach is due to the high computational resources required to render all trips markers, which is too demanding for R. In the actual prototype, all markers representing each trip will be displayed.
+:::
+
+### 9.2.1 Static View of all trips made in jakarta
+
+```{r, include = FALSE}
+tmap_mode("plot")
+```
+
+```{r, warning = FALSE}
+# Prepare the trip data for visualization
+trip_data_origin_sf <- trip_data %>%
+  filter(origin_district != "outside of jakarta") %>%
+  st_as_sf(coords = c("origin_lng", "origin_lat"), crs = 6384)
+
+# Define colors for driving modes
+driving_category_colors <- c(
+  "motorcycle" = "blue",
+  "car" = "red"
+)
+
+# Create the base map with Jakarta districts and total trips
+map <- tm_shape(jakarta_district_trips) +
+  tm_polygons(
+    col = "Total_Trips",              
+    palette = "Blues",                
+    title = "No. of Trips by District",
+    border.col = "lightgrey",         
+    id = "district",                  
+    popup.vars = c(                  
+      "District Name" = "district",
+      "Total Trips" = "Total_Trips",
+      "No of Car Trips" = "No_Of_car",
+      "No of Motorcycle Trips" = "No_Of_motorcycle"
+    )
+  ) +
+  tm_borders(col = "darkblue") +
+  tm_layout(
+    main.title = "Jakarta Districts by Total Trip Count",
+    main.title.position = "center",
+    main.title.size = 1.5,
+    legend.position = c("right", "bottom"),
+    legend.title.size = 1.2,
+    legend.text.size = 0.8,
+    legend.outside = TRUE,
+    legend.outside.position = "bottom"
+  )
+
+# Add trip origin points with semi-transparency and external legend
+map <- map +
+  tm_shape(trip_data_origin_sf) +
+  tm_dots(
+    col = "driving_mode",               
+    palette = driving_category_colors,       
+    size = 0.1,
+    alpha = 0.1,  # Set alpha for semi-transparency
+    title = "Driving Modes",
+    popup.vars = c(
+      "Driving Mode" = "driving_mode",
+      "Origin District" = "origin_district",
+      "Time" = "origin_hour",
+      "Date" = "origin_date",
+      "Time Cluster" = "origin_time_cluster",
+      "Weather Category" = "origin_weather_description_category"
+    )
+  ) +
+  tm_layout(
+    legend.outside = TRUE,
+    legend.outside.position = "right"
+  )
+
+# Display the map
+map
+```
+
+### 9.2.2 Interactive Sample Size 100 Trips Made in Jakarta For Rendering Purposes
+
+```{r, include = FALSE}
+tmap_mode("view")
+```
+
+```{r, warning = FALSE}
+# Prepare the trip data by filtering and sampling 100 points
+trip_data_origin_sf_sample_100 <- trip_data %>%
+  filter(origin_district != "outside of jakarta") %>%
+  slice_sample(n = 100) %>%  # Randomly sample 100 points
+  st_as_sf(coords = c("origin_lng", "origin_lat"), crs = 6384)
+
+# Define colors for driving modes
+driving_category_colors <- c(
+  "motorcycle" = "blue",
+  "car" = "red"
+)
+
+# Create the base map with Jakarta districts and total trips
+map <- tm_shape(jakarta_district_trips) +
+  tm_polygons(
+    col = "Total_Trips",              
+    palette = "Blues",                
+    title = "No. of Trips by District",
+    border.col = "lightgrey",         
+    id = "district",                  
+    popup.vars = c(                  
+      "District Name" = "district",
+      "Total Trips" = "Total_Trips",
+      "No of Car Trips" = "No_Of_car",
+      "No of Motorcycle Trips" = "No_Of_motorcycle"
+    )
+  ) +
+  tm_borders(col = "darkblue") +
+  tm_layout(
+    title = "Jakarta Districts by Total Trip Count",
+    legend.position = c("right", "bottom"),
+    legend.title.size = 1.2,
+    legend.text.size = 0.8
+  )
+
+# Add trip origin points with sampled data
+map <- map +
+  tm_shape(trip_data_origin_sf_sample_100) +
+  tm_dots(
+    col = "driving_mode",               
+    palette = driving_category_colors,       
+    size = 0.1,
+    alpha = 0.1,  # Set alpha for semi-transparency
+    title = "Driving Modes",
+    popup.vars = c(
+      "Driving Mode" = "driving_mode",
+      "Origin District" = "origin_district",
+      "Time" = "origin_hour",
+      "Date" = "origin_date",
+      "Time Cluster" = "origin_time_cluster",
+      "Weather Category" = "origin_weather_description_category"
+    )
+  ) +
+  tm_layout(
+    legend.outside = TRUE,
+    legend.outside.position = "bottom"
+  )
+
+# Display the map
+map
+```
+
+## 9.3 Function to filter by driving mode
+
+We create the function, `Driving_Mode_Map`, generates a customized map to visualize trips in Jakarta for a specific driving mode (e.g., Car, Bike). It does the following:
+
+-   Constructs a map with Jakarta districts, displaying the number of trips by district for the selected driving mode.
+
+-   Validates that the driving mode exists in the data, ensuring accuracy.
+
+-   Adds trip origin points for the chosen mode, providing details on each trip's origin location, time, and weather.
+
+The result is a detailed map that highlights both district-level trip volumes and specific trip origins, enabling users to analyze travel patterns by driving mode across Jakarta.
+
+### 9.3.1 Interactive using with actual dataset for markers
+
+```{r, warning = FALSE}
+# Function to generate a map based on a selected driving mode
+Driving_Mode_Map <- function(driving_mode) {
+  
+  # Construct the column name based on the driving mode
+  trip_column <- paste0("No_Of_", driving_mode)
+  
+  # Check if the constructed column exists in jakarta_district_trips
+  if (!trip_column %in% colnames(jakarta_district_trips)) {
+    stop("The selected driving mode does not exist in 'jakarta_district_trips'. Please check the driving mode name.")
+  }
+  # Filter trip data for the chosen driving mode
+  mode_data <- trip_data_origin_sf %>% filter(driving_mode == !!driving_mode)
+  # Dynamically set the popup label for the trip column
+  trip_popup_label <- setNames(trip_column, paste("No. of", driving_mode, "Trips"))
+  
+  # Create the base map with Jakarta district polygons
+  map <- tm_shape(jakarta_district_trips) +
+    tm_polygons(
+      col = trip_column,              
+      palette = "Blues",                
+      title = paste("No. of", driving_mode, "Trips by District"),
+      border.col = "lightgrey",         
+      id = "district",                  
+      popup.vars = c(
+        "District Name" = "district",
+        trip_popup_label
+      )
+    ) +
+    tm_borders(col = "darkblue")   +
+    tm_layout(title = paste("District by", driving_mode ," trips count"))
+     
+  
+  # Add trip origin points layer for the selected driving mode
+  map <- map +
+    tm_shape(mode_data) +
+    tm_dots(
+      col = driving_category_colors[driving_mode],  # Color based on driving mode
+      size = 0.1,
+      alpha = 0.7,
+      title = paste("Trips -", driving_mode),
+      popup.vars = c(
+        "Driving Mode" = "driving_mode",
+        "Origin District" = "origin_district",
+        "Time" = "origin_hour",
+        "Date" = "origin_date",
+        "Time Cluster" = "origin_time_cluster",
+        "Weather Category" = "origin_weather_description_category"
+      )
+    )
+  
+  return(map)
+}
+
+```
+
+### 9.3.2 Interactive using with sample dataset for markers
+
+```{r}
+Sample_Driving_Mode_Map <- function(driving_mode) {
+  
+  # Construct the column name based on the driving mode
+  trip_column <- paste0("No_Of_", driving_mode)
+  
+  # Check if the constructed column exists in jakarta_district_trips
+  if (!trip_column %in% colnames(jakarta_district_trips)) {
+    stop("The selected driving mode does not exist in 'jakarta_district_trips'. Please check the driving mode name.")
+  }
+  
+  # Filter trip data for the chosen driving mode and sample 100 points
+  mode_data <- trip_data_origin_sf %>% 
+    filter(driving_mode == !!driving_mode) %>%
+    slice_sample(n = 100)  # Randomly sample 100 points
+  
+  # Dynamically set the popup label for the trip column
+  trip_popup_label <- setNames(trip_column, paste("No. of", driving_mode, "Trips"))
+  
+  # Create the base map with Jakarta district polygons
+  map <- tm_shape(jakarta_district_trips) +
+    tm_polygons(
+      col = trip_column,              
+      palette = "Blues",                
+      title = paste("No. of", driving_mode, "Trips by District"),
+      border.col = "lightgrey",         
+      id = "district",                  
+      popup.vars = c(
+        "District Name" = "district",
+        trip_popup_label
+      )
+    ) +
+    tm_borders(col = "darkblue") +
+    tm_layout(
+      main.title = paste("District by", driving_mode, "Trips Count"),
+      main.title.position = "center",
+      main.title.size = 1.5,
+      legend.outside = TRUE,                 # Move legend outside
+      legend.outside.position = "bottom"     # Position legend at the bottom
+    )
+  
+  # Add trip origin points layer for the selected driving mode with sampling
+  map <- map +
+    tm_shape(mode_data) +
+    tm_dots(
+      col = driving_category_colors[driving_mode],  # Color based on driving mode
+      size = 0.1,
+      alpha = 0.7,  # Set alpha for semi-transparency
+      title = paste("Trips -", driving_mode),
+      popup.vars = c(
+        "Driving Mode" = "driving_mode",
+        "Origin District" = "origin_district",
+        "Time" = "origin_hour",
+        "Date" = "origin_date",
+        "Time Cluster" = "origin_time_cluster",
+        "Weather Category" = "origin_weather_description_category"
+      )
+    ) +
+    tm_layout(
+      legend.outside = TRUE,                # Ensure the legend remains outside
+      legend.outside.position = "right"    # Position the legend at the bottom
+    )
+  
+  return(map)
+}
+
+```
+
+## 9.4 Seeing the filters on different modes
+
+Here there are two modes for driving, which can be either cars or motorcycle. hence we filter the trips to see on a district level what are the driving mode is used for the trip.
+
+::: callout-note
+Note that for the markers we are only showing 100 random trips from the dataset as it's too computationally heavy to show all trips for that category.
+:::
+
+::: panel-tabset
+## Car
+
+```{r, warning = FALSE, fig.height=8, fig.width = 8}
+Sample_Driving_Mode_Map("car")
+```
+
+## Motorcycle
+
+```{r, warning = FALSE, fig.height=8, fig.width = 8}
+Sample_Driving_Mode_Map("motorcycle")
+```
+:::
+
+## 9.5 Seeing it on the dashboard
+
+**Left Panel (Filters)**
+
+Users can filter trips by:
+
+-   **Origin/Destination**: Choose whether to plot trip start or end locations.
+
+-   **Time, Day, Weather, Driving Mode, and District**: Narrow down trips by specific times, weather conditions, transportation modes, and districts.
+
+**Right Panel (Map)**
+
+The map shows a **choropleth** of trips by district, with darker colors indicating higher trip volumes. Hovering over a district reveals detailed info, including total trips and breakdowns by trip type. The legend helps interpret the color scale, making it easy to see trip density across districts.
+
+This setup enables users to quickly identify patterns and trends in Jakarta's trip data based on their selected filters.
+
+### 9.5.1 Choropleth Map with Summarizing district by trips
+
+![](images/clipboard-732116620.png)
+
+### 9.5.2 Clicking on each trip highlights what each trip does
+
+![](images/clipboard-3490641112.png)
+
+### 9.5.3 Filter for only car trips.
+
+Suppose if the user filter by car, then they can see only trips made by car.
+
+![](images/clipboard-4014924613.png)
+
+## 9.6 To do next for prototype
+
+Now that it works for driving mode, we need to ensure that the filter encompass every other possible category as well for filtering the trip data set!
+
+# 10.0 Kernel Density Estimation (KDE) for Points of Interest, Trips.
+
+This component of the dashboard feature enables a robust analysis of spatial concentration in Jakarta by applying Kernel Density Estimation (KDE) to points of interest (POIs), trip data, . Users can select the dataset to analyze and adjust parameters to refine their insights.
+
+1.  **Dataset Selection**: Users can choose which dataset to analyze: POIs, trips or destination. This flexibility allows for a focused investigation, depending on whether users are interested in understanding where attractions are located, how trips commonly start or ends.
+
+2.  **Data Filtering**: Before calculating the KDE, users can filter out specific data points to narrow down the analysis. This helps in examining specific types of trips, POI categories, or districts based on user-defined conditions.
+
+3.  **KDE Model Calibration**:
+
+    -   **Bandwidth Selection**: Users can choose the bandwidth, a parameter that controls the influence range of each point in the KDE calculation. Adjusting the bandwidth allows for a more granular or broader plot of density.
+
+    -   **Kernel Type**: The kernel function, such as Gaussian or Epanechnikov, determines the shape of the density curve for each point. Different kernels can highlight density patterns in unique ways, providing tailored visualizations based on the analysis goals.
+
+4.  **Confidence Testing with Clark's Evans Test**:
+
+    -   At the bottom of the dashboard, a Clark's Evans test with Monte Carlo simulation provides statistical validation for the density patterns observed. This test evaluates spatial randomness, allowing users to gauge whether the identified density patterns are statistically significant or could have occurred by chance.
+
+This feature enhances the dashboard's analytical depth, giving users the ability to fine-tune KDE parameters and assess confidence in the results, focusing solely on the primary pattern without involving a second point pattern.
+
+::: callout-note
+For the purpose of this exercise, while i acknowledge there is so many filters you can make for the trips and the type of trips i.e timing etc, we will solely focus only on origin where the trip started. across district.
+:::
+
+# 10.2 KDE Across Jakarta Districts
+
+Here we see the total KDE across Jakarta , using the gaussian kernel and also the diggles sigma methodology. When moving towards the prototype we want to allow for users to select what kernel they want to use and filter on the trips as well.
+
+### 10.2.1 Plotting the KDE Map
+
+```{r, include = FALSE}
+tmap_mode("view")
+```
+
+```{r, warning = FALSE}
+trip_data_origin_sf <- trip_data %>%
+  filter(origin_district != "outside of jakarta") %>%
+  st_as_sf(coords = c("origin_lng", "origin_lat"), crs = 6384)
+
+# Convert jakarta_district to an 'owin' object, creating bounding box manually if needed
+jakarta_district_owin <- as.owin(jakarta_district)
+
+# Convert filtered trip data to ppp objects within Jakarta's bounding box
+trip_data_origin_ppp <- as.ppp(trip_data_origin_sf)
+
+# Clip the ppp objects to the Jakarta district owin
+trip_data_origin_ppp <- trip_data_origin_ppp[jakarta_district_owin]
+
+# Step 1: Calculate Kernel Density Estimation (KDE) with density()
+trip_data_origin_ppp_bw <- density(
+  trip_data_origin_ppp,
+  sigma = bw.diggle(trip_data_origin_ppp),  # Bandwidth using Diggle's method
+  edge = TRUE,                              # Adjust for edge effects
+  kernel = "gaussian"                       # Use Gaussian kernel
+)
+
+# Convert KDE output to raster and set CRS to EPSG:6384
+trip_data_origin_raster <- raster(trip_data_origin_ppp_bw)
+projection(trip_data_origin_raster) <- CRS("+init=EPSG:6384")
+
+# Step 2: Overlay Jakarta district boundaries, keeping them interactive
+map <- tm_shape(jakarta_district_trips) +
+  tm_polygons(
+    col = NA,                               # No fill color for polygons
+    border.col = "black",                   # Border color for district boundaries
+    lwd = 1,                                # Line width for borders
+    id = "district",
+    alpha = 0.01,
+    popup.vars = c(
+      "District Name" = "district",
+      "Total Trips" = "Total_Trips"         # Display total trips in the popup
+    ),# Set ID for interactivity
+  ) +
+  # Step 3: Add the KDE raster layer below with transparency
+  tm_shape(trip_data_origin_raster) +
+  tm_raster(
+    palette = "YlOrRd",                     # Color palette for density
+    title = "Trip Origin Density",
+    alpha = 0.5                             # Transparency for raster layer
+  ) +
+  tm_layout(
+    title = "Kernel Density Estimation of Trip Origins",
+    legend.outside = TRUE
+  )
+map
+```
+
+### 10.2.2 KDE Significant Test with Clarks Evan
+
+```{r}
+clark_evans_result <- clarkevans.test(trip_data_origin_ppp,
+                                 clipregion = "jakarta_district_owin",
+                                 correction = "none",
+                                 alternative = c("clustered"),
+                                 nsim = 99)
+clark_evans_result
+
+```
+
+## 10.3 Function to call and generate specific district KDE
+
+```{r}
+Generate_District_KDE_Map <- function(district_name) {
+  
+  # Filter jakarta_district to the specified district
+  selected_district <- jakarta_district %>%
+    filter(district == district_name)
+  jakarta_filter_district_trips <- jakarta_district_trips %>%
+    filter(district == district_name)
+  
+  # Convert the selected district to an 'owin' object for spatial bounding
+  selected_district_owin <- as.owin(selected_district)
+  
+  # Filter trips that originate from the specified district
+  trip_data_origin_sf <- trip_data %>%
+    filter(origin_district == district_name) %>%
+    st_as_sf(coords = c("origin_lng", "origin_lat"), crs = 6384) %>%
+    st_transform(crs = st_crs(selected_district)$epsg)  # Ensure CRS consistency
+  
+  # Convert filtered trip data to ppp objects within the district bounding box
+  trip_data_origin_ppp <- as.ppp(st_coordinates(trip_data_origin_sf), W = selected_district_owin)
+  
+  # Step 1: Calculate Kernel Density Estimation (KDE)
+  trip_data_origin_ppp_bw <- density(
+    trip_data_origin_ppp,
+    sigma = bw.diggle(trip_data_origin_ppp),  # Bandwidth using Diggle's method
+    edge = TRUE,                              # Adjust for edge effects
+    kernel = "gaussian"                       # Use Gaussian kernel
+  )
+  
+  # Convert KDE output to raster and set CRS to EPSG:6384
+  trip_data_origin_raster <- raster(trip_data_origin_ppp_bw)
+  projection(trip_data_origin_raster) <- CRS("+init=EPSG:6384")
+  
+  # Step 2: Overlay Jakarta district boundaries, keeping them interactive
+  map <- tm_shape(jakarta_filter_district_trips) +
+    tm_polygons(
+      col = NA,                               # No fill color for polygons
+      border.col = "black",                   # Border color for district boundaries
+      lwd = 1,                                # Line width for borders
+      id = "district",
+      alpha = 0.01,
+      popup.vars = c(
+        "District Name" = "district",
+        "Total Trips" = "Total_Trips"         # Display total trips in the popup
+      )
+    ) +
+    # Step 3: Add the KDE raster layer below with transparency
+    tm_shape(trip_data_origin_raster) +
+    tm_raster(
+      palette = "YlOrRd",                     # Color palette for density
+      title = paste("Trip Origin Density in", district_name),
+      alpha = 0.5                             # Transparency for raster layer
+    ) +
+    tm_layout(
+      title = paste("Kernel Density Estimation of Trip Origins in", district_name),
+      legend.outside = TRUE
+  )
+  
+  # Step 4: Perform Clark-Evans Test for clustering
+  clark_evans_result <- clarkevans.test(
+    trip_data_origin_ppp,
+    clipregion = selected_district_owin,
+    correction = "none",
+    alternative = "clustered",
+    nsim = 99
+  )
+  
+  # Print the Clark-Evans Test result
+  print(clark_evans_result)
+  
+  # Return the map
+  return(map)
+}
+```
+
+## 10.4 Filtering by district to see results
+
+```{r, include = FALSE}
+tmap_mode("view")
+```
+
+::: panel-tabset
+## setia budi
+
+```{r, warning = FALSE}
+Generate_District_KDE_Map("setia budi")
+```
+
+## tebet
+
+```{r, warning = FALSE}
+Generate_District_KDE_Map("tebet")
+```
+
+## kebayoran baru
+
+```{r, warning = FALSE}
+
+Generate_District_KDE_Map("kebayoran baru")
+```
+
+## grogol petamburan
+
+```{r, warning = FALSE}
+Generate_District_KDE_Map("grogol petamburan")
+```
+
+## pasar minggu
+
+```{r, warning = FALSE}
+Generate_District_KDE_Map("pasar minggu")
+```
+:::
+
+## 10.5 Seeing it on the dashboard
+
+### Left Panel (Filters and Settings)
+
+The left panel provides filtering and configuration options to customize the trip data and KDE calculations:
+
+-   **Trip Analysis**: Select either **Origin** or **Destination** to plot trip start or end locations.
+
+-   **Time, Day, Weather, Driving Mode, and Districts**: Filters allow users to narrow down the dataset by specific conditions, such as time clusters, weather, transportation mode, and specific districts.
+
+-   **Kernel Method**: Users can adjust kernel settings for KDE calculations, choosing the **Kernel Type** (e.g., Gaussian) and **Bandwidth Selection Method** (e.g., Diggle) to control the smoothing and sensitivity of the density estimation.
+
+### Right Panel (KDE Map and Analysis)
+
+The main panel displays a **KDE map** of trip density across Jakarta’s districts:
+
+-   **Choropleth of Density**: The map shows trip density across districts, with darker colors indicating higher concentrations of trip origins or destinations.
+
+-   **Clark-Evans Test Result**: Below the map, the **Clark-Evans Test** output provides statistical analysis on trip clustering, indicating whether trip origins or destinations within the district exhibit clustering behavior.
+
+This interactive dashboard allows users to explore spatial trip patterns, customize the KDE model, and gain insights into trip density and clustering, enhancing the understanding of urban mobility in Jakarta.
+
+### 10.5.1 ploting the dashboard layout
+
+### ![](images/clipboard-3124469104.png)
+
+### 10.5.2 Simulating a filter for district "setia budi"
+
+![](images/clipboard-3056368076.png){width="749"}
+
+## **10.6 To do next for prototype**
+
+Make it dynamic when calculating the trip dataset and also allow for parameters to be accepted when using the kernel methods for analysis.
+
+# 11.0 Origin to Destination Flow Lines
+
+This dashboard component provides a detailed visualization of trip flows within Jakarta, showing both origin and destination traffic patterns across districts. The goal is to analyze and understand movement patterns, highlighting the flow intensity and connectivity between different areas of the city.
+
+1.  **Objective**:
+
+    -   This component visualizes trips from one district to another in Jakarta. By representing the flow of trips, users can identify high-traffic corridors, key origin and destination areas, and overall connectivity across the city. It provides insights into where trips are most frequent and where there may be opportunities for traffic management or infrastructure improvements.
+
+2.  **Dataset Filtering**:
+
+    -   The data is filtered to exclude trips that originate or end outside of Jakarta, ensuring that only intra-city flows are represented. This focus on within-city traffic highlights urban mobility patterns that are relevant for local planning.
+
+3.  **Flow Line Visualization**:
+
+    -   The map displays **flow lines** between origin and destination districts, with line thickness and color intensity representing trip volume. Districts with higher total trips are shaded in darker colors, while popups provide details for each district's incoming, outgoing, and total trips.
+
+4.  **Interactive Analysis**:
+
+    -   The interactive map allows users to explore district-level trip data in detail. Hovering over districts or flow lines reveals additional information, including the number of trips originating from or ending in each district and the specific trip volume between district pairs.
+
+5.  **Key Analytical Insights**:
+
+    1.  **Traffic Flow**: Identify high-density routes and the most connected districts.
+
+    2.  **Trip Volume**: Visualize overall trip volume within districts and between district pairs.
+
+**Infrastructure Demand**: Understand which areas may require additional transportation infrastructure or policy interventions to manage high traffic volumes.
+
+## 11.1 Aggregating the data
+
+```{r, warning = FALSE}
+# Step 1: Filter trips within Jakarta and create OD data for trip counts
+od_data_fij <- trip_data %>%
+  filter(origin_district != "outside of jakarta" & destination_district != "outside of jakarta") %>%
+  count(origin_district, destination_district, name = "trip_count") %>%
+  rename(origin = origin_district, destination = destination_district)
+
+jakarta_trip_counts <- trip_data %>%
+  filter(origin_district != "outside of jakarta" & destination_district != "outside of jakarta") %>%
+  count(origin_district, destination_district, name = "trip_count")
+
+# Step 3: Aggregate trip counts for each district (incoming and outgoing)
+district_trip_totals <- jakarta_trip_counts %>%
+  group_by(district = origin_district) %>%
+  summarise(outgoing_trips = sum(trip_count)) %>%
+  left_join(
+    jakarta_trip_counts %>%
+      group_by(district = destination_district) %>%
+      summarise(incoming_trips = sum(trip_count)),
+    by = "district"
+  ) %>%
+  mutate(
+    outgoing_trips = coalesce(outgoing_trips, 0),  
+    incoming_trips = coalesce(incoming_trips, 0), 
+    total_trips = outgoing_trips + incoming_trips
+  )
+
+# Join total trips to jakarta_district for visualization
+jakarta_district <- jakarta_district %>%
+  left_join(district_trip_totals, by = c("district" = "district"))
+
+# Step 4: Create flow lines using `od2line` based on the OD data
+flow_lines <- od2line(flow = od_data_fij, zones = jakarta_district, zone_code = "district")
+```
+
+## 11.2 ploting the flow chart
+
+```{r, include=FALSE}
+tmap_mode("view")
+```
+
+```{r, warning = FALSE}
+
+flow_map <- tm_shape(jakarta_district) +
+  tm_polygons(
+    col = "total_trips",                    # Color by total trips for each district
+    palette = "YlOrRd",                     # Yellow-Orange-Red color palette
+    title = "Total Trips",
+    border.col = "grey",
+    lwd = 0.5,
+    popup.vars = c("District" = "district", "Total Trips" = "total_trips")  # Show district and total trips in popup
+  ) +
+  tm_shape(flow_lines) +
+  tm_lines(
+    col = "trip_count",                     # Color by trip volume between OD pairs
+    palette = "-Blues",                     # Blue shades for flow lines
+    lwd = "trip_count",                     # Line width based on trip volume
+    scale = 10,                              # Scale line width for better visualization
+    title.col = "Trip Volume",
+    alpha = 0.8,
+    popup.vars = c("Origin" = "origin", "Destination" = "destination", "Trips" = "trip_count")  # Show OD and trip count in popup
+  ) +
+  tm_layout(
+    title = "Interactive Origin-Destination Traffic Flow within Jakarta",
+    legend.outside = TRUE,
+    frame = FALSE
+  )
+
+# Display the map
+flow_map
+```
+
+## 11.3 As seen on the proposed dashboard.
+
+![](images/clipboard-2449423859.png)
+
+## 11.4 To do next for prototype
+
+Update this to allow for dynamic filtering of the trips planned to use.
+
+# 12.0 Chord Diagram Between Destrict
+
+This code produces a **Chord Diagram** to visualize the flow of trips between different districts, focusing on inter-district travel patterns. Here’s a breakdown of the key steps and purpose:
+
+1.  **Filter Out Intra-District Trips**: We first remove trips that begin and end in the same district, known as intra-district flows, to focus on the trips moving between distinct districts. This helps highlight true origin-destination flows, rather than local or self-contained travel.
+
+2.  **Prepare the Data for Visualization**:
+
+    -   We aggregate the filtered data to count the number of trips between each unique origin-destination pair.
+
+    -   This aggregated data is then structured into a matrix format, where rows represent origin districts, columns represent destination districts, and each cell indicates the number of trips between the two districts.
+
+3.  **Create a Color Palette**: To visually differentiate each district, we generate a color palette using the **Spectral** color scheme. If the number of districts exceeds the palette’s limit, we extend it using interpolation to ensure each district has a unique color.
+
+4.  **Generate the Chord Diagram**:
+
+    -   Using the `chorddiag` package, we create an interactive directional Chord Diagram that displays the flows between origin and destination districts.
+
+    -   The diagram’s width and height are expanded for a more detailed plot, and padding around group names is added for readability.
+
+    -   The directional lines, with colors for each district, highlight the volume and direction of trips between districts. The tooltip for each flow uses an arrow symbol (`→`) to show the direction of each trip clearly.
+
+## 12.1 Aggregating the data
+
+```{r, warning = FALSE}
+library(chorddiag)
+library(RColorBrewer)
+
+# Step 1: Filter out intra-district flows
+trip_data_filtered <- trip_data %>%
+  filter(origin_district != destination_district)  # Exclude intra-district trips
+
+# Step 2: Prepare the data in a matrix format
+od_matrix <- trip_data_filtered %>%
+  count(origin_district, destination_district, name = "trip_count") %>%
+  spread(destination_district, trip_count, fill = 0)
+
+# Step 3: Convert to matrix for chorddiag
+od_matrix_data <- as.matrix(od_matrix[,-1])  # Remove origin column for matrix
+rownames(od_matrix_data) <- od_matrix$origin_district
+
+# Step 4: Choose an expanded color palette for better differentiation
+num_districts <- nrow(od_matrix_data)
+palette <- brewer.pal(min(num_districts, 12), name = "Spectral")  # Use "Spectral" for variety
+
+# If there are more districts than colors in the palette, interpolate to generate more colors
+if (num_districts > 12) {
+  palette <- colorRampPalette(palette)(num_districts)
+}
+
+```
+
+## 12.2 Plotting the Interactive Chord chart 
+
+```{r}
+chorddiag(
+  od_matrix_data,
+  type = "directional",
+  width = 800,            # Reduced width for a more compact display
+  height = 800,           # Reduced height to match the markdown layout
+  groupnamePadding = 10,  # Reduced padding to fit within the smaller display
+  groupColors = palette,
+  showTicks = FALSE,
+  tooltipGroupConnector = " → "
+) %>%
+  htmlwidgets::onRender("
+    function(el, x) {
+      // Set the background color to white
+      el.style.backgroundColor = 'white';
+    }
+  ")
+```
+
+Hover over the line you can see where the trips are going!
+
+## 12.3 Chart Seen on Proposed Dashboard
+
+![](images/clipboard-3051028676.png)

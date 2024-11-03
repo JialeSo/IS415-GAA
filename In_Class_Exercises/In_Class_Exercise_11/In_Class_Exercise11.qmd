@@ -232,7 +232,7 @@ tmap_mode("plot")
 
 To proof that our observation is indeed true, the Moran’s I test will be performed
 
-## Step 1: compute the distance-based weight matrix by using dnearneigh()  function of spdep.
+## Step 1: compute the distance-based weight matrix by using dnearneigh() function of spdep.
 
 ```{r}
 condo_resale_sf <- condo_resale_sf %>%
