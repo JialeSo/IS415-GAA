@@ -1363,5 +1363,124 @@
     "title": "Take Home 3: Prototyping Modules for Geospatial Analytics Shiny Application",
     "section": "12.2 Plotting the Interactive Chord chart",
     "text": "12.2 Plotting the Interactive Chord chart\n\nchorddiag(\n  od_matrix_data,\n  type = \"directional\",\n  width = 800,            # Reduced width for a more compact display\n  height = 800,           # Reduced height to match the markdown layout\n  groupnamePadding = 10,  # Reduced padding to fit within the smaller display\n  groupColors = palette,\n  showTicks = FALSE,\n  tooltipGroupConnector = \" → \"\n) %&gt;%\n  htmlwidgets::onRender(\"\n    function(el, x) {\n      // Set the background color to white\n      el.style.backgroundColor = 'white';\n    }\n  \")\n\n\n\n\n\nHover over the line you can see where the trips are going!"
+  },
+  {
+    "objectID": "In_Class_Exercises/In_Class_Exercise_12/In_Class_Exercise12.html",
+    "href": "In_Class_Exercises/In_Class_Exercise_12/In_Class_Exercise12.html",
+    "title": "In Class Exercise 12: Getting Data From APIs",
+    "section": "",
+    "text": "pacman::p_load(tidyverse, sf, tmap, httr, performance, lubridate, DT)"
+  },
+  {
+    "objectID": "In_Class_Exercises/In_Class_Exercise_12/In_Class_Exercise12.html#get-postal-code-details-from-api",
+    "href": "In_Class_Exercises/In_Class_Exercise_12/In_Class_Exercise12.html#get-postal-code-details-from-api",
+    "title": "In Class Exercise 12: Getting Data From APIs",
+    "section": "4.1 Get Postal Code Details from API",
+    "text": "4.1 Get Postal Code Details from API\nGet all the postal codes\n\npostcodes &lt;- unique(condo_resale$`Postal Code`)\n\nCall One Map Gov to get the postal codes.\n\nurl &lt;- \"https://onemap.gov.sg/api/common/elastic/search\"\nfound &lt;- data.frame()\nnot_found &lt;- data.frame()\n\nfor (postcode in postcodes) {\n  query &lt;- list('searchVal' = postcode, 'returnGeom' = 'Y',\n                'getAddrDetails' = 'Y', 'pageNum' = '1')\n  res &lt;- GET(url, query = query)\n  \n  # Check if the request was successful\n  if (status_code(res) == 200) {\n    res_content &lt;- content(res)\n    \n    # Check if the 'found' key exists and is not zero\n    if (!is.null(res_content$found) && res_content$found != 0) {\n      found &lt;- rbind(found, as.data.frame(content(res))[4:13])\n    } else {\n      not_found &lt;- rbind(not_found, data.frame(postcode = postcode))\n    }\n  } else {\n    warning(paste(\"Failed to retrieve data for postcode:\", postcode))\n  }\n}\n\nWrite it to file for subsequent usage.\n\nwrite_rds(found, \"data/aspatial/found.rds\")\nwrite_rds(not_found, \"data/aspatial/not_found.rds\")\n\n\nfound &lt;- read_rds(\"data/aspatial/found.rds\")\nnot_found &lt;- read_rds(\"data/aspatial/not_found.rds\")"
+  },
+  {
+    "objectID": "In_Class_Exercises/In_Class_Exercise_12/In_Class_Exercise12.html#data-cleaning-to-merge-them-up",
+    "href": "In_Class_Exercises/In_Class_Exercise_12/In_Class_Exercise12.html#data-cleaning-to-merge-them-up",
+    "title": "In Class Exercise 12: Getting Data From APIs",
+    "section": "4.2 Data Cleaning to merge them up",
+    "text": "4.2 Data Cleaning to merge them up\n\nfound &lt;- found %&gt;%\n  select(c(6:8)) %&gt;%\n  rename(POSTAL = `results.POSTAL`,\n          XCOORD = `results.X`,\n          YCOORD = `results.Y`)\n\n\ncondo_resale_geocoded = left_join(\n  condo_resale, found,\n  by = c('Postal Code' = 'POSTAL')\n)\n\n\ncondo_resale_sf &lt;- st_as_sf(condo_resale_geocoded,\n                            coords = c(\"XCOORD\", \"YCOORD\"),\n                            crs = 3414)\n\n\noverlapping_points &lt;- condo_resale_sf %&gt;%\n  mutate(overlap = lengths(st_equals(.,.)) &gt; 1)\n\n\ncondo_resale_sf &lt;- condo_resale_sf %&gt;%\n  st_jitter(amount = 2)"
+  },
+  {
+    "objectID": "Hands_On_Exercises/Hands_On_Exercise_13/Hands_On_Exercise13.html",
+    "href": "Hands_On_Exercises/Hands_On_Exercise_13/Hands_On_Exercise13.html",
+    "title": "Hands-on Exercise 13",
+    "section": "",
+    "text": "Predictive modelling uses statistical learning or machine learning techniques to predict outcomes. By and large, the event one wants to predict is in the future. However, a set of known outcome and predictors (also known as variables) will be used to calibrate the predictive models.\nGeospatial predictive modelling is conceptually rooted in the principle that the occurrences of events being modeled are limited in distribution. When geographically referenced data are used, occurrences of events are neither uniform nor random in distribution over space. There are geospatial factors (infrastructure, sociocultural, topographic, etc.) that constrain and influence where the locations of events occur. Geospatial predictive modeling attempts to describe those constraints and influences by spatially correlating occurrences of historical geospatial locations with environmental factors that represent those constraints and influences.\n\n\n\nAspatial dataset:\n\nHDB Resale data: a list of HDB resale transacted prices in Singapore from Jan 2017 onwards. It is in csv format which can be downloaded from Data.gov.sg.\n\nGeospatial dataset:\n\nMP14_SUBZONE_WEB_PL: a polygon feature data providing information of URA 2014 Master Plan Planning Subzone boundary data. It is in ESRI shapefile format. This data set was also downloaded from Data.gov.sg\n\nLocational factors with geographic coordinates:\n\nDownloaded from Data.gov.sg.\n\nEldercare data is a list of eldercare in Singapore. It is in shapefile format.\nHawker Centre data is a list of hawker centres in Singapore. It is in geojson format.\nParks data is a list of parks in Singapore. It is in geojson format.\nSupermarket data is a list of supermarkets in Singapore. It is in geojson format.\nCHAS clinics data is a list of CHAS clinics in Singapore. It is in geojson format.\nChildcare service data is a list of childcare services in Singapore. It is in geojson format.\nKindergartens data is a list of kindergartens in Singapore. It is in geojson format.\n\nDownloaded from Datamall.lta.gov.sg.\n\nMRT data is a list of MRT/LRT stations in Singapore with the station names and codes. It is in shapefile format.\nBus stops data is a list of bus stops in Singapore. It is in shapefile format.\n\n\nLocational factors without geographic coordinates:\n\nDownloaded from Data.gov.sg.\n\nPrimary school data is extracted from the list on General information of schools from data.gov portal. It is in csv format.\n\nRetrieved/Scraped from other sources\n\nCBD coordinates obtained from Google.\nShopping malls data is a list of Shopping malls in Singapore obtained from Wikipedia.\nGood primary schools is a list of primary schools that are ordered in ranking in terms of popularity and this can be found at Local Salary Forum.\n\n\n\n\n\n\n\npacman::p_load(sf, spdep, GWmodel, SpatialML, \n               tmap, rsample, Metrics, tidyverse)"
+  },
+  {
+    "objectID": "Hands_On_Exercises/Hands_On_Exercise_13/Hands_On_Exercise13.html#the-data",
+    "href": "Hands_On_Exercises/Hands_On_Exercise_13/Hands_On_Exercise13.html#the-data",
+    "title": "Hands-on Exercise 13",
+    "section": "",
+    "text": "Aspatial dataset:\n\nHDB Resale data: a list of HDB resale transacted prices in Singapore from Jan 2017 onwards. It is in csv format which can be downloaded from Data.gov.sg.\n\nGeospatial dataset:\n\nMP14_SUBZONE_WEB_PL: a polygon feature data providing information of URA 2014 Master Plan Planning Subzone boundary data. It is in ESRI shapefile format. This data set was also downloaded from Data.gov.sg\n\nLocational factors with geographic coordinates:\n\nDownloaded from Data.gov.sg.\n\nEldercare data is a list of eldercare in Singapore. It is in shapefile format.\nHawker Centre data is a list of hawker centres in Singapore. It is in geojson format.\nParks data is a list of parks in Singapore. It is in geojson format.\nSupermarket data is a list of supermarkets in Singapore. It is in geojson format.\nCHAS clinics data is a list of CHAS clinics in Singapore. It is in geojson format.\nChildcare service data is a list of childcare services in Singapore. It is in geojson format.\nKindergartens data is a list of kindergartens in Singapore. It is in geojson format.\n\nDownloaded from Datamall.lta.gov.sg.\n\nMRT data is a list of MRT/LRT stations in Singapore with the station names and codes. It is in shapefile format.\nBus stops data is a list of bus stops in Singapore. It is in shapefile format.\n\n\nLocational factors without geographic coordinates:\n\nDownloaded from Data.gov.sg.\n\nPrimary school data is extracted from the list on General information of schools from data.gov portal. It is in csv format.\n\nRetrieved/Scraped from other sources\n\nCBD coordinates obtained from Google.\nShopping malls data is a list of Shopping malls in Singapore obtained from Wikipedia.\nGood primary schools is a list of primary schools that are ordered in ranking in terms of popularity and this can be found at Local Salary Forum."
+  },
+  {
+    "objectID": "Hands_On_Exercises/Hands_On_Exercise_13/Hands_On_Exercise13.html#installing-and-loading-r-packages",
+    "href": "Hands_On_Exercises/Hands_On_Exercise_13/Hands_On_Exercise13.html#installing-and-loading-r-packages",
+    "title": "Hands-on Exercise 13",
+    "section": "",
+    "text": "pacman::p_load(sf, spdep, GWmodel, SpatialML, \n               tmap, rsample, Metrics, tidyverse)"
+  },
+  {
+    "objectID": "Hands_On_Exercises/Hands_On_Exercise_13/Hands_On_Exercise13.html#reading-data-file-to-rds",
+    "href": "Hands_On_Exercises/Hands_On_Exercise_13/Hands_On_Exercise13.html#reading-data-file-to-rds",
+    "title": "Hands-on Exercise 13",
+    "section": "2.1 Reading data file to rds",
+    "text": "2.1 Reading data file to rds\n\nmdata &lt;- read_rds(\"data/mdata.rds\")"
+  },
+  {
+    "objectID": "Hands_On_Exercises/Hands_On_Exercise_13/Hands_On_Exercise13.html#data-sampling",
+    "href": "Hands_On_Exercises/Hands_On_Exercise_13/Hands_On_Exercise13.html#data-sampling",
+    "title": "Hands-on Exercise 13",
+    "section": "2.1 Data sampling",
+    "text": "2.1 Data sampling\nThe entire data are split into training and test data sets with 65% and 35% respectively by using initial_split() of rsample package. rsample is one of the package of tigymodels.\nset.seed(1234) resale_split &lt;- initial_split(mdata, prop = 6.5/10,) train_data &lt;- training(resale_split) test_data &lt;- testing(resale_split)\n\nset.seed(1234)\nresale_split &lt;- initial_split(mdata, \n                              prop = 6.5/10,)\ntrain_data &lt;- training(resale_split)\ntest_data &lt;- testing(resale_split)\n\n\nwrite_rds(train_data, \"data/model/train_data.rds\") \nwrite_rds(test_data, \"data/model/test_data.rds\")"
+  },
+  {
+    "objectID": "Hands_On_Exercises/Hands_On_Exercise_13/Hands_On_Exercise13.html#retrieving-stored-data",
+    "href": "Hands_On_Exercises/Hands_On_Exercise_13/Hands_On_Exercise13.html#retrieving-stored-data",
+    "title": "Hands-on Exercise 13",
+    "section": "3.1 Retrieving Stored Data",
+    "text": "3.1 Retrieving Stored Data\n\ntrain_data &lt;- read_rds(\"data/model/train_data.rds\")\ntest_data &lt;- read_rds(\"data/model/test_data.rds\")"
+  },
+  {
+    "objectID": "Hands_On_Exercises/Hands_On_Exercise_13/Hands_On_Exercise13.html#converting-sf-data.frame-to-spatialpointdataframe",
+    "href": "Hands_On_Exercises/Hands_On_Exercise_13/Hands_On_Exercise13.html#converting-sf-data.frame-to-spatialpointdataframe",
+    "title": "Hands-on Exercise 13",
+    "section": "5.1 Converting sf data.frame to SpatialPointDataFrame",
+    "text": "5.1 Converting sf data.frame to SpatialPointDataFrame\n\ntrain_data_sp &lt;- as_Spatial(train_data)\ntrain_data_sp\n\nclass       : SpatialPointsDataFrame \nfeatures    : 10335 \nextent      : 11597.31, 42623.63, 28217.39, 48741.06  (xmin, xmax, ymin, ymax)\ncrs         : +proj=tmerc +lat_0=1.36666666666667 +lon_0=103.833333333333 +k=1 +x_0=28001.642 +y_0=38744.572 +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs \nvariables   : 17\nnames       : resale_price, floor_area_sqm, storey_order, remaining_lease_mths,          PROX_CBD,     PROX_ELDERLYCARE,        PROX_HAWKER,           PROX_MRT,          PROX_PARK,   PROX_GOOD_PRISCH,        PROX_MALL,            PROX_CHAS,     PROX_SUPERMARKET, WITHIN_350M_KINDERGARTEN, WITHIN_350M_CHILDCARE, ... \nmin values  :       218000,             74,            1,                  555, 0.999393538715878, 1.98943787433087e-08, 0.0333358643817954, 0.0220407324774434, 0.0441643212802781, 0.0652540365486641,                0, 6.20621206270077e-09, 1.21715176356525e-07,                        0,                     0, ... \nmax values  :      1186888,            133,           17,                 1164,  19.6500691667807,     3.30163731686804,   2.86763031236184,   2.13060636038504,   2.41313695915468,   10.6223726149914, 2.27100643784442,    0.808332738794272,     1.57131703651196,                        7,                    20, ..."
+  },
+  {
+    "objectID": "Hands_On_Exercises/Hands_On_Exercise_13/Hands_On_Exercise13.html#computing-adaptive-bandwidth",
+    "href": "Hands_On_Exercises/Hands_On_Exercise_13/Hands_On_Exercise13.html#computing-adaptive-bandwidth",
+    "title": "Hands-on Exercise 13",
+    "section": "5.2 Computing Adaptive Bandwidth",
+    "text": "5.2 Computing Adaptive Bandwidth\nNext, bw.gwr() of GWmodel package will be used to determine the optimal bandwidth to be used.\n\nbw_adaptive &lt;- bw.gwr(resale_price ~ floor_area_sqm +\n                  storey_order + remaining_lease_mths +\n                  PROX_CBD + PROX_ELDERLYCARE + PROX_HAWKER +\n                  PROX_MRT + PROX_PARK + PROX_MALL + \n                  PROX_SUPERMARKET + WITHIN_350M_KINDERGARTEN +\n                  WITHIN_350M_CHILDCARE + WITHIN_350M_BUS +\n                  WITHIN_1KM_PRISCH,\n                  data=train_data_sp,\n                  approach=\"CV\",\n                  kernel=\"gaussian\",\n                  adaptive=TRUE,\n                  longlat=FALSE)\n\nThe result shows that 40 neighbour points will be the optimal bandwidth to be used if adaptive bandwidth is used for this data set.\n\nwrite_rds(bw_adaptive, \"data/model/bw_adaptive.rds\")"
+  },
+  {
+    "objectID": "Hands_On_Exercises/Hands_On_Exercise_13/Hands_On_Exercise13.html#constructing-adaptive-bandwidth-gwr-model",
+    "href": "Hands_On_Exercises/Hands_On_Exercise_13/Hands_On_Exercise13.html#constructing-adaptive-bandwidth-gwr-model",
+    "title": "Hands-on Exercise 13",
+    "section": "5.3 Constructing adaptive bandwidth GWR model",
+    "text": "5.3 Constructing adaptive bandwidth GWR model\n\nbw_adaptive &lt;- read_rds(\"data/model/bw_adaptive.rds\")\n\nNow, we can go ahead to calibrate the gwr-based hedonic pricing model by using adaptive bandwidth and Gaussian kernel as shown in the code chunk below.\n\ngwr_adaptive &lt;- gwr.basic(formula = resale_price ~\n                            floor_area_sqm + storey_order +\n                            remaining_lease_mths + PROX_CBD + \n                            PROX_ELDERLYCARE + PROX_HAWKER +\n                            PROX_MRT + PROX_PARK + PROX_MALL + \n                            PROX_SUPERMARKET + WITHIN_350M_KINDERGARTEN +\n                            WITHIN_350M_CHILDCARE + WITHIN_350M_BUS +\n                            WITHIN_1KM_PRISCH,\n                          data=train_data_sp,\n                          bw=bw_adaptive, \n                          kernel = 'gaussian', \n                          adaptive=TRUE,\n                          longlat = FALSE)\n\nWe store the data in RDS for Future Use:\n\nwrite_rds(gwr_adaptive, \"data/model/gwr_adaptive.rds\")"
+  },
+  {
+    "objectID": "Hands_On_Exercises/Hands_On_Exercise_13/Hands_On_Exercise13.html#retrieve-gwr-output-object",
+    "href": "Hands_On_Exercises/Hands_On_Exercise_13/Hands_On_Exercise13.html#retrieve-gwr-output-object",
+    "title": "Hands-on Exercise 13",
+    "section": "5.4 Retrieve gwr output object",
+    "text": "5.4 Retrieve gwr output object\n\ngwr_adaptive &lt;- read_rds(\"data/model/gwr_adaptive.rds\")\n\n\ngwr_adaptive\n\n[1] 25"
+  },
+  {
+    "objectID": "Hands_On_Exercises/Hands_On_Exercise_13/Hands_On_Exercise13.html#converting-the-test-data-from-sf-data.frame-to-spatialpointdataframe",
+    "href": "Hands_On_Exercises/Hands_On_Exercise_13/Hands_On_Exercise13.html#converting-the-test-data-from-sf-data.frame-to-spatialpointdataframe",
+    "title": "Hands-on Exercise 13",
+    "section": "5.5 Converting the test data from sf data.frame to SpatialPointDataFrame",
+    "text": "5.5 Converting the test data from sf data.frame to SpatialPointDataFrame\n\ntest_data_sp &lt;- test_data %&gt;%\n  as_Spatial()\ntest_data_sp\n\nclass       : SpatialPointsDataFrame \nfeatures    : 5566 \nextent      : 11597.31, 42623.63, 28287.8, 48669.59  (xmin, xmax, ymin, ymax)\ncrs         : +proj=tmerc +lat_0=1.36666666666667 +lon_0=103.833333333333 +k=1 +x_0=28001.642 +y_0=38744.572 +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs \nvariables   : 17\nnames       : resale_price, floor_area_sqm, storey_order, remaining_lease_mths,         PROX_CBD,     PROX_ELDERLYCARE,        PROX_HAWKER,           PROX_MRT,          PROX_PARK,   PROX_GOOD_PRISCH,        PROX_MALL,            PROX_CHAS,     PROX_SUPERMARKET, WITHIN_350M_KINDERGARTEN, WITHIN_350M_CHILDCARE, ... \nmin values  :       230888,             74,            1,                  546, 1.00583660772922, 3.34897933104965e-07, 0.0474019664161957, 0.0414043955932523, 0.0502664084494264, 0.0907500295577619,                0, 4.55547870890763e-09, 1.21715176356525e-07,                        0,                     0, ... \nmax values  :      1050000,            138,           14,                 1151,  19.632402730488,     3.30163731686804,   2.83106651960209,   2.13060636038504,   2.41313695915468,   10.6169590126272, 2.26056404492346,     0.79249074802552,     1.53786629004208,                        7,                    16, ..."
+  },
+  {
+    "objectID": "Hands_On_Exercises/Hands_On_Exercise_13/Hands_On_Exercise13.html#computing-adaptive-bandwidth-for-the-test-data",
+    "href": "Hands_On_Exercises/Hands_On_Exercise_13/Hands_On_Exercise13.html#computing-adaptive-bandwidth-for-the-test-data",
+    "title": "Hands-on Exercise 13",
+    "section": "5.6 Computing adaptive bandwidth for the test data",
+    "text": "5.6 Computing adaptive bandwidth for the test data\n\ngwr_bw_test_adaptive &lt;- bw.gwr(resale_price ~ floor_area_sqm +\n                  storey_order + remaining_lease_mths +\n                  PROX_CBD + PROX_ELDERLYCARE + PROX_HAWKER +\n                  PROX_MRT + PROX_PARK + PROX_MALL + \n                  PROX_SUPERMARKET + WITHIN_350M_KINDERGARTEN +\n                  WITHIN_350M_CHILDCARE + WITHIN_350M_BUS +\n                  WITHIN_1KM_PRISCH,\n                  data=test_data_sp,\n                  approach=\"CV\",\n                  kernel=\"gaussian\",\n                  adaptive=TRUE,\n                  longlat=FALSE)\n\n\ngwr_bw_test_adaptive &lt;- read_rds(\"data/model/gwr_bw_test_adaptive.rds\")\n\n\ngwr_bw_test_adaptive\n\n[1] 25"
+  },
+  {
+    "objectID": "Hands_On_Exercises/Hands_On_Exercise_13/Hands_On_Exercise13.html#computing-predicted-values-of-the-test-dat",
+    "href": "Hands_On_Exercises/Hands_On_Exercise_13/Hands_On_Exercise13.html#computing-predicted-values-of-the-test-dat",
+    "title": "Hands-on Exercise 13",
+    "section": "5.7 Computing predicted values of the test dat",
+    "text": "5.7 Computing predicted values of the test dat"
+  },
+  {
+    "objectID": "In_Class_Exercises/In_Class_Exercise_13/In_Class_Exercise13.html",
+    "href": "In_Class_Exercises/In_Class_Exercise_13/In_Class_Exercise13.html",
+    "title": "In Class 13: There is no in-class 13",
+    "section": "",
+    "text": "There’s no In Class Exercise 13, so here’s a picture of a cat."
   }
 ]

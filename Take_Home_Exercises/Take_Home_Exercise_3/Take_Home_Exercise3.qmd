@@ -2115,7 +2115,7 @@ if (num_districts > 12) {
 
 ```
 
-## 12.2 Plotting the Interactive Chord chart 
+## 12.2 Plotting the Interactive Chord chart
 
 ```{r}
 chorddiag(

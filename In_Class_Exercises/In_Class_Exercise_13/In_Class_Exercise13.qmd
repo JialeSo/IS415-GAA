@@ -1,5 +1,5 @@
 ---
-title: "In Class Exercise1: Geospatial Data Science"
+title: "In Class 13: There is no in-class 13"
 author: "Jiale SO"
 date: "August 18, 2024"
 date-modified: "last-modified"
@@ -9,4 +9,6 @@ execute:
   freeze: true
 ---
 
-There's no In Class Exercise 1, so here's a picture of a cat.
+There's no In Class Exercise 13, so here's a picture of a cat.
+
+![](images/clipboard-563502262.png)
